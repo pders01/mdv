@@ -194,8 +194,8 @@ const syntaxStyle = SyntaxStyle.fromStyles({
   "markup.quote": { fg: RGBA.fromHex(themeColors.gray), italic: true },
   "markup.raw": { fg: RGBA.fromHex(themeColors.cyan), bg: RGBA.fromHex(themeColors.codeBg) },
   "markup.raw.block": { fg: RGBA.fromHex(themeColors.cyan), bg: RGBA.fromHex(themeColors.codeBg) },
-  "markup.link": { fg: RGBA.fromHex(themeColors.link), underline: true },
-  "markup.link.url": { fg: RGBA.fromHex(themeColors.blue), underline: true },
+  "markup.link": { fg: RGBA.fromHex(themeColors.link) },
+  "markup.link.url": { fg: RGBA.fromHex(themeColors.blue) },
   "markup.link.label": { fg: RGBA.fromHex(themeColors.link) },
   default: { fg: RGBA.fromHex(themeColors.fg) },
 });
@@ -1128,10 +1128,11 @@ const markdown = new MarkdownRenderable(renderer, {
     // Handle paragraphs with inline HTML or escape sequences
     if (token.type === "paragraph") {
       const para = token as ParagraphToken;
-      // Check if paragraph contains inline HTML or escape tokens
+      // Check if paragraph contains inline HTML, escape tokens, or links
       const hasInlineHtml = para.tokens?.some(t => t.type === "html" && !(t as any).block);
       const hasEscapes = para.tokens?.some(t => t.type === "escape");
-      if (hasInlineHtml || hasEscapes) {
+      const hasLinks = para.tokens?.some(t => t.type === "link");
+      if (hasInlineHtml || hasEscapes || hasLinks) {
         const rendered = renderParagraph(para);
         if (rendered) return rendered;
       }
