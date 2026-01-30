@@ -2,43 +2,51 @@
 
 A terminal markdown viewer with vim keybindings, built with [OpenTUI](https://opentui.com) and [shiki](https://shiki.style) for syntax highlighting.
 
+## Requirements
+
+- [Bun](https://bun.sh) v1.0 or later
+
 ## Installation
 
 ### From source
 
 ```bash
-# Clone the repository
 git clone https://github.com/yourusername/mdv.git
 cd mdv
-
-# Install dependencies
 bun install
-
-# Link globally (optional)
-bun link
 ```
 
-### Global install
+### Global install (recommended)
 
 ```bash
-# After linking, use from anywhere
-mdv README.md
+# Build standalone binary and install to /usr/local/bin
+bun run build
+sudo mv mdv /usr/local/bin/
+
+# Or use the install script
+bun run install-global
+```
+
+### Run without installing
+
+```bash
+bun run src/index.ts README.md
 ```
 
 ## Usage
 
 ```bash
 # View a markdown file
-bun run src/index.ts README.md
+mdv README.md
 
 # Pipe content from stdin
-cat README.md | bun run src/index.ts -
+cat README.md | mdv -
 
 # With a specific theme
-bun run src/index.ts -t dracula README.md
+mdv -t dracula README.md
 
 # List available themes
-bun run src/index.ts --list-themes
+mdv --list-themes
 ```
 
 ## Keybindings
