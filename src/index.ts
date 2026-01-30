@@ -709,7 +709,7 @@ function renderParagraph(token: ParagraphToken): BoxRenderable | null {
               // Closing tag - append URL in parentheses if we have one
               if (state.linkHref) {
                 segments.push({
-                  text: ` (${state.linkHref})`,
+                  text: " (" + state.linkHref + ")",
                   fg: themeColors.gray,
                   bold: false,
                   italic: false,
@@ -767,7 +767,7 @@ function renderParagraph(token: ParagraphToken): BoxRenderable | null {
       // URL in parentheses (like HTML links)
       if (link.href) {
         segments.push({
-          text: ` (${link.href})`,
+          text: " (" + link.href + ")",
           fg: themeColors.gray,
           bold: false,
           italic: false,
@@ -956,6 +956,54 @@ function renderTable(token: TableToken): BoxRenderable {
   return wrapper;
 }
 
+// Render inline tokens (for list items, etc.)
+function renderInlineTokens(tokens: Token[]): BoxRenderable {
+  const row = new BoxRenderable(renderer, {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  });
+
+  for (const t of tokens) {
+    if (t.type === "text") {
+      row.add(new TextRenderable(renderer, {
+        content: (t as any).text || "",
+        fg: themeColors.fg,
+      }));
+    } else if (t.type === "strong") {
+      row.add(new TextRenderable(renderer, {
+        content: (t as any).text || "",
+        fg: themeColors.fg,
+        attributes: TextAttributes.BOLD,
+      }));
+    } else if (t.type === "em") {
+      row.add(new TextRenderable(renderer, {
+        content: (t as any).text || "",
+        fg: themeColors.fg,
+        attributes: TextAttributes.ITALIC,
+      }));
+    } else if (t.type === "codespan") {
+      row.add(new TextRenderable(renderer, {
+        content: (t as any).text || "",
+        fg: themeColors.cyan,
+      }));
+    } else if (t.type === "link") {
+      const link = t as any;
+      row.add(new TextRenderable(renderer, {
+        content: link.text || "",
+        fg: themeColors.link,
+      }));
+      if (link.href) {
+        row.add(new TextRenderable(renderer, {
+          content: " (" + link.href + ")",
+          fg: themeColors.gray,
+        }));
+      }
+    }
+  }
+
+  return row;
+}
+
 // Render list with proper indentation for nested lists
 function renderList(token: ListToken, depth: number = 0): BoxRenderable {
   const wrapper = new BoxRenderable(renderer, {
@@ -972,21 +1020,17 @@ function renderList(token: ListToken, depth: number = 0): BoxRenderable {
       flexDirection: "column",
     });
 
-    // Get the text content (first text token)
-    let itemText = "";
     let nestedList: ListToken | null = null;
+    let paragraphToken: Token | null = null;
 
     if (item.tokens) {
       for (const t of item.tokens) {
-        if (t.type === "text" || t.type === "paragraph") {
-          itemText = (t as any).text || "";
+        if (t.type === "paragraph" || t.type === "text") {
+          paragraphToken = t;
         } else if (t.type === "list") {
           nestedList = t as ListToken;
         }
       }
-    } else {
-      // Fallback to item.text but strip nested list markers
-      itemText = item.text.split("\n")[0];
     }
 
     // Render the list item line
@@ -1001,10 +1045,18 @@ function renderList(token: ListToken, depth: number = 0): BoxRenderable {
       fg: themeColors.cyan,
     }));
 
-    lineWrapper.add(new TextRenderable(renderer, {
-      content: itemText,
-      fg: themeColors.fg,
-    }));
+    // Render inline content with proper token handling
+    if (paragraphToken && (paragraphToken as any).tokens) {
+      const inlineContent = renderInlineTokens((paragraphToken as any).tokens);
+      lineWrapper.add(inlineContent);
+    } else {
+      // Fallback to plain text
+      const itemText = item.text?.split("\n")[0] || "";
+      lineWrapper.add(new TextRenderable(renderer, {
+        content: itemText,
+        fg: themeColors.fg,
+      }));
+    }
 
     itemWrapper.add(lineWrapper);
 
@@ -1159,6 +1211,24 @@ renderer.keyInput.on("keypress", (event: KeyEvent) => {
       lastKey = "";
     } else {
       lastKey = "g";
+      lastKeyTime = now;
+    }
+    return;
+  }
+
+  // yy - yank (copy) entire document to clipboard
+  if (event.name === "y" && !event.ctrl && !event.shift) {
+    if (lastKey === "y" && now - lastKeyTime < 500) {
+      // Copy content to clipboard using pbcopy (macOS) or xclip (Linux)
+      const proc = Bun.spawn(["pbcopy"], {
+        stdin: new Blob([content]),
+      });
+      proc.exited.then(() => {
+        // Could show a status message here
+      });
+      lastKey = "";
+    } else {
+      lastKey = "y";
       lastKeyTime = now;
     }
     return;

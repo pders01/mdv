@@ -63,6 +63,7 @@ mdv --list-themes
 | `Ctrl-b` / `PageUp` | Scroll up full page |
 | `Home` | Go to top |
 | `End` | Go to bottom |
+| `yy` | Copy document to clipboard |
 | `q` / `Ctrl-c` | Quit |
 
 ## Features
