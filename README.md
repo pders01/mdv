@@ -51,6 +51,8 @@ mdv --list-themes
 
 ## Keybindings
 
+### Navigation
+
 | Key | Action |
 |-----|--------|
 | `j` / `↓` | Scroll down one line |
@@ -63,7 +65,20 @@ mdv --list-themes
 | `Ctrl-b` / `PageUp` | Scroll up full page |
 | `Home` | Go to top |
 | `End` | Go to bottom |
-| `yy` | Copy document to clipboard |
+
+### Yank (Copy)
+
+| Key | Action |
+|-----|--------|
+| `yy` | Copy entire document to clipboard |
+| `V` | Enter visual line mode |
+| `y` (in visual mode) | Copy selection to clipboard |
+| `Esc` | Exit visual mode |
+
+### General
+
+| Key | Action |
+|-----|--------|
 | `q` / `Ctrl-c` | Quit |
 
 ## Features

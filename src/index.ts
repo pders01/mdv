@@ -210,13 +210,43 @@ const container = new BoxRenderable(renderer, {
   flexGrow: 1,
 });
 
+// Track mouse drag state for visual selection
+let isDragging = false;
+let dragStartLine = 0;
+
 const scrollBox = new ScrollBoxRenderable(renderer, {
   id: "scrollbox",
   flexGrow: 1,
   padding: 1,
   scrollY: true,
   scrollX: false,
+  onMouseDown: (event) => {
+    // Start a potential drag selection
+    isDragging = true;
+    const lineHeight = scrollBox.scrollHeight / Math.max(contentLines.length, 1);
+    const absoluteY = event.y + scrollBox.scrollTop - 1; // -1 for padding
+    dragStartLine = Math.max(0, Math.min(Math.floor(absoluteY / Math.max(lineHeight, 1)), contentLines.length - 1));
+  },
+  onMouseDrag: (event) => {
+    if (!isDragging) return;
+
+    // Enter visual mode if not already
+    if (mode !== "visual") {
+      enterVisualMode(dragStartLine);
+    }
+
+    // Update selection based on current mouse position
+    const lineHeight = scrollBox.scrollHeight / Math.max(contentLines.length, 1);
+    const absoluteY = event.y + scrollBox.scrollTop - 1;
+    visualEnd = Math.max(0, Math.min(Math.floor(absoluteY / Math.max(lineHeight, 1)), contentLines.length - 1));
+    updateStatusBar();
+  },
+  onMouseDragEnd: () => {
+    isDragging = false;
+    // Keep visual mode active so user can yank with 'y'
+  },
 });
+
 
 // =============================================================================
 // Custom Token Renderers
@@ -1183,11 +1213,12 @@ statusBar.add(new TextRenderable(renderer, {
   attributes: TextAttributes.BOLD,
 }));
 
-statusBar.add(new TextRenderable(renderer, {
+const helpText = new TextRenderable(renderer, {
   id: "help",
-  content: "  j/k scroll │ gg/G top/bottom │ Ctrl-d/u page │ q quit",
+  content: "  j/k scroll | V visual | yy yank all | q quit",
   fg: themeColors.gray,
-}));
+});
+statusBar.add(helpText);
 
 // Assemble UI
 container.add(scrollBox);
@@ -1201,14 +1232,126 @@ renderer.root.add(container);
 let lastKey = "";
 let lastKeyTime = 0;
 
+// Visual mode state
+type Mode = "normal" | "visual";
+let mode: Mode = "normal";
+let visualStart = 0; // Line number where visual mode started
+let visualEnd = 0;   // Current line in visual mode
+
+// Split content into lines for visual selection
+const contentLines = content.split("\n");
+
+// Helper to copy text to clipboard
+function copyToClipboard(text: string) {
+  const proc = Bun.spawn(["pbcopy"], {
+    stdin: new Blob([text]),
+  });
+  return proc.exited;
+}
+
+// Helper to get selected lines in visual mode
+function getSelectedContent(): string {
+  const start = Math.min(visualStart, visualEnd);
+  const end = Math.max(visualStart, visualEnd);
+  return contentLines.slice(start, end + 1).join("\n");
+}
+
+// Notification timeout handle
+let notificationTimeout: ReturnType<typeof setTimeout> | null = null;
+
+// Show a temporary notification in the status bar
+function showNotification(message: string, durationMs: number = 2000) {
+  // Clear any existing notification timeout
+  if (notificationTimeout) {
+    clearTimeout(notificationTimeout);
+  }
+
+  // Show notification
+  helpText.content = `  ${message}`;
+  helpText.fg = themeColors.green;
+
+  // Revert after duration
+  notificationTimeout = setTimeout(() => {
+    helpText.fg = themeColors.gray;
+    updateStatusBar();
+    notificationTimeout = null;
+  }, durationMs);
+}
+
+// Update status bar based on mode
+function updateStatusBar() {
+  if (mode === "visual") {
+    const lines = Math.abs(visualEnd - visualStart) + 1;
+    const startLine = Math.min(visualStart, visualEnd) + 1;
+    const endLine = Math.max(visualStart, visualEnd) + 1;
+    helpText.content = `  -- VISUAL -- L${startLine}-${endLine} (${lines} line${lines > 1 ? "s" : ""}) | y yank | Esc cancel`;
+    helpText.fg = themeColors.yellow;
+  } else {
+    helpText.content = "  j/k gg/G scroll | Ctrl-d/u half | V visual | yy yank | q quit";
+    helpText.fg = themeColors.gray;
+  }
+}
+
+// Convert scroll position to approximate line number
+function scrollToLine(): number {
+  const scrollRatio = scrollBox.scrollTop / Math.max(scrollBox.scrollHeight, 1);
+  return Math.floor(scrollRatio * contentLines.length);
+}
+
+// Enter visual mode
+function enterVisualMode(startLine?: number) {
+  mode = "visual";
+  visualStart = startLine ?? scrollToLine();
+  visualEnd = visualStart;
+  updateStatusBar();
+}
+
+// Exit visual mode
+function exitVisualMode() {
+  mode = "normal";
+  updateStatusBar();
+}
+
 renderer.keyInput.on("keypress", (event: KeyEvent) => {
   const now = Date.now();
   const height = renderer.height;
+
+  // Handle Escape - exit visual mode
+  if (event.name === "escape") {
+    if (mode === "visual") {
+      exitVisualMode();
+    }
+    lastKey = "";
+    return;
+  }
+
+  // Handle V - enter visual line mode (Shift+V)
+  if (mode === "normal" && (event.name === "V" || (event.name === "v" && event.shift))) {
+    enterVisualMode();
+    lastKey = "";
+    return;
+  }
+
+  // Handle y in visual mode - yank selection
+  if (event.name === "y" && mode === "visual") {
+    const lines = Math.abs(visualEnd - visualStart) + 1;
+    const selectedText = getSelectedContent();
+    copyToClipboard(selectedText).then(() => {
+      showNotification(`Yanked ${lines} line${lines > 1 ? "s" : ""} to clipboard`);
+    });
+    exitVisualMode();
+    lastKey = "";
+    return;
+  }
 
   // gg - go to top
   if (event.name === "g" && !event.ctrl && !event.shift) {
     if (lastKey === "g" && now - lastKeyTime < 500) {
       scrollBox.scrollTo(0);
+      if (mode === "visual") {
+        visualEnd = 0;
+        updateStatusBar();
+      }
       lastKey = "";
     } else {
       lastKey = "g";
@@ -1217,15 +1360,11 @@ renderer.keyInput.on("keypress", (event: KeyEvent) => {
     return;
   }
 
-  // yy - yank (copy) entire document to clipboard
-  if (event.name === "y" && !event.ctrl && !event.shift) {
+  // yy - yank (copy) entire document to clipboard (normal mode only)
+  if (event.name === "y" && !event.ctrl && !event.shift && mode === "normal") {
     if (lastKey === "y" && now - lastKeyTime < 500) {
-      // Copy content to clipboard using pbcopy (macOS) or xclip (Linux)
-      const proc = Bun.spawn(["pbcopy"], {
-        stdin: new Blob([content]),
-      });
-      proc.exited.then(() => {
-        // Could show a status message here
+      copyToClipboard(content).then(() => {
+        showNotification(`Yanked entire document (${contentLines.length} lines) to clipboard`);
       });
       lastKey = "";
     } else {
@@ -1238,6 +1377,10 @@ renderer.keyInput.on("keypress", (event: KeyEvent) => {
   // G - go to bottom
   if (event.name === "G" || (event.name === "g" && event.shift)) {
     scrollBox.scrollTo(scrollBox.scrollHeight);
+    if (mode === "visual") {
+      visualEnd = contentLines.length - 1;
+      updateStatusBar();
+    }
     return;
   }
 
@@ -1258,44 +1401,92 @@ renderer.keyInput.on("keypress", (event: KeyEvent) => {
     case "j":
     case "down":
       scrollBox.scrollBy(1);
+      if (mode === "visual") {
+        visualEnd = Math.min(visualEnd + 1, contentLines.length - 1);
+        updateStatusBar();
+      }
       break;
 
     case "k":
     case "up":
       scrollBox.scrollBy(-1);
+      if (mode === "visual") {
+        visualEnd = Math.max(visualEnd - 1, 0);
+        updateStatusBar();
+      }
       break;
 
     case "d":
-      if (event.ctrl) scrollBox.scrollBy(Math.floor(height / 2));
+      if (event.ctrl) {
+        scrollBox.scrollBy(Math.floor(height / 2));
+        if (mode === "visual") {
+          visualEnd = Math.min(visualEnd + Math.floor(height / 2), contentLines.length - 1);
+          updateStatusBar();
+        }
+      }
       break;
 
     case "u":
-      if (event.ctrl) scrollBox.scrollBy(-Math.floor(height / 2));
+      if (event.ctrl) {
+        scrollBox.scrollBy(-Math.floor(height / 2));
+        if (mode === "visual") {
+          visualEnd = Math.max(visualEnd - Math.floor(height / 2), 0);
+          updateStatusBar();
+        }
+      }
       break;
 
     case "f":
-      if (event.ctrl) scrollBox.scrollBy(height - 2);
+      if (event.ctrl) {
+        scrollBox.scrollBy(height - 2);
+        if (mode === "visual") {
+          visualEnd = Math.min(visualEnd + height - 2, contentLines.length - 1);
+          updateStatusBar();
+        }
+      }
       break;
 
     case "b":
-      if (event.ctrl) scrollBox.scrollBy(-(height - 2));
+      if (event.ctrl) {
+        scrollBox.scrollBy(-(height - 2));
+        if (mode === "visual") {
+          visualEnd = Math.max(visualEnd - (height - 2), 0);
+          updateStatusBar();
+        }
+      }
       break;
 
     case "pagedown":
     case "space":
       scrollBox.scrollBy(height - 2);
+      if (mode === "visual") {
+        visualEnd = Math.min(visualEnd + height - 2, contentLines.length - 1);
+        updateStatusBar();
+      }
       break;
 
     case "pageup":
       scrollBox.scrollBy(-(height - 2));
+      if (mode === "visual") {
+        visualEnd = Math.max(visualEnd - (height - 2), 0);
+        updateStatusBar();
+      }
       break;
 
     case "home":
       scrollBox.scrollTo(0);
+      if (mode === "visual") {
+        visualEnd = 0;
+        updateStatusBar();
+      }
       break;
 
     case "end":
       scrollBox.scrollTo(scrollBox.scrollHeight);
+      if (mode === "visual") {
+        visualEnd = contentLines.length - 1;
+        updateStatusBar();
+      }
       break;
   }
 });
