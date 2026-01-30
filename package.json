@@ -1,9 +1,14 @@
 {
   "name": "mdv",
-  "module": "src/index.tsx",
+  "version": "0.1.0",
+  "description": "A terminal markdown viewer with vim keybindings",
+  "module": "src/index.ts",
   "type": "module",
-  "private": true,
+  "bin": {
+    "mdv": "src/index.ts"
+  },
   "scripts": {
+    "start": "bun run src/index.ts",
     "dev": "bun run --watch src/index.ts"
   },
   "devDependencies": {
@@ -13,6 +18,9 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.75"
+    "@opentui/core": "^0.1.75",
+    "@shikijs/cli": "^3.21.0",
+    "marked": "^15.0.0",
+    "shiki": "^3.21.0"
   }
 }
