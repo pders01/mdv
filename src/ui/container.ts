@@ -102,10 +102,12 @@ export function createMainContainer(
 
     const content = scrollBox.content;
 
-    // Helper to get block states from markdown
+    // Helper to get block states from markdown (accessing private API)
     const getBlockStates = (): BlockState[] | null => {
-      const blockStates = (markdown as unknown as { _blockStates: BlockState[] })._blockStates;
-      return (blockStates && blockStates.length > 0) ? blockStates : null;
+      const blockStates = (markdown as unknown as { _blockStates: unknown })._blockStates;
+      // Validate structure in case OpenTUI internals change
+      if (!Array.isArray(blockStates) || blockStates.length === 0) return null;
+      return blockStates as BlockState[];
     };
 
     // Cached line mappings (built once, reused)
