@@ -10,6 +10,7 @@ import {
 } from "@opentui/core";
 import type { Token } from "marked";
 import type { ThemeColors, ListToken } from "../types.js";
+import { convertInlineToken } from "./text.js";
 
 /**
  * Render inline tokens (for list items, etc.)
@@ -24,41 +25,26 @@ export function renderInlineTokens(
     flexWrap: "wrap",
   });
 
-  for (const t of tokens) {
-    if (t.type === "text") {
+  for (const token of tokens) {
+    const result = convertInlineToken(token, colors);
+    if (!result) continue;
+
+    const { segment, urlSegment } = result;
+    let attrs = 0;
+    if (segment.bold) attrs |= TextAttributes.BOLD;
+    if (segment.italic) attrs |= TextAttributes.ITALIC;
+
+    row.add(new TextRenderable(renderer, {
+      content: segment.text,
+      fg: segment.fg,
+      attributes: attrs || undefined,
+    }));
+
+    if (urlSegment) {
       row.add(new TextRenderable(renderer, {
-        content: (t as any).text || "",
-        fg: colors.fg,
+        content: urlSegment.text,
+        fg: urlSegment.fg,
       }));
-    } else if (t.type === "strong") {
-      row.add(new TextRenderable(renderer, {
-        content: (t as any).text || "",
-        fg: colors.fg,
-        attributes: TextAttributes.BOLD,
-      }));
-    } else if (t.type === "em") {
-      row.add(new TextRenderable(renderer, {
-        content: (t as any).text || "",
-        fg: colors.fg,
-        attributes: TextAttributes.ITALIC,
-      }));
-    } else if (t.type === "codespan") {
-      row.add(new TextRenderable(renderer, {
-        content: (t as any).text || "",
-        fg: colors.cyan,
-      }));
-    } else if (t.type === "link") {
-      const link = t as any;
-      row.add(new TextRenderable(renderer, {
-        content: link.text || "",
-        fg: colors.link,
-      }));
-      if (link.href) {
-        row.add(new TextRenderable(renderer, {
-          content: " (" + link.href + ")",
-          fg: colors.gray,
-        }));
-      }
     }
   }
 

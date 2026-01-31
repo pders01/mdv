@@ -9,7 +9,7 @@ import {
   type CliRenderer,
 } from "@opentui/core";
 import type { ThemeColors, ParagraphToken, InlineHtmlState, StyledSegment } from "../types.js";
-import { decodeHtmlEntities, toSubscript, toSuperscript } from "./text.js";
+import { decodeHtmlEntities, toSubscript, toSuperscript, convertInlineToken } from "./text.js";
 
 /**
  * Render paragraph with inline HTML support
@@ -162,56 +162,18 @@ export function renderParagraph(
       continue;
     }
 
-    if (t.type === "text") {
+    // Handle text and escape tokens through addSegment to apply inline HTML state
+    if (t.type === "text" || t.type === "escape") {
       addSegment((t as any).text || "");
-    } else if (t.type === "strong") {
-      segments.push({
-        text: (t as any).text || "",
-        fg: colors.fg,
-        bold: true,
-        italic: false,
-      });
-    } else if (t.type === "em") {
-      segments.push({
-        text: (t as any).text || "",
-        fg: colors.fg,
-        bold: false,
-        italic: true,
-      });
-    } else if (t.type === "codespan") {
-      segments.push({
-        text: decodeHtmlEntities((t as any).text || ""),
-        fg: colors.cyan,
-        bold: false,
-        italic: false,
-      });
-    } else if (t.type === "link") {
-      const link = t as any;
-      // Link text
-      segments.push({
-        text: link.text || "",
-        fg: colors.link,
-        bold: false,
-        italic: false,
-      });
-      // URL in parentheses (like HTML links)
-      if (link.href) {
-        segments.push({
-          text: " (" + link.href + ")",
-          fg: colors.gray,
-          bold: false,
-          italic: false,
-        });
+    } else {
+      // Use shared inline token converter for other token types
+      const result = convertInlineToken(t, colors);
+      if (result) {
+        segments.push(result.segment);
+        if (result.urlSegment) {
+          segments.push(result.urlSegment);
+        }
       }
-    } else if (t.type === "del") {
-      segments.push({
-        text: (t as any).text || "",
-        fg: colors.gray,
-        bold: false,
-        italic: false,
-      });
-    } else if (t.type === "escape") {
-      addSegment((t as any).text || "");
     }
   }
 

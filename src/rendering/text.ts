@@ -1,7 +1,10 @@
 /**
  * Text transformation utilities
- * Handles subscript, superscript, and HTML entity decoding
+ * Handles subscript, superscript, HTML entity decoding, and inline token conversion
  */
+
+import type { Token } from "marked";
+import type { ThemeColors, StyledSegment } from "../types.js";
 
 // =============================================================================
 // Unicode Character Mappings
@@ -62,4 +65,77 @@ export function decodeHtmlEntities(text: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, " ");
+}
+
+// =============================================================================
+// Inline Token Conversion
+// =============================================================================
+
+/**
+ * Result of converting an inline token, may include a URL segment for links
+ */
+export interface InlineTokenResult {
+  segment: StyledSegment;
+  urlSegment?: StyledSegment;
+}
+
+/**
+ * Convert a markdown inline token to styled segment(s)
+ * Returns null for unsupported token types
+ */
+export function convertInlineToken(
+  token: Token,
+  colors: ThemeColors
+): InlineTokenResult | null {
+  const t = token as any;
+
+  switch (token.type) {
+    case "text":
+    case "escape":
+      return {
+        segment: { text: t.text || "", fg: colors.fg, bold: false, italic: false },
+      };
+
+    case "strong":
+      return {
+        segment: { text: t.text || "", fg: colors.fg, bold: true, italic: false },
+      };
+
+    case "em":
+      return {
+        segment: { text: t.text || "", fg: colors.fg, bold: false, italic: true },
+      };
+
+    case "codespan":
+      return {
+        segment: {
+          text: decodeHtmlEntities(t.text || ""),
+          fg: colors.cyan,
+          bold: false,
+          italic: false,
+        },
+      };
+
+    case "link":
+      const result: InlineTokenResult = {
+        segment: { text: t.text || "", fg: colors.link, bold: false, italic: false },
+      };
+      if (t.href) {
+        result.urlSegment = {
+          text: " (" + t.href + ")",
+          fg: colors.gray,
+          bold: false,
+          italic: false,
+        };
+      }
+      return result;
+
+    case "del":
+      return {
+        segment: { text: t.text || "", fg: colors.gray, bold: false, italic: false },
+      };
+
+    default:
+      return null;
+  }
 }
