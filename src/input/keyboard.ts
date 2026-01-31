@@ -81,9 +81,13 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
     if (event.name === "y" && cursor.mode === "visual") {
       const lines = cursor.getSelectedLineCount();
       const selectedText = cursor.getSelectedContent(contentLines);
-      copyToClipboard(selectedText).then(() => {
-        showNotification(`Yanked ${lines} line${lines > 1 ? "s" : ""} to clipboard`);
-      });
+      copyToClipboard(selectedText)
+        .then(() => {
+          showNotification(`Yanked ${lines} line${lines > 1 ? "s" : ""} to clipboard`);
+        })
+        .catch(() => {
+          showNotification("Failed to copy to clipboard");
+        });
       cursor.exitVisual();
       lastKey = "";
       return;
@@ -104,9 +108,13 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
     // yy - yank current line (normal mode) or entire document
     if (event.name === "y" && !event.ctrl && !event.shift && cursor.mode === "normal") {
       if (lastKey === "y" && now - lastKeyTime < DOUBLE_KEY_TIMEOUT_MS) {
-        copyToClipboard(content).then(() => {
-          showNotification(`Yanked entire document (${contentLines.length} lines) to clipboard`);
-        });
+        copyToClipboard(content)
+          .then(() => {
+            showNotification(`Yanked entire document (${contentLines.length} lines) to clipboard`);
+          })
+          .catch(() => {
+            showNotification("Failed to copy to clipboard");
+          });
         lastKey = "";
       } else {
         lastKey = "y";
