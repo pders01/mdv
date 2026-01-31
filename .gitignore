@@ -42,5 +42,9 @@ Thumbs.db
 # Cached documentation
 docs/
 
-# Compiled binary
+# Compiled binaries
 /mdv
+/mdv-darwin-arm64
+/mdv-darwin-x64
+/mdv-linux-x64
+/mdv-linux-arm64

@@ -8,18 +8,36 @@ A terminal markdown viewer with vim keybindings, built with [OpenTUI](https://op
 
 ## Installation
 
+### From GitHub Releases (recommended)
+
+Download the latest binary for your platform from [Releases](https://github.com/pders01/mdv/releases):
+
+```bash
+# macOS (Apple Silicon)
+curl -L https://github.com/pders01/mdv/releases/latest/download/mdv-darwin-arm64.tar.gz | tar xz
+sudo mv mdv-darwin-arm64 /usr/local/bin/mdv
+
+# macOS (Intel)
+curl -L https://github.com/pders01/mdv/releases/latest/download/mdv-darwin-x64.tar.gz | tar xz
+sudo mv mdv-darwin-x64 /usr/local/bin/mdv
+
+# Linux (x64)
+curl -L https://github.com/pders01/mdv/releases/latest/download/mdv-linux-x64.tar.gz | tar xz
+sudo mv mdv-linux-x64 /usr/local/bin/mdv
+
+# Linux (ARM64)
+curl -L https://github.com/pders01/mdv/releases/latest/download/mdv-linux-arm64.tar.gz | tar xz
+sudo mv mdv-linux-arm64 /usr/local/bin/mdv
+```
+
 ### From source
 
 ```bash
-git clone https://github.com/yourusername/mdv.git
+git clone https://github.com/pders01/mdv.git
 cd mdv
 bun install
-```
 
-### Global install (recommended)
-
-```bash
-# Build standalone binary and install to /usr/local/bin
+# Build for current platform
 bun run build
 sudo mv mdv /usr/local/bin/
 
