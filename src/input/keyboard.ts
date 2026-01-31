@@ -7,6 +7,11 @@ import type { VisualMode } from "./visual.js";
 import { copyToClipboard } from "./clipboard.js";
 
 /**
+ * Maximum time between key presses for double-key shortcuts (gg, yy)
+ */
+const DOUBLE_KEY_TIMEOUT_MS = 500;
+
+/**
  * Keyboard handler options
  */
 export interface KeyboardHandlerOptions {
@@ -68,7 +73,7 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
 
     // gg - go to top
     if (event.name === "g" && !event.ctrl && !event.shift) {
-      if (lastKey === "g" && now - lastKeyTime < 500) {
+      if (lastKey === "g" && now - lastKeyTime < DOUBLE_KEY_TIMEOUT_MS) {
         scrollBox.scrollTo(0);
         visualMode.moveToStart();
         lastKey = "";
@@ -81,7 +86,7 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
 
     // yy - yank (copy) entire document to clipboard (normal mode only)
     if (event.name === "y" && !event.ctrl && !event.shift && visualMode.mode === "normal") {
-      if (lastKey === "y" && now - lastKeyTime < 500) {
+      if (lastKey === "y" && now - lastKeyTime < DOUBLE_KEY_TIMEOUT_MS) {
         copyToClipboard(content).then(() => {
           showNotification(`Yanked entire document (${contentLines.length} lines) to clipboard`);
         });
