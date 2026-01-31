@@ -57,7 +57,20 @@ try {
     process.exit(1);
   }
 } catch (error) {
-  console.error((error as Error).message);
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`Error: ${message}`);
+
+  // Provide helpful context for common file errors
+  if (args.filePath) {
+    if (message.includes("ENOENT") || message.includes("not found")) {
+      console.error(`File does not exist: ${args.filePath}`);
+    } else if (message.includes("EACCES") || message.includes("permission")) {
+      console.error(`Permission denied: ${args.filePath}`);
+    } else if (message.includes("EISDIR") || message.includes("directory")) {
+      console.error(`Path is a directory, not a file: ${args.filePath}`);
+    }
+  }
+
   process.exit(1);
 }
 
