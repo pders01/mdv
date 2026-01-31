@@ -8,6 +8,7 @@ dist/
 
 # Bun build cache
 *.bun-build
+.*bun-build
 
 # Code coverage
 coverage/

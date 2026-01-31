@@ -11,7 +11,8 @@
     "start": "bun run src/index.ts",
     "dev": "bun run --watch src/index.ts",
     "build": "bun build src/index.ts --compile --outfile mdv",
-    "install-global": "bun run build && sudo mv mdv /usr/local/bin/"
+    "install-global": "bun run build && sudo mv mdv /usr/local/bin/",
+    "test": "bun test"
   },
   "devDependencies": {
     "@types/bun": "latest"
