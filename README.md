@@ -39,8 +39,13 @@ bun run src/index.ts README.md
 # View a markdown file
 mdv README.md
 
+# Read from stdin (pipe)
+cat README.md | mdv
+curl -s https://example.com/doc.md | mdv
+
 # With a specific theme
 mdv -t dracula README.md
+cat README.md | mdv -t dracula
 
 # List available themes
 mdv --list-themes

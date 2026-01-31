@@ -41,6 +41,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
  */
 export function showHelp(): void {
   console.log("Usage: mdv [options] <markdown-file>");
+  console.log("       cat file.md | mdv [options]");
   console.log("\nOptions:");
   console.log("  -t, --theme <name>  Set syntax highlighting theme (default: github-dark)");
   console.log("  -h, --help          Show this help");
@@ -61,7 +62,22 @@ export async function listThemes(): Promise<void> {
  */
 export function showUsageError(): void {
   console.error("Usage: mdv [options] <markdown-file>");
+  console.error("       cat file.md | mdv [options]");
   console.error("\nRun 'mdv --help' for more options");
+}
+
+/**
+ * Check if stdin has piped content
+ */
+export function hasStdinContent(): boolean {
+  return !process.stdin.isTTY;
+}
+
+/**
+ * Read content from stdin (must be called BEFORE renderer creation)
+ */
+export async function readStdinContent(): Promise<string> {
+  return await Bun.stdin.text();
 }
 
 /**

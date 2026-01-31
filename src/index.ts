@@ -4,6 +4,8 @@
  */
 
 import { basename } from "path";
+import { openSync } from "fs";
+import { ReadStream } from "tty";
 import {
   createCliRenderer,
   MarkdownRenderable,
@@ -11,7 +13,7 @@ import {
 import type { BundledTheme } from "shiki";
 
 // Local modules
-import { parseCliArgs, showHelp, listThemes, showUsageError, readContent } from "./cli.js";
+import { parseCliArgs, showHelp, listThemes, showUsageError, readContent, hasStdinContent, readStdinContent } from "./cli.js";
 import { extractThemeColors, createSyntaxStyle } from "./theme/index.js";
 import { createHighlighterInstance } from "./highlighting/shiki.js";
 import { createRenderNode } from "./rendering/index.js";
@@ -36,21 +38,40 @@ if (args.listThemes) {
   process.exit(0);
 }
 
-if (!args.filePath) {
-  showUsageError();
-  process.exit(1);
-}
-
 // =============================================================================
-// Read File Content
+// Read Content (stdin or file)
 // =============================================================================
 
 let content: string;
+let isStdin = false;
+
 try {
-  content = await readContent(args.filePath);
+  if (hasStdinContent()) {
+    // Read stdin content BEFORE creating renderer
+    content = await readStdinContent();
+    isStdin = true;
+  } else if (args.filePath) {
+    content = await readContent(args.filePath);
+  } else {
+    showUsageError();
+    process.exit(1);
+  }
 } catch (error) {
   console.error((error as Error).message);
   process.exit(1);
+}
+
+// After reading piped stdin, reopen /dev/tty for keyboard input
+if (isStdin) {
+  const ttyFd = openSync("/dev/tty", "r");
+  const ttyStream = new ReadStream(ttyFd);
+
+  // Replace process.stdin with TTY stream so OpenTUI can receive keyboard events
+  Object.defineProperty(process, "stdin", {
+    value: ttyStream,
+    writable: true,
+    configurable: true,
+  });
 }
 
 const contentLines = content.split("\n");
@@ -130,7 +151,7 @@ const markdown = new MarkdownRenderable(renderer, {
 scrollBox.add(markdown);
 
 // Create status bar
-const fileName = basename(args.filePath);
+const fileName = isStdin ? "stdin" : basename(args.filePath!);
 const { statusBar, showNotification, updateStatusBar } = createStatusBar(
   renderer,
   fileName,
