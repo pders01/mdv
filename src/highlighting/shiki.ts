@@ -127,7 +127,11 @@ export function shikiToChunks(
       }
     }
     return chunks;
-  } catch {
+  } catch (error) {
+    // Log error in debug mode to aid troubleshooting
+    if (process.env.DEBUG) {
+      console.error(`Syntax highlighting failed for language '${lang}':`, error);
+    }
     return [{ __isChunk: true, text: code, fg: getCachedColor(colors.fg) }];
   }
 }
