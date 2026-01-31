@@ -8,7 +8,7 @@ import {
   TextAttributes,
   type CliRenderer,
 } from "@opentui/core";
-import type { ThemeColors, ParagraphToken, InlineHtmlState, StyledSegment } from "../types.js";
+import type { ThemeColors, ParagraphToken, InlineHtmlState, StyledSegment, HtmlToken, TextToken, EscapeToken } from "../types.js";
 import { decodeHtmlEntities, toSubscript, toSuperscript, convertInlineToken } from "./text.js";
 
 /**
@@ -73,7 +73,8 @@ export function renderParagraph(
 
   for (const t of token.tokens) {
     if (t.type === "html") {
-      const html = (t as any).raw || "";
+      const htmlToken = t as HtmlToken;
+      const html = htmlToken.raw || "";
 
       // Parse HTML tag
       const tagMatch = html.match(/^<(\/?)([\w-]+)(?:\s[^>]*)?>(.*)$/s);
@@ -164,7 +165,8 @@ export function renderParagraph(
 
     // Handle text and escape tokens through addSegment to apply inline HTML state
     if (t.type === "text" || t.type === "escape") {
-      addSegment((t as any).text || "");
+      const textToken = t as TextToken | EscapeToken;
+      addSegment(textToken.text || "");
     } else {
       // Use shared inline token converter for other token types
       const result = convertInlineToken(t, colors);

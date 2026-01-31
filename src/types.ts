@@ -25,6 +25,87 @@ export interface TextChunk {
 // =============================================================================
 
 /**
+ * Inline text token
+ */
+export interface TextToken extends Token {
+  type: "text";
+  text: string;
+}
+
+/**
+ * Escape sequence token
+ */
+export interface EscapeToken extends Token {
+  type: "escape";
+  text: string;
+}
+
+/**
+ * Strong (bold) token
+ */
+export interface StrongToken extends Token {
+  type: "strong";
+  text: string;
+}
+
+/**
+ * Emphasis (italic) token
+ */
+export interface EmToken extends Token {
+  type: "em";
+  text: string;
+}
+
+/**
+ * Code span token
+ */
+export interface CodespanToken extends Token {
+  type: "codespan";
+  text: string;
+}
+
+/**
+ * Link token
+ */
+export interface LinkToken extends Token {
+  type: "link";
+  text: string;
+  href: string;
+  title?: string;
+}
+
+/**
+ * Deleted text token
+ */
+export interface DelToken extends Token {
+  type: "del";
+  text: string;
+}
+
+/**
+ * HTML token (inline or block)
+ */
+export interface HtmlToken extends Token {
+  type: "html";
+  raw: string;
+  text: string;
+  block: boolean;
+  pre: boolean;
+}
+
+/**
+ * Union of inline token types
+ */
+export type InlineToken =
+  | TextToken
+  | EscapeToken
+  | StrongToken
+  | EmToken
+  | CodespanToken
+  | LinkToken
+  | DelToken;
+
+/**
  * List item within a list token
  */
 export interface ListItem {

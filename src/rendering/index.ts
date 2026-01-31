@@ -5,7 +5,7 @@
 
 import { BoxRenderable, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
-import type { ThemeColors, ListToken, TableToken, ParagraphToken } from "../types.js";
+import type { ThemeColors, ListToken, TableToken, ParagraphToken, HtmlToken } from "../types.js";
 import type { HighlighterInstance } from "../highlighting/shiki.js";
 import { renderCodeBlock } from "./code.js";
 import { renderHorizontalRule, renderHtmlBlock } from "./html.js";
@@ -65,7 +65,7 @@ export function createRenderNode(
     if (token.type === "paragraph") {
       const para = token as ParagraphToken;
       // Check if paragraph contains inline HTML, escape tokens, or links
-      const hasInlineHtml = para.tokens?.some(t => t.type === "html" && !(t as any).block);
+      const hasInlineHtml = para.tokens?.some(t => t.type === "html" && !(t as HtmlToken).block);
       const hasEscapes = para.tokens?.some(t => t.type === "escape");
       const hasLinks = para.tokens?.some(t => t.type === "link");
       if (hasInlineHtml || hasEscapes || hasLinks) {

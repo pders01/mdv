@@ -12,22 +12,29 @@ import type { Token } from "marked";
 import type { ThemeColors } from "../types.js";
 
 /**
+ * Token with optional text content (for recursive extraction)
+ */
+interface ContentToken extends Token {
+  tokens?: ContentToken[];
+  text?: string;
+  raw?: string;
+}
+
+/**
  * Extract text from blockquote tokens recursively
  */
-export function extractBlockquoteText(
-  token: Token & { tokens?: Token[]; text?: string; raw?: string }
-): string {
+export function extractBlockquoteText(token: ContentToken): string {
   if (token.text) return token.text;
   if (!token.tokens) return token.raw || "";
 
   return token.tokens.map(t => {
     if (t.type === "paragraph" || t.type === "text") {
-      return (t as any).text || (t as any).raw || "";
+      return t.text || t.raw || "";
     }
     if (t.type === "blockquote") {
-      return "> " + extractBlockquoteText(t as any);
+      return "> " + extractBlockquoteText(t);
     }
-    return extractBlockquoteText(t as any);
+    return extractBlockquoteText(t);
   }).join("\n").trim();
 }
 
@@ -37,7 +44,7 @@ export function extractBlockquoteText(
 export function renderBlockquote(
   renderer: CliRenderer,
   colors: ThemeColors,
-  token: Token & { tokens?: Token[] }
+  token: ContentToken
 ): BoxRenderable {
   const wrapper = new BoxRenderable(renderer, {
     marginTop: 1,

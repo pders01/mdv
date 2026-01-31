@@ -9,7 +9,7 @@ import {
   type CliRenderer,
 } from "@opentui/core";
 import type { Token } from "marked";
-import type { ThemeColors, ListToken } from "../types.js";
+import type { ThemeColors, ListToken, ParagraphToken } from "../types.js";
 import { convertInlineToken } from "./text.js";
 
 /**
@@ -100,8 +100,9 @@ export function renderList(
     }));
 
     // Render inline content with proper token handling
-    if (paragraphToken && (paragraphToken as any).tokens) {
-      const inlineContent = renderInlineTokens(renderer, colors, (paragraphToken as any).tokens);
+    const paraTokens = (paragraphToken as ParagraphToken | null)?.tokens;
+    if (paraTokens) {
+      const inlineContent = renderInlineTokens(renderer, colors, paraTokens);
       lineWrapper.add(inlineContent);
     } else {
       // Fallback to plain text

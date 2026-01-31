@@ -4,7 +4,17 @@
  */
 
 import type { Token } from "marked";
-import type { ThemeColors, StyledSegment } from "../types.js";
+import type {
+  ThemeColors,
+  StyledSegment,
+  TextToken,
+  EscapeToken,
+  StrongToken,
+  EmToken,
+  CodespanToken,
+  LinkToken,
+  DelToken,
+} from "../types.js";
 
 // =============================================================================
 // Unicode Character Mappings
@@ -96,26 +106,31 @@ export function convertInlineToken(
   token: Token,
   colors: ThemeColors
 ): InlineTokenResult | null {
-  const t = token as any;
-
   switch (token.type) {
     case "text":
-    case "escape":
+    case "escape": {
+      const t = token as TextToken | EscapeToken;
       return {
         segment: { text: t.text || "", fg: colors.fg, bold: false, italic: false },
       };
+    }
 
-    case "strong":
+    case "strong": {
+      const t = token as StrongToken;
       return {
         segment: { text: t.text || "", fg: colors.fg, bold: true, italic: false },
       };
+    }
 
-    case "em":
+    case "em": {
+      const t = token as EmToken;
       return {
         segment: { text: t.text || "", fg: colors.fg, bold: false, italic: true },
       };
+    }
 
-    case "codespan":
+    case "codespan": {
+      const t = token as CodespanToken;
       return {
         segment: {
           text: decodeHtmlEntities(t.text || ""),
@@ -124,8 +139,10 @@ export function convertInlineToken(
           italic: false,
         },
       };
+    }
 
-    case "link":
+    case "link": {
+      const t = token as LinkToken;
       const result: InlineTokenResult = {
         segment: { text: t.text || "", fg: colors.link, bold: false, italic: false },
       };
@@ -138,11 +155,14 @@ export function convertInlineToken(
         };
       }
       return result;
+    }
 
-    case "del":
+    case "del": {
+      const t = token as DelToken;
       return {
         segment: { text: t.text || "", fg: colors.gray, bold: false, italic: false },
       };
+    }
 
     default:
       return null;
