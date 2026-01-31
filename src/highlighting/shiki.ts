@@ -70,6 +70,23 @@ export async function createHighlighterInstance(
 // =============================================================================
 
 /**
+ * Cache for RGBA color objects to avoid repeated parsing
+ */
+const colorCache = new Map<string, ReturnType<typeof RGBA.fromHex>>();
+
+/**
+ * Get cached RGBA color from hex string
+ */
+function getCachedColor(hex: string): ReturnType<typeof RGBA.fromHex> {
+  let color = colorCache.get(hex);
+  if (!color) {
+    color = RGBA.fromHex(hex);
+    colorCache.set(hex, color);
+  }
+  return color;
+}
+
+/**
  * Convert Shiki tokens to OpenTUI TextChunks
  */
 export function shikiToChunks(
@@ -81,7 +98,7 @@ export function shikiToChunks(
   const supportedLangs = highlighter.getLoadedLanguages();
 
   if (!supportedLangs.includes(lang as BundledLanguage)) {
-    return [{ __isChunk: true, text: code, fg: RGBA.fromHex(colors.fg) }];
+    return [{ __isChunk: true, text: code, fg: getCachedColor(colors.fg) }];
   }
 
   try {
@@ -97,7 +114,7 @@ export function shikiToChunks(
         const chunk: TextChunk = {
           __isChunk: true,
           text: token.content,
-          fg: RGBA.fromHex(token.color || "#E1E4E8"),
+          fg: getCachedColor(token.color || "#E1E4E8"),
         };
         if (token.fontStyle) {
           if (token.fontStyle & 1) chunk.italic = true;
@@ -111,7 +128,7 @@ export function shikiToChunks(
     }
     return chunks;
   } catch {
-    return [{ __isChunk: true, text: code, fg: RGBA.fromHex(colors.fg) }];
+    return [{ __isChunk: true, text: code, fg: getCachedColor(colors.fg) }];
   }
 }
 
