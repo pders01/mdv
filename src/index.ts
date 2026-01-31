@@ -19,7 +19,7 @@ import { createHighlighterInstance } from "./highlighting/shiki.js";
 import { createRenderNode } from "./rendering/index.js";
 import { createMainContainer } from "./ui/container.js";
 import { createStatusBar } from "./ui/statusbar.js";
-import { createVisualMode } from "./input/visual.js";
+import { createCursorManager, scrollToCursor } from "./input/cursor.js";
 import { setupKeyboardHandler } from "./input/keyboard.js";
 
 // =============================================================================
@@ -137,28 +137,33 @@ const renderer = await createCliRenderer({
 const syntaxStyle = createSyntaxStyle(themeColors);
 
 // =============================================================================
-// Visual Mode Setup
+// Cursor Manager Setup
 // =============================================================================
 
-// Create visual mode manager (will get status bar update function later)
+// Create cursor manager (will get status bar update function later)
 let statusBarUpdate: () => void = () => {};
-const visualMode = createVisualMode(contentLines, () => statusBarUpdate());
+const cursor = createCursorManager(contentLines.length, () => statusBarUpdate());
 
 // =============================================================================
 // UI Components
 // =============================================================================
 
 // Create container and scroll box
-const { container, scrollBox } = createMainContainer(
+const { container, scrollBox, setupHighlighting } = createMainContainer(
   renderer,
-  contentLines,
-  ({ action, startLine, currentLine }) => {
-    if (action === "start" || (action === "update" && visualMode.mode !== "visual")) {
-      visualMode.enter(startLine);
-    } else if (action === "update" && currentLine !== undefined) {
-      visualMode.visualEnd = currentLine;
-    }
-  }
+  contentLines
+);
+
+// Setup cursor and selection highlighting
+setupHighlighting(
+  () => ({
+    mode: cursor.mode,
+    cursorLine: cursor.cursorLine,
+    selectionStart: cursor.selectionStart,
+    selectionEnd: cursor.selectionEnd,
+  }),
+  themeColors.cyan,    // Cursor color (subtle)
+  themeColors.yellow   // Selection color
 );
 
 // Create render node callback
@@ -178,15 +183,24 @@ const fileName = isStdin ? "stdin" : basename(args.filePath!);
 const { statusBar, showNotification, updateStatusBar } = createStatusBar(
   renderer,
   fileName,
-  themeColors
+  themeColors,
+  contentLines.length
 );
 
-// Connect visual mode to status bar
-statusBarUpdate = () => updateStatusBar(visualMode.mode, visualMode.visualStart, visualMode.visualEnd);
+// Connect cursor to status bar
+statusBarUpdate = () => updateStatusBar(
+  cursor.mode,
+  cursor.cursorLine,
+  cursor.selectionStart,
+  cursor.selectionEnd
+);
 
 // Assemble UI
 container.add(statusBar);
 renderer.root.add(container);
+
+// Initial status bar update
+statusBarUpdate();
 
 // =============================================================================
 // Keyboard Handling
@@ -195,8 +209,11 @@ renderer.root.add(container);
 setupKeyboardHandler({
   renderer,
   scrollBox,
-  visualMode,
+  cursor,
   content,
   contentLines,
   showNotification,
 });
+
+// Initialize cursor position and scroll
+scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);

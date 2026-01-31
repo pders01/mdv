@@ -1,9 +1,10 @@
 /**
- * Keyboard event handling
+ * Keyboard event handling with Vim-style cursor navigation
  */
 
 import type { ScrollBoxRenderable, CliRenderer, KeyEvent } from "@opentui/core";
-import type { VisualMode } from "./visual.js";
+import type { CursorManager } from "./cursor.js";
+import { scrollToCursor } from "./cursor.js";
 import { copyToClipboard } from "./clipboard.js";
 
 /**
@@ -17,7 +18,7 @@ const DOUBLE_KEY_TIMEOUT_MS = 500;
 export interface KeyboardHandlerOptions {
   renderer: CliRenderer;
   scrollBox: ScrollBoxRenderable;
-  visualMode: VisualMode;
+  cursor: CursorManager;
   content: string;
   contentLines: string[];
   showNotification: (message: string, durationMs?: number) => void;
@@ -30,7 +31,7 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
   const {
     renderer,
     scrollBox,
-    visualMode,
+    cursor,
     content,
     contentLines,
     showNotification,
@@ -39,34 +40,50 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
   let lastKey = "";
   let lastKeyTime = 0;
 
+  // Helper: move cursor and scroll to follow
+  const moveCursor = (delta: number, center: boolean = false) => {
+    cursor.moveCursor(delta);
+    scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, center);
+  };
+
+  const goToFirst = () => {
+    cursor.moveToFirst();
+    scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+  };
+
+  const goToLast = () => {
+    cursor.moveToLast();
+    scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+  };
+
   renderer.keyInput.on("keypress", (event: KeyEvent) => {
     const now = Date.now();
     const height = renderer.height;
 
     // Handle Escape - exit visual mode
     if (event.name === "escape") {
-      if (visualMode.mode === "visual") {
-        visualMode.exit();
+      if (cursor.mode === "visual") {
+        cursor.exitVisual();
       }
       lastKey = "";
       return;
     }
 
-    // Handle V - enter visual line mode (Shift+V)
-    if (visualMode.mode === "normal" && (event.name === "V" || (event.name === "v" && event.shift))) {
-      visualMode.enter(undefined, scrollBox);
+    // Handle V - enter visual line mode
+    if (cursor.mode === "normal" && (event.name === "V" || (event.name === "v" && event.shift))) {
+      cursor.enterVisual();
       lastKey = "";
       return;
     }
 
     // Handle y in visual mode - yank selection
-    if (event.name === "y" && visualMode.mode === "visual") {
-      const lines = visualMode.getSelectedLineCount();
-      const selectedText = visualMode.getSelectedContent();
+    if (event.name === "y" && cursor.mode === "visual") {
+      const lines = cursor.getSelectedLineCount();
+      const selectedText = cursor.getSelectedContent(contentLines);
       copyToClipboard(selectedText).then(() => {
         showNotification(`Yanked ${lines} line${lines > 1 ? "s" : ""} to clipboard`);
       });
-      visualMode.exit();
+      cursor.exitVisual();
       lastKey = "";
       return;
     }
@@ -74,8 +91,7 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
     // gg - go to top
     if (event.name === "g" && !event.ctrl && !event.shift) {
       if (lastKey === "g" && now - lastKeyTime < DOUBLE_KEY_TIMEOUT_MS) {
-        scrollBox.scrollTo(0);
-        visualMode.moveToStart();
+        goToFirst();
         lastKey = "";
       } else {
         lastKey = "g";
@@ -84,8 +100,8 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
       return;
     }
 
-    // yy - yank (copy) entire document to clipboard (normal mode only)
-    if (event.name === "y" && !event.ctrl && !event.shift && visualMode.mode === "normal") {
+    // yy - yank current line (normal mode) or entire document
+    if (event.name === "y" && !event.ctrl && !event.shift && cursor.mode === "normal") {
       if (lastKey === "y" && now - lastKeyTime < DOUBLE_KEY_TIMEOUT_MS) {
         copyToClipboard(content).then(() => {
           showNotification(`Yanked entire document (${contentLines.length} lines) to clipboard`);
@@ -100,8 +116,8 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
 
     // G - go to bottom
     if (event.name === "G" || (event.name === "g" && event.shift)) {
-      scrollBox.scrollTo(scrollBox.scrollHeight);
-      visualMode.moveToEnd();
+      goToLast();
+      lastKey = "";
       return;
     }
 
@@ -121,63 +137,53 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
 
       case "j":
       case "down":
-        scrollBox.scrollBy(1);
-        visualMode.moveDown(1);
+        moveCursor(1);
         break;
 
       case "k":
       case "up":
-        scrollBox.scrollBy(-1);
-        visualMode.moveUp(1);
+        moveCursor(-1);
         break;
 
       case "d":
         if (event.ctrl) {
-          scrollBox.scrollBy(Math.floor(height / 2));
-          visualMode.moveDown(Math.floor(height / 2));
+          moveCursor(Math.floor(height / 2));
         }
         break;
 
       case "u":
         if (event.ctrl) {
-          scrollBox.scrollBy(-Math.floor(height / 2));
-          visualMode.moveUp(Math.floor(height / 2));
+          moveCursor(-Math.floor(height / 2));
         }
         break;
 
       case "f":
         if (event.ctrl) {
-          scrollBox.scrollBy(height - 2);
-          visualMode.moveDown(height - 2);
+          moveCursor(height - 2);
         }
         break;
 
       case "b":
         if (event.ctrl) {
-          scrollBox.scrollBy(-(height - 2));
-          visualMode.moveUp(height - 2);
+          moveCursor(-(height - 2));
         }
         break;
 
       case "pagedown":
       case "space":
-        scrollBox.scrollBy(height - 2);
-        visualMode.moveDown(height - 2);
+        moveCursor(height - 2);
         break;
 
       case "pageup":
-        scrollBox.scrollBy(-(height - 2));
-        visualMode.moveUp(height - 2);
+        moveCursor(-(height - 2));
         break;
 
       case "home":
-        scrollBox.scrollTo(0);
-        visualMode.moveToStart();
+        goToFirst();
         break;
 
       case "end":
-        scrollBox.scrollTo(scrollBox.scrollHeight);
-        visualMode.moveToEnd();
+        goToLast();
         break;
     }
   });

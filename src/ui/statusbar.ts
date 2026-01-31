@@ -1,5 +1,5 @@
 /**
- * Status bar component and notifications
+ * Status bar component with cursor position and notifications
  */
 
 import {
@@ -17,16 +17,22 @@ export interface StatusBarSetup {
   statusBar: BoxRenderable;
   helpText: TextRenderable;
   showNotification: (message: string, durationMs?: number) => void;
-  updateStatusBar: (mode: Mode, visualStart: number, visualEnd: number) => void;
+  updateStatusBar: (
+    mode: Mode,
+    cursorLine: number,
+    selectionStart: number,
+    selectionEnd: number
+  ) => void;
 }
 
 /**
- * Create status bar with notification support
+ * Create status bar with cursor info and notification support
  */
 export function createStatusBar(
   renderer: CliRenderer,
   filename: string,
-  colors: ThemeColors
+  colors: ThemeColors,
+  totalLines: number
 ): StatusBarSetup {
   const statusBar = new BoxRenderable(renderer, {
     id: "statusbar",
@@ -38,6 +44,7 @@ export function createStatusBar(
     backgroundColor: colors.codeBg,
   });
 
+  // Filename
   statusBar.add(new TextRenderable(renderer, {
     id: "filename",
     content: filename,
@@ -45,49 +52,71 @@ export function createStatusBar(
     attributes: TextAttributes.BOLD,
   }));
 
+  // Position indicator
+  const positionText = new TextRenderable(renderer, {
+    id: "position",
+    content: "",
+    fg: colors.gray,
+  });
+  statusBar.add(positionText);
+
+  // Mode/help text
   const helpText = new TextRenderable(renderer, {
     id: "help",
-    content: "  j/k scroll | V visual | yy yank all | q quit",
+    content: "",
     fg: colors.gray,
   });
   statusBar.add(helpText);
 
   // Notification timeout handle
   let notificationTimeout: ReturnType<typeof setTimeout> | null = null;
+  let isNotificationActive = false;
 
   /**
    * Show a temporary notification in the status bar
    */
   function showNotification(message: string, durationMs: number = 2000) {
-    // Clear any existing notification timeout
     if (notificationTimeout) {
       clearTimeout(notificationTimeout);
     }
 
-    // Show notification
+    isNotificationActive = true;
     helpText.content = `  ${message}`;
     helpText.fg = colors.green;
 
-    // Revert after duration
     notificationTimeout = setTimeout(() => {
+      isNotificationActive = false;
       helpText.fg = colors.gray;
-      updateStatusBar("normal", 0, 0);
+      // Will be updated by next cursor movement
       notificationTimeout = null;
     }, durationMs);
   }
 
   /**
-   * Update status bar based on mode
+   * Update status bar based on mode and cursor position
    */
-  function updateStatusBar(mode: Mode, visualStart: number, visualEnd: number) {
+  function updateStatusBar(
+    mode: Mode,
+    cursorLine: number,
+    selectionStart: number,
+    selectionEnd: number
+  ) {
+    // Update position indicator
+    const lineNum = cursorLine + 1; // 1-indexed display
+    const percent = totalLines > 0 ? Math.round((lineNum / totalLines) * 100) : 0;
+    positionText.content = `  L${lineNum}/${totalLines} (${percent}%)`;
+
+    // Don't update help text if notification is active
+    if (isNotificationActive) return;
+
     if (mode === "visual") {
-      const lines = Math.abs(visualEnd - visualStart) + 1;
-      const startLine = Math.min(visualStart, visualEnd) + 1;
-      const endLine = Math.max(visualStart, visualEnd) + 1;
-      helpText.content = `  -- VISUAL -- L${startLine}-${endLine} (${lines} line${lines > 1 ? "s" : ""}) | y yank | Esc cancel`;
+      const lines = selectionEnd - selectionStart + 1;
+      const start = selectionStart + 1;
+      const end = selectionEnd + 1;
+      helpText.content = `  -- VISUAL -- L${start}-${end} (${lines} line${lines > 1 ? "s" : ""}) | y yank | Esc cancel`;
       helpText.fg = colors.yellow;
     } else {
-      helpText.content = "  j/k gg/G scroll | Ctrl-d/u half | V visual | yy yank | q quit";
+      helpText.content = "  j/k gg/G | V visual | yy yank | q quit";
       helpText.fg = colors.gray;
     }
   }

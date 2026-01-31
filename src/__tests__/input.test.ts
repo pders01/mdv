@@ -1,11 +1,11 @@
 /**
- * Input handling tests
+ * Cursor/input handling tests
  */
 
 import { describe, test, expect } from "bun:test";
-import { createVisualMode, VisualMode } from "../input/visual.js";
+import { createCursorManager, CursorManager } from "../input/cursor.js";
 
-describe("VisualMode", () => {
+describe("CursorManager", () => {
   const sampleLines = [
     "Line 1",
     "Line 2",
@@ -14,158 +14,166 @@ describe("VisualMode", () => {
     "Line 5",
   ];
 
-  test("starts in normal mode", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+  test("starts in normal mode at line 0", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    expect(vm.mode).toBe("normal");
+    expect(cursor.mode).toBe("normal");
+    expect(cursor.cursorLine).toBe(0);
   });
 
-  test("enters visual mode", () => {
+  test("enters visual mode with anchor at cursor", () => {
     let updateCount = 0;
-    const vm = createVisualMode(sampleLines, () => { updateCount++; });
+    const cursor = createCursorManager(sampleLines.length, () => { updateCount++; });
 
-    vm.enter(0);
+    cursor.setCursor(2);
+    cursor.enterVisual();
 
-    expect(vm.mode).toBe("visual");
-    expect(vm.visualStart).toBe(0);
-    expect(vm.visualEnd).toBe(0);
-    expect(updateCount).toBe(1);
+    expect(cursor.mode).toBe("visual");
+    expect(cursor.anchorLine).toBe(2);
+    expect(cursor.cursorLine).toBe(2);
   });
 
-  test("exits visual mode", () => {
+  test("exits visual mode back to normal", () => {
     let updateCount = 0;
-    const vm = createVisualMode(sampleLines, () => { updateCount++; });
+    const cursor = createCursorManager(sampleLines.length, () => { updateCount++; });
 
-    vm.enter(2);
-    vm.exit();
+    cursor.enterVisual();
+    cursor.exitVisual();
 
-    expect(vm.mode).toBe("normal");
-    expect(updateCount).toBe(2); // enter + exit
+    expect(cursor.mode).toBe("normal");
   });
 
-  test("moves visual end down", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+  test("moves cursor down", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(0);
-    vm.moveDown(2);
+    cursor.moveCursor(2);
 
-    expect(vm.visualEnd).toBe(2);
+    expect(cursor.cursorLine).toBe(2);
   });
 
-  test("moves visual end up", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+  test("moves cursor up", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(3);
-    vm.moveUp(2);
+    cursor.setCursor(3);
+    cursor.moveCursor(-2);
 
-    expect(vm.visualEnd).toBe(1);
+    expect(cursor.cursorLine).toBe(1);
   });
 
-  test("clamps moveDown to last line", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+  test("clamps cursor to last line", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(3);
-    vm.moveDown(100);
+    cursor.moveCursor(100);
 
-    expect(vm.visualEnd).toBe(4); // Last line (0-indexed)
+    expect(cursor.cursorLine).toBe(4); // Last line (0-indexed)
   });
 
-  test("clamps moveUp to first line", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+  test("clamps cursor to first line", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(2);
-    vm.moveUp(100);
+    cursor.setCursor(2);
+    cursor.moveCursor(-100);
 
-    expect(vm.visualEnd).toBe(0);
+    expect(cursor.cursorLine).toBe(0);
   });
 
-  test("moveToStart sets visualEnd to 0", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+  test("moveToFirst sets cursor to 0", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(3);
-    vm.moveToStart();
+    cursor.setCursor(3);
+    cursor.moveToFirst();
 
-    expect(vm.visualEnd).toBe(0);
+    expect(cursor.cursorLine).toBe(0);
   });
 
-  test("moveToEnd sets visualEnd to last line", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+  test("moveToLast sets cursor to last line", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(1);
-    vm.moveToEnd();
+    cursor.moveToLast();
 
-    expect(vm.visualEnd).toBe(4);
+    expect(cursor.cursorLine).toBe(4);
+  });
+
+  test("selectionStart/End returns correct range in visual mode", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
+
+    cursor.setCursor(1);
+    cursor.enterVisual();
+    cursor.moveCursor(2); // cursor now at 3
+
+    expect(cursor.selectionStart).toBe(1); // anchor
+    expect(cursor.selectionEnd).toBe(3);   // cursor
+  });
+
+  test("selection works when cursor is before anchor", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
+
+    cursor.setCursor(3);
+    cursor.enterVisual();
+    cursor.moveCursor(-2); // cursor now at 1
+
+    expect(cursor.selectionStart).toBe(1); // cursor (smaller)
+    expect(cursor.selectionEnd).toBe(3);   // anchor (larger)
   });
 
   test("getSelectedContent returns correct lines", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(1);
-    vm.visualEnd = 3;
+    cursor.setCursor(1);
+    cursor.enterVisual();
+    cursor.moveCursor(2); // lines 1-3
 
-    const content = vm.getSelectedContent();
+    const content = cursor.getSelectedContent(sampleLines);
     expect(content).toBe("Line 2\nLine 3\nLine 4");
   });
 
-  test("getSelectedContent works with reversed selection", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+  test("getSelectedContent in normal mode returns cursor line", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(3);
-    vm.visualEnd = 1;
+    cursor.setCursor(2);
 
-    const content = vm.getSelectedContent();
-    expect(content).toBe("Line 2\nLine 3\nLine 4");
+    const content = cursor.getSelectedContent(sampleLines);
+    expect(content).toBe("Line 3");
   });
 
   test("getSelectedLineCount returns correct count", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(0);
-    vm.visualEnd = 2;
+    cursor.setCursor(0);
+    cursor.enterVisual();
+    cursor.moveCursor(2);
 
-    expect(vm.getSelectedLineCount()).toBe(3);
+    expect(cursor.getSelectedLineCount()).toBe(3);
   });
 
-  test("getSelectedLineCount works with single line", () => {
-    const vm = createVisualMode(sampleLines, () => {});
+  test("getSelectedLineCount in normal mode returns 1", () => {
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
-    vm.enter(2);
+    cursor.setCursor(2);
 
-    expect(vm.getSelectedLineCount()).toBe(1);
+    expect(cursor.getSelectedLineCount()).toBe(1);
   });
 
-  test("move operations only work in visual mode", () => {
-    const vm = createVisualMode(sampleLines, () => {});
-
-    // In normal mode, moves should not update visualEnd
-    vm.moveDown(2);
-    vm.moveUp(1);
-
-    // visualEnd should still be 0 (initial value)
-    expect(vm.visualEnd).toBe(0);
-  });
-
-  test("visualEnd setter calls update callback", () => {
+  test("moveCursor calls update callback", () => {
     let updateCount = 0;
-    const vm = createVisualMode(sampleLines, () => { updateCount++; });
+    const cursor = createCursorManager(sampleLines.length, () => { updateCount++; });
 
-    vm.enter(0);
-    updateCount = 0; // Reset after enter
+    cursor.moveCursor(1);
+    cursor.moveCursor(1);
 
-    vm.visualEnd = 3;
-
-    expect(updateCount).toBe(1);
+    expect(updateCount).toBe(2);
   });
 });
 
-describe("createVisualMode factory", () => {
-  test("returns VisualMode instance", () => {
-    const vm = createVisualMode(["a", "b", "c"], () => {});
-    expect(vm).toBeInstanceOf(VisualMode);
+describe("createCursorManager factory", () => {
+  test("returns CursorManager instance", () => {
+    const cursor = createCursorManager(5, () => {});
+    expect(cursor).toBeInstanceOf(CursorManager);
   });
 
-  test("handles empty content", () => {
-    const vm = createVisualMode([], () => {});
-    expect(vm.mode).toBe("normal");
+  test("handles zero lines", () => {
+    const cursor = createCursorManager(0, () => {});
+    expect(cursor.mode).toBe("normal");
+    expect(cursor.cursorLine).toBe(0);
   });
 });
