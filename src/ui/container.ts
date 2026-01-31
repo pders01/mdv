@@ -5,11 +5,20 @@
 import {
   BoxRenderable,
   ScrollBoxRenderable,
+  MarkdownRenderable,
   RGBA,
   type CliRenderer,
 } from "@opentui/core";
 import type { Mode } from "../types.js";
-import type { CursorManager } from "../input/cursor.js";
+
+/**
+ * BlockState from OpenTUI's MarkdownRenderable internal state
+ */
+interface BlockState {
+  token: { type: string; raw: string };
+  tokenRaw: string;
+  renderable: { x: number; y: number; width: number; height: number };
+}
 
 /**
  * Cursor/selection state for rendering
@@ -22,6 +31,19 @@ export interface CursorRenderState {
 }
 
 /**
+ * Line position info (absolute Y, not scroll-adjusted)
+ */
+export interface LinePosition {
+  y: number;
+  height: number;
+}
+
+/**
+ * Function to get line position from actual rendered blocks
+ */
+export type GetLinePosition = (line: number) => LinePosition | null;
+
+/**
  * Container setup result
  */
 export interface ContainerSetup {
@@ -30,8 +52,10 @@ export interface ContainerSetup {
   setupHighlighting: (
     getCursorState: () => CursorRenderState,
     cursorColor: string,
-    selectionColor: string
-  ) => void;
+    selectionColor: string,
+    codeBgColor: string,
+    markdown: MarkdownRenderable
+  ) => GetLinePosition;
 }
 
 /**
@@ -58,52 +82,175 @@ export function createMainContainer(
   container.add(scrollBox);
 
   /**
-   * Setup cursor and selection highlighting
+   * Setup cursor and selection highlighting using actual rendered positions.
+   * Returns a getLinePosition function for use by scroll logic.
    */
   function setupHighlighting(
     getCursorState: () => CursorRenderState,
     cursorColor: string,
-    selectionColor: string
-  ) {
+    selectionColor: string,
+    codeBgColor: string,
+    markdown: MarkdownRenderable
+  ): GetLinePosition {
     const cursorRGBA = RGBA.fromHex(cursorColor);
     cursorRGBA.a = 0.2; // Subtle cursor highlight
 
     const selectionRGBA = RGBA.fromHex(selectionColor);
     selectionRGBA.a = 0.35; // More visible selection
 
+    const codeBgRGBA = RGBA.fromHex(codeBgColor);
+
     const content = scrollBox.content;
-    if (!content) return;
 
-    content.renderAfter = (buffer) => {
-      const state = getCursorState();
-      if (contentLines.length === 0 || scrollBox.scrollHeight <= 0) return;
+    // Helper to get block states from markdown
+    const getBlockStates = (): BlockState[] | null => {
+      const blockStates = (markdown as unknown as { _blockStates: BlockState[] })._blockStates;
+      return (blockStates && blockStates.length > 0) ? blockStates : null;
+    };
 
-      const lineHeight = scrollBox.scrollHeight / contentLines.length;
-      const viewportHeight = scrollBox.viewport?.height || renderer.height;
-      const scrollTop = scrollBox.scrollTop;
+    // Cached line mappings (built once, reused)
+    let cachedLineToBlock: Map<number, number> | null = null;
+    let cachedBlockStartLines: Map<number, number> | null = null;
+    let cachedBlockLineCounts: Map<number, number> | null = null;
 
-      // Helper to draw a line highlight
-      const drawLineHighlight = (line: number, color: typeof cursorRGBA) => {
-        const lineY = Math.floor(line * lineHeight) - scrollTop;
+    // Build and cache source line to block index mapping
+    // This is expensive, so we only do it once per session
+    const ensureLineMappings = (blockStates: BlockState[]): void => {
+      if (cachedLineToBlock !== null) return; // Already built
 
-        // Skip if outside visible area
-        if (lineY + lineHeight < 0 || lineY >= viewportHeight) return;
+      cachedLineToBlock = new Map<number, number>();
+      cachedBlockStartLines = new Map<number, number>();
+      cachedBlockLineCounts = new Map<number, number>();
 
-        const y = Math.max(0, Math.floor(lineY));
-        const height = Math.min(Math.ceil(lineHeight), viewportHeight - y);
-        buffer.fillRect(0, y, buffer.width, height, color);
-      };
+      // Join content to search within
+      const fullContent = contentLines.join("\n");
+      let searchStart = 0;
 
-      if (state.mode === "visual") {
-        // Draw selection highlight for all selected lines
-        for (let line = state.selectionStart; line <= state.selectionEnd; line++) {
-          drawLineHighlight(line, selectionRGBA);
+      for (let blockIdx = 0; blockIdx < blockStates.length; blockIdx++) {
+        const state = blockStates[blockIdx];
+        const tokenRaw = state.tokenRaw;
+
+        // Find where this token starts in the full content
+        const tokenStart = fullContent.indexOf(tokenRaw, searchStart);
+        if (tokenStart === -1) continue;
+
+        // Count newlines before tokenStart to get the starting line
+        let startLine = 0;
+        for (let i = 0; i < tokenStart; i++) {
+          if (fullContent[i] === "\n") startLine++;
         }
-      } else {
-        // Draw cursor line highlight in normal mode
-        drawLineHighlight(state.cursorLine, cursorRGBA);
+
+        // Count newlines within token to get number of lines covered
+        const tokenNewlines = (tokenRaw.match(/\n/g) || []).length;
+        const linesInToken = tokenNewlines > 0 ? tokenNewlines : 1;
+        const endLine = startLine + linesInToken - 1;
+
+        // Store block start line and line count
+        cachedBlockStartLines.set(blockIdx, startLine);
+        cachedBlockLineCounts.set(blockIdx, linesInToken);
+
+        // Map all lines in this range to this block
+        for (let line = startLine; line <= endLine && line < contentLines.length; line++) {
+          cachedLineToBlock.set(line, blockIdx);
+        }
+
+        // Move search position past this token
+        searchStart = tokenStart + tokenRaw.length;
       }
     };
+
+    /**
+     * Get absolute Y position for a source line (shared by highlighting and scrolling)
+     */
+    const getLinePosition: GetLinePosition = (line: number): LinePosition | null => {
+      const blockStates = getBlockStates();
+      if (!blockStates) return null;
+
+      // Build mappings once (cached)
+      ensureLineMappings(blockStates);
+      if (!cachedLineToBlock) return null;
+
+      const blockIdx = cachedLineToBlock.get(line);
+      if (blockIdx === undefined) return null;
+
+      const blockState = blockStates[blockIdx];
+      if (!blockState) return null;
+
+      // Read fresh renderable position (this can change during scroll/resize)
+      const r = blockState.renderable;
+      const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
+      const linesInBlock = cachedBlockLineCounts?.get(blockIdx) ?? 1;
+      const lineWithinBlock = line - blockStartLine;
+
+      const lineHeight = r.height / linesInBlock;
+      const lineY = r.y + (lineWithinBlock * lineHeight);
+
+      return { y: lineY, height: lineHeight };
+    };
+
+    // Setup render hooks if content exists
+    if (content) {
+      // Draw code block backgrounds BEFORE content (so text appears on top)
+      content.renderBefore = (buffer) => {
+        if (contentLines.length === 0) return;
+
+        const blockStates = getBlockStates();
+        if (!blockStates) return;
+
+        for (const blockState of blockStates) {
+          if (blockState.token.type === "code") {
+            const r = blockState.renderable;
+            let drawY = r.y;
+            let drawHeight = r.height;
+
+            // Clip to viewport top (prevent drift when block is partially above)
+            if (drawY < 0) {
+              drawHeight += drawY; // Reduce height by amount above viewport
+              drawY = 0;
+            }
+
+            // Only draw if there's visible height remaining
+            if (drawHeight > 0) {
+              buffer.fillRect(0, drawY, buffer.width, drawHeight, codeBgRGBA);
+            }
+          }
+        }
+      };
+
+      // Draw cursor/selection highlights AFTER content (as overlays)
+      content.renderAfter = (buffer) => {
+        const state = getCursorState();
+        if (contentLines.length === 0) return;
+
+        const drawLineHighlight = (line: number, color: typeof cursorRGBA) => {
+          const pos = getLinePosition(line);
+          if (!pos) return;
+
+          let y = Math.floor(pos.y);
+          let height = Math.ceil(pos.height);
+
+          // Clip to viewport top (prevent drift when highlight is partially above)
+          if (y < 0) {
+            height += y;
+            y = 0;
+          }
+
+          if (height > 0) {
+            buffer.fillRect(0, y, buffer.width, height, color);
+          }
+        };
+
+        if (state.mode === "visual") {
+          for (let line = state.selectionStart; line <= state.selectionEnd; line++) {
+            drawLineHighlight(line, selectionRGBA);
+          }
+        } else {
+          drawLineHighlight(state.cursorLine, cursorRGBA);
+        }
+      };
+    }
+
+    return getLinePosition;
   }
 
   return { container, scrollBox, setupHighlighting };

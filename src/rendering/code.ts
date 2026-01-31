@@ -1,5 +1,8 @@
 /**
  * Code block rendering with Shiki syntax highlighting
+ *
+ * Note: Code block backgrounds are drawn at the container level (container.ts)
+ * using _blockStates for accurate scroll-aware positioning.
  */
 
 import {
@@ -38,22 +41,24 @@ export function renderCodeBlock(
     ? resolveLanguage(token.lang)
     : "";
 
+  // Create chunks with syntax highlighting
   const chunks: TextChunk[] = lang
     ? shikiToChunks(highlighterInstance, token.text, lang)
     : [{ __isChunk: true, text: token.text, fg: RGBA.fromHex(colors.fg) }];
 
   const styledText = new StyledText(chunks as any);
+
   const codeText = new TextRenderable(renderer, {
     content: styledText,
-    bg: colors.codeBg,
   });
 
+  // Wrapper provides padding/margins; background is drawn by container.ts
   const wrapper = new BoxRenderable(renderer, {
-    backgroundColor: colors.codeBg,
     padding: 1,
     marginTop: 1,
     marginBottom: 1,
   });
+
   wrapper.add(codeText);
 
   return wrapper;

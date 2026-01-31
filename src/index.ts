@@ -154,18 +154,6 @@ const { container, scrollBox, setupHighlighting } = createMainContainer(
   contentLines
 );
 
-// Setup cursor and selection highlighting
-setupHighlighting(
-  () => ({
-    mode: cursor.mode,
-    cursorLine: cursor.cursorLine,
-    selectionStart: cursor.selectionStart,
-    selectionEnd: cursor.selectionEnd,
-  }),
-  themeColors.cyan,    // Cursor color (subtle)
-  themeColors.yellow   // Selection color
-);
-
 // Create render node callback
 const renderNode = createRenderNode(renderer, themeColors, highlighterInstance);
 
@@ -177,6 +165,21 @@ const markdown = new MarkdownRenderable(renderer, {
   renderNode,
 });
 scrollBox.add(markdown);
+
+// Setup cursor and selection highlighting (AFTER markdown is added to scrollBox)
+// Pass markdown instance to access actual rendered positions via _blockStates
+setupHighlighting(
+  () => ({
+    mode: cursor.mode,
+    cursorLine: cursor.cursorLine,
+    selectionStart: cursor.selectionStart,
+    selectionEnd: cursor.selectionEnd,
+  }),
+  themeColors.cyan,    // Cursor color (subtle)
+  themeColors.yellow,  // Selection color
+  themeColors.codeBg,  // Code block background
+  markdown             // For actual rendered positions
+);
 
 // Create status bar
 const fileName = isStdin ? "stdin" : basename(args.filePath!);

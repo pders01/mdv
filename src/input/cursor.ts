@@ -24,6 +24,8 @@ export class CursorManager {
   private _mode: Mode = "normal";
   private _cursorLine = 0;
   private _anchorLine = 0;
+  private _selectionStart = 0;
+  private _selectionEnd = 0;
   private totalLines: number;
   private onUpdate: () => void;
 
@@ -45,17 +47,25 @@ export class CursorManager {
   }
 
   /**
-   * Get selection start (smaller of anchor/cursor)
+   * Get selection start (smaller of anchor/cursor) - cached
    */
   get selectionStart(): number {
-    return Math.min(this._anchorLine, this._cursorLine);
+    return this._selectionStart;
   }
 
   /**
-   * Get selection end (larger of anchor/cursor)
+   * Get selection end (larger of anchor/cursor) - cached
    */
   get selectionEnd(): number {
-    return Math.max(this._anchorLine, this._cursorLine);
+    return this._selectionEnd;
+  }
+
+  /**
+   * Update cached selection bounds
+   */
+  private updateSelectionBounds(): void {
+    this._selectionStart = Math.min(this._anchorLine, this._cursorLine);
+    this._selectionEnd = Math.max(this._anchorLine, this._cursorLine);
   }
 
   /**
@@ -63,6 +73,7 @@ export class CursorManager {
    */
   moveCursor(delta: number): void {
     this._cursorLine = Math.max(0, Math.min(this._cursorLine + delta, this.totalLines - 1));
+    this.updateSelectionBounds();
     this.onUpdate();
   }
 
@@ -71,6 +82,7 @@ export class CursorManager {
    */
   setCursor(line: number): void {
     this._cursorLine = Math.max(0, Math.min(line, this.totalLines - 1));
+    this.updateSelectionBounds();
     this.onUpdate();
   }
 
@@ -79,6 +91,7 @@ export class CursorManager {
    */
   moveToFirst(): void {
     this._cursorLine = 0;
+    this.updateSelectionBounds();
     this.onUpdate();
   }
 
@@ -87,6 +100,7 @@ export class CursorManager {
    */
   moveToLast(): void {
     this._cursorLine = this.totalLines - 1;
+    this.updateSelectionBounds();
     this.onUpdate();
   }
 
@@ -96,6 +110,7 @@ export class CursorManager {
   enterVisual(): void {
     this._mode = "visual";
     this._anchorLine = this._cursorLine;
+    this.updateSelectionBounds();
     this.onUpdate();
   }
 
@@ -104,6 +119,7 @@ export class CursorManager {
    */
   exitVisual(): void {
     this._mode = "normal";
+    this.updateSelectionBounds();
     this.onUpdate();
   }
 
@@ -137,6 +153,7 @@ export class CursorManager {
     const centerLine = Math.floor(centerY / lineHeight);
 
     this._cursorLine = Math.max(0, Math.min(centerLine, this.totalLines - 1));
+    this.updateSelectionBounds();
   }
 }
 
@@ -150,8 +167,38 @@ export function createCursorManager(
   return new CursorManager(totalLines, onUpdate);
 }
 
+// Cache for scroll calculations to avoid redundant division/multiplication
+let scrollCache = {
+  scrollHeight: -1,
+  totalLines: -1,
+  lineHeight: 0,
+  viewportHeight: 0,
+};
+
+/**
+ * Update scroll cache if dimensions changed
+ */
+function updateScrollCache(scrollBox: ScrollBoxRenderable, totalLines: number): void {
+  const currentScrollHeight = scrollBox.scrollHeight;
+  const currentViewportHeight = scrollBox.viewport?.height || scrollBox.scrollHeight;
+
+  if (currentScrollHeight !== scrollCache.scrollHeight ||
+      totalLines !== scrollCache.totalLines ||
+      currentViewportHeight !== scrollCache.viewportHeight) {
+    scrollCache = {
+      scrollHeight: currentScrollHeight,
+      totalLines,
+      lineHeight: currentScrollHeight / totalLines,
+      viewportHeight: currentViewportHeight,
+    };
+  }
+}
+
 /**
  * Scroll viewport to keep cursor visible
+ *
+ * Uses uniform line height estimation for scrolling (predictable, no render dependency).
+ * Actual block positions are only used for rendering highlights.
  */
 export function scrollToCursor(
   scrollBox: ScrollBoxRenderable,
@@ -161,8 +208,9 @@ export function scrollToCursor(
 ): void {
   if (totalLines === 0 || scrollBox.scrollHeight <= 0) return;
 
-  const lineHeight = scrollBox.scrollHeight / totalLines;
-  const viewportHeight = scrollBox.viewport?.height || scrollBox.scrollHeight;
+  updateScrollCache(scrollBox, totalLines);
+
+  const { lineHeight, viewportHeight } = scrollCache;
   const cursorY = cursorLine * lineHeight;
 
   if (center) {

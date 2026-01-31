@@ -1,0 +1,73 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+mdv is a terminal markdown viewer with vim-style keybindings. It renders markdown files in the terminal with syntax highlighting, built on OpenTUI (terminal UI framework) and Shiki (syntax highlighting).
+
+## Commands
+
+```bash
+# Development
+bun dev                          # Run with hot reload
+bun run src/index.ts <file.md>   # Run directly
+
+# Build
+bun run build                    # Compile standalone binary
+bun run install-global           # Build and install to /usr/local/bin
+
+# Testing
+bun test                         # Run all tests
+bun test src/__tests__/rendering/code.test.ts  # Run single test file
+
+# Linting
+bun run lint                     # Run oxlint
+bun run lint:fix                 # Run oxlint with auto-fix
+```
+
+## Architecture
+
+### Entry Point & CLI
+- `src/index.ts` - Main entry, orchestrates all modules and sets up the TUI
+- `src/cli.ts` - CLI argument parsing using Node's `util.parseArgs`
+
+### Rendering Pipeline
+Custom markdown token renderers in `src/rendering/`:
+- `index.ts` - Main dispatcher that routes tokens to specialized renderers
+- `code.ts` - Syntax-highlighted code blocks via Shiki
+- `paragraph.ts` - Paragraphs with inline HTML/escapes/links
+- `list.ts` - Ordered/unordered lists with nesting
+- `table.ts` - Table rendering
+- `blockquote.ts` - Blockquote rendering
+- `html.ts` - HTML blocks and inline HTML handling
+- `text.ts` - Text utilities (HTML entities, subscript/superscript)
+
+### Syntax Highlighting
+- `src/highlighting/shiki.ts` - Shiki highlighter setup, language aliases, token-to-chunk conversion
+- Converts Shiki tokens to OpenTUI `TextChunk` format with colors and styles
+
+### Theme System
+- `src/theme/colors.ts` - Extract theme colors from Shiki theme
+- `src/theme/syntax.ts` - Create OpenTUI syntax styles from theme colors
+- `ThemeColors` type defines the color palette (fg, bg, link, semantic colors)
+
+### Input Handling
+- `src/input/keyboard.ts` - Vim keybindings (j/k, gg/G, Ctrl-d/u, yy, V)
+- `src/input/visual.ts` - Visual line mode state management
+- `src/input/clipboard.ts` - System clipboard integration
+
+### UI Components
+- `src/ui/container.ts` - Main scrollable container
+- `src/ui/statusbar.ts` - Status bar with mode indicator and notifications
+
+### Type Definitions
+- `src/types.ts` - Shared types: `ThemeColors`, token types, `TextChunk`, `Mode`
+
+## Key Dependencies
+- `@opentui/core` - Terminal UI framework (BoxRenderable, MarkdownRenderable, ScrollBox)
+- `shiki` - Syntax highlighting engine
+- `marked` - Markdown parsing (tokens are processed by custom renderers)
+
+## Testing
+Tests use `bun:test` and are in `src/__tests__/`. Most tests focus on token parsing via `marked.lexer()` and utility functions rather than full rendering.

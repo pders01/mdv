@@ -41,6 +41,7 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
   let lastKeyTime = 0;
 
   // Helper: move cursor and scroll to follow
+  // Uses uniform line height for scroll (decoupled from render state)
   const moveCursor = (delta: number, center: boolean = false) => {
     cursor.moveCursor(delta);
     scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, center);
