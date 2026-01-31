@@ -135,6 +135,7 @@ export class CursorManager {
    * Get selected content from content lines
    */
   getSelectedContent(contentLines: string[]): string {
+    if (contentLines.length === 0) return "";
     if (this._mode === "normal") {
       return contentLines[this._cursorLine] || "";
     }
