@@ -7,8 +7,6 @@ import {
   createHighlighterInstance,
   shikiToChunks,
   shikiLangs,
-  langAliases,
-  resolveLanguage,
   type HighlighterInstance,
 } from "../highlighting/shiki.js";
 import type { ThemeColors } from "../types.js";

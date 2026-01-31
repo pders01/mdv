@@ -44,8 +44,8 @@ export function showHelp(): void {
   console.log("       cat file.md | mdv -");
   console.log("\nOptions:");
   console.log("  -t, --theme <name>  Set syntax highlighting theme (default: github-dark)");
-  console.log("  --list-themes       List available themes");
   console.log("  -h, --help          Show this help");
+  console.log("  --list-themes       List available themes");
 }
 
 /**

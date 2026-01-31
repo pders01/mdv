@@ -12,10 +12,13 @@
     "dev": "bun run --watch src/index.ts",
     "build": "bun build src/index.ts --compile --outfile mdv",
     "install-global": "bun run build && sudo mv mdv /usr/local/bin/",
-    "test": "bun test"
+    "test": "bun test",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "oxlint": "^1.42.0"
   },
   "peerDependencies": {
     "typescript": "^5"

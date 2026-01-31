@@ -16,7 +16,6 @@ export interface KeyboardHandlerOptions {
   content: string;
   contentLines: string[];
   showNotification: (message: string, durationMs?: number) => void;
-  updateStatusBar: () => void;
 }
 
 /**
@@ -30,7 +29,6 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
     content,
     contentLines,
     showNotification,
-    updateStatusBar,
   } = options;
 
   let lastKey = "";

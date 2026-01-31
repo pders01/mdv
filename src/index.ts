@@ -155,5 +155,4 @@ setupKeyboardHandler({
   content,
   contentLines,
   showNotification,
-  updateStatusBar: statusBarUpdate,
 });

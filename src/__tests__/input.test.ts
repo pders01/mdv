@@ -15,8 +15,7 @@ describe("VisualMode", () => {
   ];
 
   test("starts in normal mode", () => {
-    let updateCalled = false;
-    const vm = createVisualMode(sampleLines, () => { updateCalled = true; });
+    const vm = createVisualMode(sampleLines, () => {});
 
     expect(vm.mode).toBe("normal");
   });
