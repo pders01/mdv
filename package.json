@@ -1,6 +1,6 @@
 {
   "name": "mdv",
-  "version": "0.1.0",
+  "version": "0.0.2",
   "description": "A terminal markdown viewer with vim keybindings",
   "module": "src/index.ts",
   "type": "module",
