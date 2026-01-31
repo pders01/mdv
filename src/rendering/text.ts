@@ -55,16 +55,25 @@ export function toSuperscript(text: string): string {
 }
 
 /**
- * Decode common HTML entities to their character equivalents
+ * HTML entity to character mapping
+ */
+const HTML_ENTITIES: Record<string, string> = {
+  lt: "<",
+  gt: ">",
+  amp: "&",
+  quot: '"',
+  "#39": "'",
+  nbsp: " ",
+};
+
+/**
+ * Decode common HTML entities to their character equivalents (single-pass)
  */
 export function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ");
+  return text.replace(
+    /&(lt|gt|amp|quot|#39|nbsp);/g,
+    (_, entity) => HTML_ENTITIES[entity] || `&${entity};`
+  );
 }
 
 // =============================================================================
