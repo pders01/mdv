@@ -63,15 +63,25 @@ try {
 
 // After reading piped stdin, reopen /dev/tty for keyboard input
 if (isStdin) {
-  const ttyFd = openSync("/dev/tty", "r");
-  const ttyStream = new ReadStream(ttyFd);
+  if (process.platform === "win32") {
+    console.error("Warning: Piped input on Windows may not support keyboard interaction");
+  } else {
+    try {
+      const ttyFd = openSync("/dev/tty", "r");
+      const ttyStream = new ReadStream(ttyFd);
 
-  // Replace process.stdin with TTY stream so OpenTUI can receive keyboard events
-  Object.defineProperty(process, "stdin", {
-    value: ttyStream,
-    writable: true,
-    configurable: true,
-  });
+      // Replace process.stdin with TTY stream so OpenTUI can receive keyboard events
+      Object.defineProperty(process, "stdin", {
+        value: ttyStream,
+        writable: true,
+        configurable: true,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Warning: Could not reopen TTY for keyboard input: ${message}`);
+      console.error("Keyboard shortcuts may not work when reading from stdin");
+    }
+  }
 }
 
 const contentLines = content.split("\n");
