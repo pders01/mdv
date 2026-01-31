@@ -9,6 +9,7 @@ import {
   type CliRenderer,
 } from "@opentui/core";
 import type { ThemeColors, TableToken } from "../types.js";
+import { calculateColumnWidths, padCell, buildSeparatorLine, CELL_PADDING } from "./table-utils.js";
 
 /**
  * Render table with proper formatting
@@ -24,46 +25,22 @@ export function renderTable(
     flexDirection: "column",
   });
 
-  // Calculate column widths based on content
-  const colCount = token.header.length;
-  const colWidths: number[] = [];
+  // Convert token data to string arrays for shared utility
+  const headerCells = token.header.map(h => h.text);
+  const dataCells = token.rows.map(row => row.map(cell => cell.text));
+  const allRows = [headerCells, ...dataCells];
 
-  // Initialize with header widths
-  for (let i = 0; i < colCount; i++) {
-    colWidths[i] = token.header[i].text.length;
-  }
-
-  // Update with row widths
-  for (const row of token.rows) {
-    for (let i = 0; i < row.length && i < colCount; i++) {
-      colWidths[i] = Math.max(colWidths[i], row[i].text.length);
-    }
-  }
-
-  // Add padding
-  const cellPadding = 2;
-  const paddedWidths = colWidths.map(w => w + cellPadding);
-
-  // Helper to pad cell content
-  const padCell = (text: string, width: number, align: string | null = "left"): string => {
-    const padding = width - text.length;
-    if (padding <= 0) return text;
-    if (align === "center") {
-      const left = Math.floor(padding / 2);
-      const right = padding - left;
-      return " ".repeat(left) + text + " ".repeat(right);
-    } else if (align === "right") {
-      return " ".repeat(padding) + text;
-    }
-    return text + " ".repeat(padding);
-  };
+  // Calculate column widths and add padding
+  const colWidths = calculateColumnWidths(allRows);
+  const paddedWidths = colWidths.map(w => w + CELL_PADDING);
+  const colCount = colWidths.length;
 
   // Render header row
-  const headerRow = new BoxRenderable(renderer, {
+  const headerRowBox = new BoxRenderable(renderer, {
     flexDirection: "row",
   });
 
-  headerRow.add(new TextRenderable(renderer, {
+  headerRowBox.add(new TextRenderable(renderer, {
     content: "\u2502 ",
     fg: colors.gray,
   }));
@@ -72,46 +49,32 @@ export function renderTable(
     const align = token.align?.[i] || "left";
     const cellText = padCell(token.header[i].text, paddedWidths[i], align);
 
-    headerRow.add(new TextRenderable(renderer, {
+    headerRowBox.add(new TextRenderable(renderer, {
       content: cellText,
       fg: colors.cyan,
       attributes: TextAttributes.BOLD,
     }));
 
     if (i < colCount - 1) {
-      headerRow.add(new TextRenderable(renderer, {
+      headerRowBox.add(new TextRenderable(renderer, {
         content: "\u2502 ",
         fg: colors.gray,
       }));
     }
   }
 
-  headerRow.add(new TextRenderable(renderer, {
+  headerRowBox.add(new TextRenderable(renderer, {
     content: " \u2502",
     fg: colors.gray,
   }));
 
-  wrapper.add(headerRow);
+  wrapper.add(headerRowBox);
 
   // Render separator row
-  const separatorParts: string[] = [];
-  separatorParts.push("\u251C");
-  for (let i = 0; i < colCount; i++) {
-    separatorParts.push("\u2500".repeat(paddedWidths[i] + 1));
-    if (i < colCount - 1) {
-      separatorParts.push("\u253C");
-    }
-  }
-  separatorParts.push("\u2500\u2524");
-
-  const separatorRow = new BoxRenderable(renderer, {
-    flexDirection: "row",
-  });
-  separatorRow.add(new TextRenderable(renderer, {
-    content: separatorParts.join(""),
+  wrapper.add(new TextRenderable(renderer, {
+    content: buildSeparatorLine(paddedWidths),
     fg: colors.gray,
   }));
-  wrapper.add(separatorRow);
 
   // Render data rows
   for (const row of token.rows) {

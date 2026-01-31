@@ -10,6 +10,7 @@ import {
 } from "@opentui/core";
 import type { ThemeColors } from "../types.js";
 import { decodeHtmlEntities } from "./text.js";
+import { calculateColumnWidths, padCell, buildSeparatorLine, CELL_PADDING } from "./table-utils.js";
 
 // =============================================================================
 // HTML Parsing
@@ -97,47 +98,34 @@ export function renderHtmlTable(
     return wrapper;
   }
 
-  // Calculate column widths
-  const colCount = Math.max(...rows.map(r => r.length));
-  const colWidths: number[] = Array(colCount).fill(0);
-
-  for (const row of rows) {
-    for (let i = 0; i < row.length; i++) {
-      colWidths[i] = Math.max(colWidths[i], row[i].length);
-    }
-  }
-
-  const cellPadding = 2;
-  const paddedWidths = colWidths.map(w => w + cellPadding);
-
-  const padCell = (text: string, width: number): string => {
-    const padding = width - text.length;
-    return padding > 0 ? text + " ".repeat(padding) : text;
-  };
+  // Calculate column widths using shared utility
+  const colWidths = calculateColumnWidths(rows);
+  const paddedWidths = colWidths.map(w => w + CELL_PADDING);
+  const colCount = colWidths.length;
 
   // Render header row (first row)
-  if (rows.length > 0) {
-    const headerRow = new BoxRenderable(renderer, { flexDirection: "row" });
-    headerRow.add(new TextRenderable(renderer, { content: "\u2502 ", fg: colors.gray }));
+  const headerRow = new BoxRenderable(renderer, { flexDirection: "row" });
+  headerRow.add(new TextRenderable(renderer, { content: "\u2502 ", fg: colors.gray }));
 
-    for (let i = 0; i < colCount; i++) {
-      const cellText = padCell(rows[0][i] || "", paddedWidths[i]);
-      headerRow.add(new TextRenderable(renderer, {
-        content: cellText,
-        fg: colors.cyan,
-        attributes: TextAttributes.BOLD,
-      }));
-      if (i < colCount - 1) {
-        headerRow.add(new TextRenderable(renderer, { content: "\u2502 ", fg: colors.gray }));
-      }
+  for (let i = 0; i < colCount; i++) {
+    const cellText = padCell(rows[0][i] || "", paddedWidths[i]);
+    headerRow.add(new TextRenderable(renderer, {
+      content: cellText,
+      fg: colors.cyan,
+      attributes: TextAttributes.BOLD,
+    }));
+    if (i < colCount - 1) {
+      headerRow.add(new TextRenderable(renderer, { content: "\u2502 ", fg: colors.gray }));
     }
-    headerRow.add(new TextRenderable(renderer, { content: " \u2502", fg: colors.gray }));
-    wrapper.add(headerRow);
-
-    // Separator
-    const sep = "\u251C" + paddedWidths.map(w => "\u2500".repeat(w + 1)).join("\u253C") + "\u2500\u2524";
-    wrapper.add(new TextRenderable(renderer, { content: sep, fg: colors.gray }));
   }
+  headerRow.add(new TextRenderable(renderer, { content: " \u2502", fg: colors.gray }));
+  wrapper.add(headerRow);
+
+  // Separator using shared utility
+  wrapper.add(new TextRenderable(renderer, {
+    content: buildSeparatorLine(paddedWidths),
+    fg: colors.gray,
+  }));
 
   // Render data rows
   for (let r = 1; r < rows.length; r++) {
