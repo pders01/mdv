@@ -53,16 +53,28 @@ Custom markdown token renderers in `src/rendering/`:
 - `ThemeColors` type defines the color palette (fg, bg, link, semantic colors)
 
 ### Input Handling
-- `src/input/keyboard.ts` - Vim keybindings (j/k, gg/G, Ctrl-d/u, yy, V)
-- `src/input/visual.ts` - Visual line mode state management
-- `src/input/clipboard.ts` - System clipboard integration
+- `src/input/cursor.ts` - Cursor state management, scroll logic (uniform line height)
+- `src/input/keyboard.ts` - Vim keybindings (j/k, gg/G, Ctrl-d/u, yy, V) with error handling
+- `src/input/clipboard.ts` - System clipboard integration (pbcopy/xclip)
 
 ### UI Components
-- `src/ui/container.ts` - Main scrollable container
+- `src/ui/container.ts` - Main scrollable container, cursor/selection highlighting, code block backgrounds
 - `src/ui/statusbar.ts` - Status bar with mode indicator and notifications
 
 ### Type Definitions
 - `src/types.ts` - Shared types: `ThemeColors`, token types, `TextChunk`, `Mode`
+
+## Key Implementation Details
+
+### Highlighting System
+- Uses OpenTUI's `_blockStates` (private API) to get rendered block positions
+- Line mapping: searches for `tokenRaw` in content to find source line numbers
+- Fixed 1-row line height for cursor highlights (prevents multi-line issues in lists)
+- Viewport clipping prevents drift when blocks scroll above viewport
+
+### Scroll System
+- Decoupled from render state - uses `scrollHeight / totalLines` for uniform line height
+- Cursor follows vim-style navigation (j/k moves cursor, scroll follows)
 
 ## Key Dependencies
 - `@opentui/core` - Terminal UI framework (BoxRenderable, MarkdownRenderable, ScrollBox)
