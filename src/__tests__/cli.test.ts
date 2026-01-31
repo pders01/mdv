@@ -13,11 +13,6 @@ describe("parseCliArgs", () => {
     expect(args.listThemes).toBe(false);
   });
 
-  test("parses stdin marker", () => {
-    const args = parseCliArgs(["node", "mdv", "-"]);
-    expect(args.filePath).toBe("-");
-  });
-
   test("parses theme option short form", () => {
     const args = parseCliArgs(["node", "mdv", "-t", "nord", "file.md"]);
     expect(args.theme).toBe("nord");

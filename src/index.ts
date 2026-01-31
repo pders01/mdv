@@ -130,7 +130,7 @@ const markdown = new MarkdownRenderable(renderer, {
 scrollBox.add(markdown);
 
 // Create status bar
-const fileName = args.filePath === "-" ? "stdin" : basename(args.filePath);
+const fileName = basename(args.filePath);
 const { statusBar, showNotification, updateStatusBar } = createStatusBar(
   renderer,
   fileName,

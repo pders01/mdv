@@ -41,7 +41,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
  */
 export function showHelp(): void {
   console.log("Usage: mdv [options] <markdown-file>");
-  console.log("       cat file.md | mdv -");
   console.log("\nOptions:");
   console.log("  -t, --theme <name>  Set syntax highlighting theme (default: github-dark)");
   console.log("  -h, --help          Show this help");
@@ -62,18 +61,13 @@ export async function listThemes(): Promise<void> {
  */
 export function showUsageError(): void {
   console.error("Usage: mdv [options] <markdown-file>");
-  console.error("       cat file.md | mdv -");
   console.error("\nRun 'mdv --help' for more options");
 }
 
 /**
- * Read file content from path or stdin
+ * Read file content from path
  */
 export async function readContent(filePath: string): Promise<string> {
-  if (filePath === "-") {
-    return await Bun.stdin.text();
-  }
-
   const file = Bun.file(filePath);
   if (!(await file.exists())) {
     throw new Error(`File not found: ${filePath}`);
