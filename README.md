@@ -24,10 +24,6 @@ tar xzf mdv-darwin-x64.tar.gz && sudo mv mdv-darwin-x64 /usr/local/bin/mdv
 # Linux (x64)
 curl -LO https://github.com/pders01/mdv/releases/latest/download/mdv-linux-x64.tar.gz
 tar xzf mdv-linux-x64.tar.gz && sudo mv mdv-linux-x64 /usr/local/bin/mdv
-
-# Linux (ARM64)
-curl -LO https://github.com/pders01/mdv/releases/latest/download/mdv-linux-arm64.tar.gz
-tar xzf mdv-linux-arm64.tar.gz && sudo mv mdv-linux-arm64 /usr/local/bin/mdv
 ```
 
 ### From source
