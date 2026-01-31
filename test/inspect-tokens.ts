@@ -7,7 +7,7 @@ import { lexer } from "marked";
 import { Glob } from "bun";
 
 const fixturesDir = `${import.meta.dir}/fixtures`;
-const glob = new Glob("*.md");
+const glob = new Glob("**/*.md");
 const fixtures = Array.from(glob.scanSync(fixturesDir)).sort();
 
 for (const fixture of fixtures) {
