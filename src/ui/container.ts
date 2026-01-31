@@ -140,9 +140,11 @@ export function createMainContainer(
           if (fullContent[i] === "\n") startLine++;
         }
 
-        // Count newlines within token to get number of lines covered
+        // Count lines in token: N newlines = N+1 lines, unless trailing newline
         const tokenNewlines = (tokenRaw.match(/\n/g) || []).length;
-        const linesInToken = tokenNewlines > 0 ? tokenNewlines : 1;
+        const linesInToken = tokenRaw.endsWith('\n')
+          ? Math.max(1, tokenNewlines)  // Trailing newline: N newlines = N lines
+          : tokenNewlines + 1;           // No trailing: N newlines = N+1 lines
         const endLine = startLine + linesInToken - 1;
 
         // Store block start line and line count
@@ -179,11 +181,12 @@ export function createMainContainer(
       // Read fresh renderable position (this can change during scroll/resize)
       const r = blockState.renderable;
       const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
-      const linesInBlock = cachedBlockLineCounts?.get(blockIdx) ?? 1;
       const lineWithinBlock = line - blockStartLine;
 
-      const lineHeight = r.height / linesInBlock;
-      const lineY = r.y + (lineWithinBlock * lineHeight);
+      // Use fixed line height of 1 (terminal row) - rendered spacing varies but
+      // source lines map 1:1 to terminal rows for highlighting purposes
+      const lineHeight = 1;
+      const lineY = r.y + lineWithinBlock;
 
       return { y: lineY, height: lineHeight };
     };
