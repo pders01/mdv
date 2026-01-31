@@ -52,16 +52,23 @@ export function createMainContainer(
     onMouseDown: (event) => {
       // Start a potential drag selection
       isDragging = true;
-      const lineHeight = scrollBox.scrollHeight / Math.max(contentLines.length, 1);
+
+      // Guard against invalid scroll dimensions
+      if (scrollBox.scrollHeight <= 0 || contentLines.length === 0) return;
+
+      const lineHeight = scrollBox.scrollHeight / contentLines.length;
       const absoluteY = event.y + scrollBox.scrollTop - 1; // -1 for padding
-      dragStartLine = Math.max(0, Math.min(Math.floor(absoluteY / Math.max(lineHeight, 1)), contentLines.length - 1));
+      dragStartLine = Math.max(0, Math.min(Math.floor(absoluteY / lineHeight), contentLines.length - 1));
     },
     onMouseDrag: (event) => {
       if (!isDragging) return;
 
-      const lineHeight = scrollBox.scrollHeight / Math.max(contentLines.length, 1);
+      // Guard against invalid scroll dimensions
+      if (scrollBox.scrollHeight <= 0 || contentLines.length === 0) return;
+
+      const lineHeight = scrollBox.scrollHeight / contentLines.length;
       const absoluteY = event.y + scrollBox.scrollTop - 1;
-      const currentLine = Math.max(0, Math.min(Math.floor(absoluteY / Math.max(lineHeight, 1)), contentLines.length - 1));
+      const currentLine = Math.max(0, Math.min(Math.floor(absoluteY / lineHeight), contentLines.length - 1));
 
       // Notify about visual mode change
       if (onVisualModeChange) {
