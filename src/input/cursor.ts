@@ -179,6 +179,8 @@ let scrollCache = {
  * Update scroll cache if dimensions changed
  */
 function updateScrollCache(scrollBox: ScrollBoxRenderable, totalLines: number): void {
+  if (totalLines === 0) return; // Guard against division by zero
+
   const currentScrollHeight = scrollBox.scrollHeight;
   const currentViewportHeight = scrollBox.viewport?.height || scrollBox.scrollHeight;
 
