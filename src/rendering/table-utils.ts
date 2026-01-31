@@ -6,7 +6,15 @@
  * Calculate column widths from a 2D array of cell strings
  */
 export function calculateColumnWidths(rows: string[][]): number[] {
+  if (rows.length === 0) {
+    return [];
+  }
+
   const colCount = Math.max(...rows.map(r => r.length));
+  if (colCount <= 0) {
+    return [];
+  }
+
   const colWidths: number[] = Array(colCount).fill(0);
 
   for (const row of rows) {
