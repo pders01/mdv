@@ -4,7 +4,7 @@
 
 import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
-import type { ThemeColors } from "../types.js";
+import type { ThemeColors, RenderBlock } from "../types.js";
 
 /**
  * Token with optional text content (for recursive extraction)
@@ -34,6 +34,26 @@ export function extractBlockquoteText(token: ContentToken): string {
     })
     .join("\n")
     .trim();
+}
+
+/**
+ * Convert a blockquote token to a RenderBlock (pure function, no OpenTUI dependency)
+ */
+export function blockquoteToBlock(colors: ThemeColors, token: ContentToken): RenderBlock {
+  const textContent = extractBlockquoteText(token);
+
+  return {
+    type: "blockquote",
+    lines: [
+      [
+        { text: "\u2502 ", fg: colors.purple, bold: false, italic: false },
+        { text: textContent, fg: colors.gray, bold: false, italic: true },
+      ],
+    ],
+    indent: 0,
+    marginTop: 1,
+    marginBottom: 1,
+  };
 }
 
 /**

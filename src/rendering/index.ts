@@ -97,16 +97,22 @@ export function createRenderNode(
 }
 
 // Re-export individual renderers for testing
-export { renderCodeBlock } from "./code.js";
+export { renderCodeBlock, codeToBlock } from "./code.js";
 export {
   renderHorizontalRule,
   renderHtmlBlock,
   renderHtmlTable,
   renderHtmlList,
   renderHtmlHeading,
+  htmlTableToBlock,
+  htmlListToBlocks,
+  htmlHeadingToBlock,
+  htmlBlockToBlocks,
+  hrToBlock,
 } from "./html.js";
-export { renderBlockquote, extractBlockquoteText } from "./blockquote.js";
-export { renderList, renderInlineTokens } from "./list.js";
-export { renderTable } from "./table.js";
-export { renderParagraph } from "./paragraph.js";
+export { renderBlockquote, extractBlockquoteText, blockquoteToBlock } from "./blockquote.js";
+export { renderList, renderInlineTokens, listToBlocks, inlineTokensToSegments } from "./list.js";
+export { renderTable, tableToBlock } from "./table.js";
+export { renderParagraph, paragraphToSegments, paragraphToBlock } from "./paragraph.js";
 export { decodeHtmlEntities, toSubscript, toSuperscript } from "./text.js";
+export { renderMarkdownToBlocks } from "./segments.js";

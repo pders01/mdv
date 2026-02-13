@@ -8,6 +8,7 @@ import type {
   ParagraphToken,
   InlineHtmlState,
   StyledSegment,
+  RenderBlock,
   HtmlToken,
   TextToken,
   EscapeToken,
@@ -15,14 +16,10 @@ import type {
 import { decodeHtmlEntities, toSubscript, toSuperscript, convertInlineToken } from "./text.js";
 
 /**
- * Render paragraph with inline HTML support
+ * Extract styled segments from a paragraph token (pure function, no OpenTUI dependency)
  */
-export function renderParagraph(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  token: ParagraphToken,
-): BoxRenderable | null {
-  if (!token.tokens) return null;
+export function paragraphToSegments(colors: ThemeColors, token: ParagraphToken): StyledSegment[] {
+  if (!token.tokens) return [];
 
   const segments: StyledSegment[] = [];
   const state: InlineHtmlState = {
@@ -182,6 +179,34 @@ export function renderParagraph(
     }
   }
 
+  return segments;
+}
+
+/**
+ * Convert paragraph segments to a RenderBlock
+ */
+export function paragraphToBlock(colors: ThemeColors, token: ParagraphToken): RenderBlock | null {
+  const segments = paragraphToSegments(colors, token);
+  if (segments.length === 0) return null;
+
+  return {
+    type: "paragraph",
+    lines: [segments],
+    indent: 0,
+    marginTop: 0,
+    marginBottom: 1,
+  };
+}
+
+/**
+ * Render paragraph with inline HTML support
+ */
+export function renderParagraph(
+  renderer: CliRenderer,
+  colors: ThemeColors,
+  token: ParagraphToken,
+): BoxRenderable | null {
+  const segments = paragraphToSegments(colors, token);
   if (segments.length === 0) return null;
 
   const wrapper = new BoxRenderable(renderer, {

@@ -7,7 +7,7 @@
 
 import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
-import type { ThemeColors, TextChunk } from "../types.js";
+import type { ThemeColors, TextChunk, StyledSegment, RenderBlock } from "../types.js";
 import { shikiToChunks, resolveLanguage, type HighlighterInstance } from "../highlighting/shiki.js";
 
 /**
@@ -16,6 +16,51 @@ import { shikiToChunks, resolveLanguage, type HighlighterInstance } from "../hig
 interface CodeToken extends Token {
   text: string;
   lang?: string;
+}
+
+/**
+ * Convert a code token to a RenderBlock (pure function, no OpenTUI dependency)
+ * When highlighterInstance is provided, uses Shiki for syntax highlighting.
+ * Otherwise, produces plain text segments.
+ */
+export function codeToBlock(
+  colors: ThemeColors,
+  token: CodeToken,
+  highlighterInstance?: HighlighterInstance,
+): RenderBlock {
+  const lang = token.lang ? resolveLanguage(token.lang) : "";
+
+  let segments: StyledSegment[];
+
+  if (lang && highlighterInstance) {
+    const chunks = shikiToChunks(highlighterInstance, token.text, lang);
+    segments = chunks.map((chunk) => ({
+      text: chunk.text,
+      fg: chunk.fg ? `#${chunk.fg.r.toString(16).padStart(2, "0")}${chunk.fg.g.toString(16).padStart(2, "0")}${chunk.fg.b.toString(16).padStart(2, "0")}` : colors.fg,
+      bold: chunk.bold || false,
+      italic: chunk.italic || false,
+    }));
+  } else {
+    segments = [{ text: token.text, fg: colors.fg, bold: false, italic: false }];
+  }
+
+  // Split segments into lines at \n boundaries
+  const lines: StyledSegment[][] = [[]];
+  for (const seg of segments) {
+    if (seg.text === "\n") {
+      lines.push([]);
+    } else {
+      lines[lines.length - 1].push(seg);
+    }
+  }
+
+  return {
+    type: "code",
+    lines,
+    indent: 0,
+    marginTop: 1,
+    marginBottom: 1,
+  };
 }
 
 /**

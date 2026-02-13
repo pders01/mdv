@@ -172,6 +172,22 @@ export interface StyledSegment {
 }
 
 // =============================================================================
+// Render Block IR Types
+// =============================================================================
+
+/**
+ * Intermediate representation of a rendered block.
+ * Captures styled segments plus layout metadata without depending on OpenTUI.
+ */
+export interface RenderBlock {
+  type: "paragraph" | "code" | "list" | "table" | "blockquote" | "hr" | "heading" | "html";
+  lines: StyledSegment[][];
+  indent: number;
+  marginTop: number;
+  marginBottom: number;
+}
+
+// =============================================================================
 // Theme Types
 // =============================================================================
 

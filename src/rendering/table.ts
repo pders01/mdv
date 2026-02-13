@@ -3,8 +3,63 @@
  */
 
 import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
-import type { ThemeColors, TableToken } from "../types.js";
+import type { ThemeColors, TableToken, StyledSegment, RenderBlock } from "../types.js";
 import { calculateColumnWidths, padCell, buildSeparatorLine, CELL_PADDING } from "./table-utils.js";
+
+/**
+ * Convert a table token to a RenderBlock (pure function, no OpenTUI dependency)
+ */
+export function tableToBlock(colors: ThemeColors, token: TableToken): RenderBlock {
+  const headerCells = token.header.map((h) => h.text);
+  const dataCells = token.rows.map((row) => row.map((cell) => cell.text));
+  const allRows = [headerCells, ...dataCells];
+
+  const colWidths = calculateColumnWidths(allRows);
+  const paddedWidths = colWidths.map((w) => w + CELL_PADDING);
+  const colCount = colWidths.length;
+
+  const lines: StyledSegment[][] = [];
+
+  // Header row
+  const headerLine: StyledSegment[] = [{ text: "\u2502 ", fg: colors.gray, bold: false, italic: false }];
+  for (let i = 0; i < colCount; i++) {
+    const align = token.align?.[i] || "left";
+    const cellText = padCell(token.header[i].text, paddedWidths[i], align);
+    headerLine.push({ text: cellText, fg: colors.cyan, bold: true, italic: false });
+    if (i < colCount - 1) {
+      headerLine.push({ text: "\u2502 ", fg: colors.gray, bold: false, italic: false });
+    }
+  }
+  headerLine.push({ text: " \u2502", fg: colors.gray, bold: false, italic: false });
+  lines.push(headerLine);
+
+  // Separator row
+  lines.push([{ text: buildSeparatorLine(paddedWidths), fg: colors.gray, bold: false, italic: false }]);
+
+  // Data rows
+  for (const row of token.rows) {
+    const dataLine: StyledSegment[] = [{ text: "\u2502 ", fg: colors.gray, bold: false, italic: false }];
+    for (let i = 0; i < colCount; i++) {
+      const align = token.align?.[i] || "left";
+      const cellContent = i < row.length ? row[i].text : "";
+      const cellText = padCell(cellContent, paddedWidths[i], align);
+      dataLine.push({ text: cellText, fg: colors.fg, bold: false, italic: false });
+      if (i < colCount - 1) {
+        dataLine.push({ text: "\u2502 ", fg: colors.gray, bold: false, italic: false });
+      }
+    }
+    dataLine.push({ text: " \u2502", fg: colors.gray, bold: false, italic: false });
+    lines.push(dataLine);
+  }
+
+  return {
+    type: "table",
+    lines,
+    indent: 0,
+    marginTop: 1,
+    marginBottom: 1,
+  };
+}
 
 /**
  * Render table with proper formatting

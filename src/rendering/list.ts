@@ -4,8 +4,85 @@
 
 import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
-import type { ThemeColors, ListToken, ParagraphToken } from "../types.js";
+import type { ThemeColors, ListToken, ParagraphToken, StyledSegment, RenderBlock } from "../types.js";
 import { convertInlineToken } from "./text.js";
+
+/**
+ * Convert inline tokens to styled segments (pure function, no OpenTUI dependency)
+ */
+export function inlineTokensToSegments(colors: ThemeColors, tokens: Token[]): StyledSegment[] {
+  const segments: StyledSegment[] = [];
+
+  for (const token of tokens) {
+    const result = convertInlineToken(token, colors);
+    if (!result) continue;
+
+    segments.push(result.segment);
+    if (result.urlSegment) {
+      segments.push(result.urlSegment);
+    }
+  }
+
+  return segments;
+}
+
+/**
+ * Convert a list token to RenderBlocks (pure function, no OpenTUI dependency)
+ */
+export function listToBlocks(
+  colors: ThemeColors,
+  token: ListToken,
+  depth: number = 0,
+): RenderBlock[] {
+  const blocks: RenderBlock[] = [];
+
+  token.items.forEach((item, index) => {
+    let nestedList: ListToken | null = null;
+    let paragraphToken: Token | null = null;
+
+    if (item.tokens) {
+      for (const t of item.tokens) {
+        if (t.type === "paragraph" || t.type === "text") {
+          paragraphToken = t;
+        } else if (t.type === "list") {
+          nestedList = t as ListToken;
+        }
+      }
+    }
+
+    const indent = "  ".repeat(depth);
+    const bulletText = token.ordered ? `${index + 1}.` : "\u2022";
+    const bulletSegment: StyledSegment = {
+      text: indent + bulletText + " ",
+      fg: colors.cyan,
+      bold: false,
+      italic: false,
+    };
+
+    const paraTokens = (paragraphToken as ParagraphToken | null)?.tokens;
+    let contentSegments: StyledSegment[];
+    if (paraTokens) {
+      contentSegments = inlineTokensToSegments(colors, paraTokens);
+    } else {
+      const itemText = item.text?.split("\n")[0] || "";
+      contentSegments = [{ text: itemText, fg: colors.fg, bold: false, italic: false }];
+    }
+
+    blocks.push({
+      type: "list",
+      lines: [[bulletSegment, ...contentSegments]],
+      indent: depth,
+      marginTop: depth === 0 && index === 0 ? 1 : 0,
+      marginBottom: depth === 0 && index === token.items.length - 1 ? 1 : 0,
+    });
+
+    if (nestedList) {
+      blocks.push(...listToBlocks(colors, nestedList, depth + 1));
+    }
+  });
+
+  return blocks;
+}
 
 /**
  * Render inline tokens (for list items, etc.)
@@ -20,31 +97,19 @@ export function renderInlineTokens(
     flexWrap: "wrap",
   });
 
-  for (const token of tokens) {
-    const result = convertInlineToken(token, colors);
-    if (!result) continue;
-
-    const { segment, urlSegment } = result;
+  const segments = inlineTokensToSegments(colors, tokens);
+  for (const seg of segments) {
     let attrs = 0;
-    if (segment.bold) attrs |= TextAttributes.BOLD;
-    if (segment.italic) attrs |= TextAttributes.ITALIC;
+    if (seg.bold) attrs |= TextAttributes.BOLD;
+    if (seg.italic) attrs |= TextAttributes.ITALIC;
 
     row.add(
       new TextRenderable(renderer, {
-        content: segment.text,
-        fg: segment.fg,
+        content: seg.text,
+        fg: seg.fg,
         attributes: attrs || undefined,
       }),
     );
-
-    if (urlSegment) {
-      row.add(
-        new TextRenderable(renderer, {
-          content: urlSegment.text,
-          fg: urlSegment.fg,
-        }),
-      );
-    }
   }
 
   return row;
