@@ -17,10 +17,7 @@ import { renderParagraph } from "./paragraph.js";
 /**
  * RenderNode callback type (matches MarkdownRenderable's expected signature)
  */
-export type RenderNodeCallback = (
-  token: Token,
-  context: { depth: number }
-) => BoxRenderable | null;
+export type RenderNodeCallback = (token: Token, context: { depth: number }) => BoxRenderable | null;
 
 /**
  * Create a renderNode callback with all rendering capabilities
@@ -28,7 +25,7 @@ export type RenderNodeCallback = (
 export function createRenderNode(
   renderer: CliRenderer,
   colors: ThemeColors,
-  highlighterInstance: HighlighterInstance
+  highlighterInstance: HighlighterInstance,
 ): RenderNodeCallback {
   return (token: Token, _context: { depth: number }): BoxRenderable | null => {
     // Handle code blocks with shiki highlighting
@@ -37,7 +34,7 @@ export function createRenderNode(
         renderer,
         colors,
         highlighterInstance,
-        token as Token & { text: string; lang?: string }
+        token as Token & { text: string; lang?: string },
       );
     }
 
@@ -65,9 +62,9 @@ export function createRenderNode(
     if (token.type === "paragraph") {
       const para = token as ParagraphToken;
       // Check if paragraph contains inline HTML, escape tokens, or links
-      const hasInlineHtml = para.tokens?.some(t => t.type === "html" && !(t as HtmlToken).block);
-      const hasEscapes = para.tokens?.some(t => t.type === "escape");
-      const hasLinks = para.tokens?.some(t => t.type === "link");
+      const hasInlineHtml = para.tokens?.some((t) => t.type === "html" && !(t as HtmlToken).block);
+      const hasEscapes = para.tokens?.some((t) => t.type === "escape");
+      const hasLinks = para.tokens?.some((t) => t.type === "link");
       if (hasInlineHtml || hasEscapes || hasLinks) {
         const rendered = renderParagraph(renderer, colors, para);
         if (rendered) return rendered;
@@ -101,7 +98,13 @@ export function createRenderNode(
 
 // Re-export individual renderers for testing
 export { renderCodeBlock } from "./code.js";
-export { renderHorizontalRule, renderHtmlBlock, renderHtmlTable, renderHtmlList, renderHtmlHeading } from "./html.js";
+export {
+  renderHorizontalRule,
+  renderHtmlBlock,
+  renderHtmlTable,
+  renderHtmlList,
+  renderHtmlHeading,
+} from "./html.js";
 export { renderBlockquote, extractBlockquoteText } from "./blockquote.js";
 export { renderList, renderInlineTokens } from "./list.js";
 export { renderTable } from "./table.js";

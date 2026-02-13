@@ -14,27 +14,27 @@ Back to normal text.
 
 This paragraph precedes tab-indented code.
 
-	This code uses a tab character.
-	Multiple lines with tabs.
-	Should render as code.
+    This code uses a tab character.
+    Multiple lines with tabs.
+    Should render as code.
 
 ## Code After List
 
-* List item one
-* List item two
+- List item one
+- List item two
 
-    This is a code block after a list.
-    It needs a blank line before it.
+  This is a code block after a list.
+  It needs a blank line before it.
 
 ## Code in List Item
 
-* List item with code:
+- List item with code:
 
         function example() {
             return true;
         }
 
-* Another list item
+- Another list item
 
 ## Multiple Code Blocks
 

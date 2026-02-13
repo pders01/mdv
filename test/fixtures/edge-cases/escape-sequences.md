@@ -5,8 +5,7 @@
 These characters can be escaped:
 
 \\ backslash itself
-\` backtick
-\* asterisk
+\` backtick \* asterisk
 \_ underscore
 \{ curly brace open
 \} curly brace close
@@ -38,7 +37,7 @@ Escaping a \[link\](http://example.com) so it doesn't render.
 
 ## Mixed Escaped and Real
 
-Here is *real italic* and \*escaped asterisks\*.
+Here is _real italic_ and \*escaped asterisks\*.
 
 Here is **real bold** and \*\*escaped stars\*\*.
 

@@ -12,8 +12,6 @@
 
 ###### Heading 6
 
-Setext H1
-=========
+# Setext H1
 
-Setext H2
----------
+## Setext H2

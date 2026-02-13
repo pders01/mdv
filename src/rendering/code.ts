@@ -5,20 +5,10 @@
  * using _blockStates for accurate scroll-aware positioning.
  */
 
-import {
-  BoxRenderable,
-  TextRenderable,
-  StyledText,
-  RGBA,
-  type CliRenderer,
-} from "@opentui/core";
+import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
 import type { ThemeColors, TextChunk } from "../types.js";
-import {
-  shikiToChunks,
-  resolveLanguage,
-  type HighlighterInstance,
-} from "../highlighting/shiki.js";
+import { shikiToChunks, resolveLanguage, type HighlighterInstance } from "../highlighting/shiki.js";
 
 /**
  * Code token type
@@ -35,11 +25,9 @@ export function renderCodeBlock(
   renderer: CliRenderer,
   colors: ThemeColors,
   highlighterInstance: HighlighterInstance,
-  token: CodeToken
+  token: CodeToken,
 ): BoxRenderable {
-  const lang = token.lang
-    ? resolveLanguage(token.lang)
-    : "";
+  const lang = token.lang ? resolveLanguage(token.lang) : "";
 
   // Create chunks with syntax highlighting
   const chunks: TextChunk[] = lang

@@ -10,7 +10,7 @@ export function calculateColumnWidths(rows: string[][]): number[] {
     return [];
   }
 
-  const colCount = Math.max(...rows.map(r => r.length));
+  const colCount = Math.max(...rows.map((r) => r.length));
   if (colCount <= 0) {
     return [];
   }
@@ -29,11 +29,7 @@ export function calculateColumnWidths(rows: string[][]): number[] {
 /**
  * Pad cell content to specified width with alignment
  */
-export function padCell(
-  text: string,
-  width: number,
-  align: string | null = "left"
-): string {
+export function padCell(text: string, width: number, align: string | null = "left"): string {
   const padding = width - text.length;
   if (padding <= 0) return text;
 

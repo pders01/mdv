@@ -54,7 +54,9 @@ export function showHelp(): void {
 export async function listThemes(): Promise<void> {
   const { bundledThemes } = await import("shiki");
   console.log("Available themes:");
-  Object.keys(bundledThemes).sort().forEach(t => console.log(`  ${t}`));
+  Object.keys(bundledThemes)
+    .sort()
+    .forEach((t) => console.log(`  ${t}`));
 }
 
 /**

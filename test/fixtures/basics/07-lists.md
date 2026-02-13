@@ -2,9 +2,9 @@
 
 Unordered list:
 
-* Item 1
-* Item 2
-* Item 3
+- Item 1
+- Item 2
+- Item 3
 
 Alternative unordered:
 
@@ -20,8 +20,8 @@ Ordered list:
 
 Nested list:
 
-* Level 1
-  * Level 2
-    * Level 3
-  * Back to 2
-* Back to 1
+- Level 1
+  - Level 2
+    - Level 3
+  - Back to 2
+- Back to 1

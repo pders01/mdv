@@ -9,7 +9,7 @@ import type { ListToken } from "../../types.js";
 describe("list token parsing", () => {
   test("parses unordered list", () => {
     const tokens = lexer("* Item 1\n* Item 2\n* Item 3");
-    const list = tokens.find(t => t.type === "list") as ListToken;
+    const list = tokens.find((t) => t.type === "list") as ListToken;
 
     expect(list).toBeDefined();
     expect(list.ordered).toBe(false);
@@ -18,7 +18,7 @@ describe("list token parsing", () => {
 
   test("parses ordered list", () => {
     const tokens = lexer("1. First\n2. Second\n3. Third");
-    const list = tokens.find(t => t.type === "list") as ListToken;
+    const list = tokens.find((t) => t.type === "list") as ListToken;
 
     expect(list).toBeDefined();
     expect(list.ordered).toBe(true);
@@ -30,14 +30,14 @@ describe("list token parsing", () => {
     * Level 2
         * Level 3`;
     const tokens = lexer(markdown);
-    const list = tokens.find(t => t.type === "list") as ListToken;
+    const list = tokens.find((t) => t.type === "list") as ListToken;
 
     expect(list).toBeDefined();
     expect(list.items.length).toBe(1);
 
     // Check for nested list in first item
     const firstItem = list.items[0];
-    const nestedList = firstItem.tokens?.find(t => t.type === "list");
+    const nestedList = firstItem.tokens?.find((t) => t.type === "list");
     expect(nestedList).toBeDefined();
   });
 
@@ -46,7 +46,7 @@ describe("list token parsing", () => {
     * Unordered child
     * Another child`;
     const tokens = lexer(markdown);
-    const list = tokens.find(t => t.type === "list") as ListToken;
+    const list = tokens.find((t) => t.type === "list") as ListToken;
 
     expect(list).toBeDefined();
     expect(list.ordered).toBe(true);
@@ -57,7 +57,7 @@ describe("list token parsing", () => {
 * Item with *italic*
 * Item with \`code\``;
     const tokens = lexer(markdown);
-    const list = tokens.find(t => t.type === "list") as ListToken;
+    const list = tokens.find((t) => t.type === "list") as ListToken;
 
     expect(list).toBeDefined();
     expect(list.items.length).toBe(3);
@@ -72,7 +72,7 @@ describe("list token parsing", () => {
     const markdown = `* [Link text](http://example.com)
 * Another [link](http://test.com)`;
     const tokens = lexer(markdown);
-    const list = tokens.find(t => t.type === "list") as ListToken;
+    const list = tokens.find((t) => t.type === "list") as ListToken;
 
     expect(list).toBeDefined();
     expect(list.items.length).toBe(2);
@@ -91,7 +91,7 @@ describe("nested list fixture parsing", () => {
 
   test("parses all top-level items", () => {
     const tokens = lexer(nestedListFixture);
-    const list = tokens.find(t => t.type === "list") as ListToken;
+    const list = tokens.find((t) => t.type === "list") as ListToken;
 
     expect(list).toBeDefined();
     expect(list.items.length).toBe(2);
@@ -99,10 +99,10 @@ describe("nested list fixture parsing", () => {
 
   test("first item has nested list", () => {
     const tokens = lexer(nestedListFixture);
-    const list = tokens.find(t => t.type === "list") as ListToken;
+    const list = tokens.find((t) => t.type === "list") as ListToken;
     const firstItem = list.items[0];
 
-    const nestedList = firstItem.tokens?.find(t => t.type === "list") as ListToken;
+    const nestedList = firstItem.tokens?.find((t) => t.type === "list") as ListToken;
     expect(nestedList).toBeDefined();
     expect(nestedList.items.length).toBe(3);
   });

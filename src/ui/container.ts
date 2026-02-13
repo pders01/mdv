@@ -54,17 +54,14 @@ export interface ContainerSetup {
     cursorColor: string,
     selectionColor: string,
     codeBgColor: string,
-    markdown: MarkdownRenderable
+    markdown: MarkdownRenderable,
   ) => GetLinePosition;
 }
 
 /**
  * Create the main container and scroll box
  */
-export function createMainContainer(
-  renderer: CliRenderer,
-  contentLines: string[]
-): ContainerSetup {
+export function createMainContainer(renderer: CliRenderer, contentLines: string[]): ContainerSetup {
   const container = new BoxRenderable(renderer, {
     id: "main",
     flexDirection: "column",
@@ -90,7 +87,7 @@ export function createMainContainer(
     cursorColor: string,
     selectionColor: string,
     codeBgColor: string,
-    markdown: MarkdownRenderable
+    markdown: MarkdownRenderable,
   ): GetLinePosition {
     const cursorRGBA = RGBA.fromHex(cursorColor);
     cursorRGBA.a = 0.2; // Subtle cursor highlight
@@ -144,9 +141,9 @@ export function createMainContainer(
 
         // Count lines in token: N newlines = N+1 lines, unless trailing newline
         const tokenNewlines = (tokenRaw.match(/\n/g) || []).length;
-        const linesInToken = tokenRaw.endsWith('\n')
-          ? Math.max(1, tokenNewlines)  // Trailing newline: N newlines = N lines
-          : tokenNewlines + 1;           // No trailing: N newlines = N+1 lines
+        const linesInToken = tokenRaw.endsWith("\n")
+          ? Math.max(1, tokenNewlines) // Trailing newline: N newlines = N lines
+          : tokenNewlines + 1; // No trailing: N newlines = N+1 lines
         const endLine = startLine + linesInToken - 1;
 
         // Store block start line and line count

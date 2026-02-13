@@ -7,7 +7,9 @@ import { toSubscript, toSuperscript, decodeHtmlEntities } from "../../rendering/
 
 describe("toSubscript", () => {
   test("converts digits", () => {
-    expect(toSubscript("0123456789")).toBe("\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089");
+    expect(toSubscript("0123456789")).toBe(
+      "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089",
+    );
   });
 
   test("converts chemical formula H2O", () => {
@@ -29,7 +31,9 @@ describe("toSubscript", () => {
 
 describe("toSuperscript", () => {
   test("converts digits", () => {
-    expect(toSuperscript("0123456789")).toBe("\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079");
+    expect(toSuperscript("0123456789")).toBe(
+      "\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079",
+    );
   });
 
   test("converts E=mc2 exponent", () => {
@@ -63,8 +67,8 @@ describe("decodeHtmlEntities", () => {
     expect(decodeHtmlEntities("&amp;")).toBe("&");
   });
 
-  test("decodes &quot; to \"", () => {
-    expect(decodeHtmlEntities("&quot;")).toBe("\"");
+  test('decodes &quot; to "', () => {
+    expect(decodeHtmlEntities("&quot;")).toBe('"');
   });
 
   test("decodes &#39; to '", () => {
@@ -76,7 +80,7 @@ describe("decodeHtmlEntities", () => {
   });
 
   test("decodes multiple entities in one string", () => {
-    expect(decodeHtmlEntities("&lt;div&gt; &amp; &quot;text&quot;")).toBe("<div> & \"text\"");
+    expect(decodeHtmlEntities("&lt;div&gt; &amp; &quot;text&quot;")).toBe('<div> & "text"');
   });
 
   test("preserves normal text", () => {

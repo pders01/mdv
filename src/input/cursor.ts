@@ -161,10 +161,7 @@ export class CursorManager {
 /**
  * Create a cursor manager
  */
-export function createCursorManager(
-  totalLines: number,
-  onUpdate: () => void
-): CursorManager {
+export function createCursorManager(totalLines: number, onUpdate: () => void): CursorManager {
   return new CursorManager(totalLines, onUpdate);
 }
 
@@ -185,9 +182,11 @@ function updateScrollCache(scrollBox: ScrollBoxRenderable, totalLines: number): 
   const currentScrollHeight = scrollBox.scrollHeight;
   const currentViewportHeight = scrollBox.viewport?.height || scrollBox.scrollHeight;
 
-  if (currentScrollHeight !== scrollCache.scrollHeight ||
-      totalLines !== scrollCache.totalLines ||
-      currentViewportHeight !== scrollCache.viewportHeight) {
+  if (
+    currentScrollHeight !== scrollCache.scrollHeight ||
+    totalLines !== scrollCache.totalLines ||
+    currentViewportHeight !== scrollCache.viewportHeight
+  ) {
     scrollCache = {
       scrollHeight: currentScrollHeight,
       totalLines,
@@ -207,7 +206,7 @@ export function scrollToCursor(
   scrollBox: ScrollBoxRenderable,
   cursorLine: number,
   totalLines: number,
-  center: boolean = false
+  center: boolean = false,
 ): void {
   if (totalLines === 0 || scrollBox.scrollHeight <= 0) return;
 

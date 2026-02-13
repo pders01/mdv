@@ -28,14 +28,7 @@ export interface KeyboardHandlerOptions {
  * Setup keyboard event handler
  */
 export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
-  const {
-    renderer,
-    scrollBox,
-    cursor,
-    content,
-    contentLines,
-    showNotification,
-  } = options;
+  const { renderer, scrollBox, cursor, content, contentLines, showNotification } = options;
 
   let lastKey = "";
   let lastKeyTime = 0;

@@ -88,7 +88,7 @@ describe("HTML block token parsing", () => {
     </tr>
 </table>`;
     const tokens = lexer(html);
-    const htmlBlock = tokens.find(t => t.type === "html");
+    const htmlBlock = tokens.find((t) => t.type === "html");
     expect(htmlBlock).toBeDefined();
   });
 
@@ -98,14 +98,14 @@ describe("HTML block token parsing", () => {
     <li>Item 2</li>
 </ul>`;
     const tokens = lexer(html);
-    const htmlBlock = tokens.find(t => t.type === "html");
+    const htmlBlock = tokens.find((t) => t.type === "html");
     expect(htmlBlock).toBeDefined();
   });
 
   test("parses HTML heading as block", () => {
     const html = `<h1 id="title">Main Title</h1>`;
     const tokens = lexer(html);
-    const htmlBlock = tokens.find(t => t.type === "html");
+    const htmlBlock = tokens.find((t) => t.type === "html");
     expect(htmlBlock).toBeDefined();
   });
 });
@@ -114,7 +114,7 @@ describe("inline HTML in paragraphs", () => {
   test("parses paragraph with inline strong", () => {
     const markdown = "This has <strong>strong</strong> text inline.";
     const tokens = lexer(markdown);
-    const paragraph = tokens.find(t => t.type === "paragraph") as any;
+    const paragraph = tokens.find((t) => t.type === "paragraph") as any;
 
     expect(paragraph).toBeDefined();
     expect(paragraph.tokens).toBeDefined();
@@ -126,7 +126,7 @@ describe("inline HTML in paragraphs", () => {
   test("parses paragraph with inline link", () => {
     const markdown = 'Click <a href="http://example.com">this link</a> to visit.';
     const tokens = lexer(markdown);
-    const paragraph = tokens.find(t => t.type === "paragraph") as any;
+    const paragraph = tokens.find((t) => t.type === "paragraph") as any;
 
     expect(paragraph).toBeDefined();
     const hasHtml = paragraph.tokens.some((t: any) => t.type === "html");
@@ -136,7 +136,7 @@ describe("inline HTML in paragraphs", () => {
   test("parses paragraph with subscript", () => {
     const markdown = "Water is H<sub>2</sub>O.";
     const tokens = lexer(markdown);
-    const paragraph = tokens.find(t => t.type === "paragraph") as any;
+    const paragraph = tokens.find((t) => t.type === "paragraph") as any;
 
     expect(paragraph).toBeDefined();
     const hasHtml = paragraph.tokens.some((t: any) => t.type === "html");
@@ -146,7 +146,7 @@ describe("inline HTML in paragraphs", () => {
   test("parses paragraph with superscript", () => {
     const markdown = "E = mc<sup>2</sup>.";
     const tokens = lexer(markdown);
-    const paragraph = tokens.find(t => t.type === "paragraph") as any;
+    const paragraph = tokens.find((t) => t.type === "paragraph") as any;
 
     expect(paragraph).toBeDefined();
     const hasHtml = paragraph.tokens.some((t: any) => t.type === "html");

@@ -69,33 +69,33 @@ mdv --list-themes
 
 ### Navigation
 
-| Key | Action |
-|-----|--------|
-| `j` / `↓` | Scroll down one line |
-| `k` / `↑` | Scroll up one line |
-| `gg` | Go to top |
-| `G` | Go to bottom |
-| `Ctrl-d` | Scroll down half page |
-| `Ctrl-u` | Scroll up half page |
+| Key                             | Action                |
+| ------------------------------- | --------------------- |
+| `j` / `↓`                       | Scroll down one line  |
+| `k` / `↑`                       | Scroll up one line    |
+| `gg`                            | Go to top             |
+| `G`                             | Go to bottom          |
+| `Ctrl-d`                        | Scroll down half page |
+| `Ctrl-u`                        | Scroll up half page   |
 | `Ctrl-f` / `Space` / `PageDown` | Scroll down full page |
-| `Ctrl-b` / `PageUp` | Scroll up full page |
-| `Home` | Go to top |
-| `End` | Go to bottom |
+| `Ctrl-b` / `PageUp`             | Scroll up full page   |
+| `Home`                          | Go to top             |
+| `End`                           | Go to bottom          |
 
 ### Yank (Copy)
 
-| Key | Action |
-|-----|--------|
-| `yy` | Copy entire document to clipboard |
-| `V` | Enter visual line mode |
-| `y` (in visual mode) | Copy selection to clipboard |
-| `Esc` | Exit visual mode |
+| Key                  | Action                            |
+| -------------------- | --------------------------------- |
+| `yy`                 | Copy entire document to clipboard |
+| `V`                  | Enter visual line mode            |
+| `y` (in visual mode) | Copy selection to clipboard       |
+| `Esc`                | Exit visual mode                  |
 
 ### General
 
-| Key | Action |
-|-----|--------|
-| `q` / `Ctrl-c` | Quit |
+| Key            | Action |
+| -------------- | ------ |
+| `q` / `Ctrl-c` | Quit   |
 
 ## Features
 

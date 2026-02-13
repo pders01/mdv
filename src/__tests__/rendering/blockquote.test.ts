@@ -9,7 +9,7 @@ import { extractBlockquoteText } from "../../rendering/blockquote.js";
 describe("extractBlockquoteText", () => {
   test("extracts text from simple blockquote", () => {
     const tokens = lexer("> This is a simple blockquote.");
-    const blockquote = tokens.find(t => t.type === "blockquote");
+    const blockquote = tokens.find((t) => t.type === "blockquote");
     expect(blockquote).toBeDefined();
 
     const text = extractBlockquoteText(blockquote as any);
@@ -18,7 +18,7 @@ describe("extractBlockquoteText", () => {
 
   test("extracts text from multi-line blockquote", () => {
     const tokens = lexer("> Line 1\n> Line 2");
-    const blockquote = tokens.find(t => t.type === "blockquote");
+    const blockquote = tokens.find((t) => t.type === "blockquote");
     expect(blockquote).toBeDefined();
 
     const text = extractBlockquoteText(blockquote as any);
@@ -28,7 +28,7 @@ describe("extractBlockquoteText", () => {
 
   test("handles nested blockquotes", () => {
     const tokens = lexer("> Level 1\n> > Level 2");
-    const blockquote = tokens.find(t => t.type === "blockquote");
+    const blockquote = tokens.find((t) => t.type === "blockquote");
     expect(blockquote).toBeDefined();
 
     const text = extractBlockquoteText(blockquote as any);
@@ -37,7 +37,7 @@ describe("extractBlockquoteText", () => {
 
   test("extracts text with formatting", () => {
     const tokens = lexer("> Text with **bold** and *italic*");
-    const blockquote = tokens.find(t => t.type === "blockquote");
+    const blockquote = tokens.find((t) => t.type === "blockquote");
     expect(blockquote).toBeDefined();
 
     const text = extractBlockquoteText(blockquote as any);
@@ -58,13 +58,13 @@ describe("blockquote parsing with fixtures", () => {
 
   test("parses multiple blockquotes", () => {
     const tokens = lexer(blockquoteFixture);
-    const blockquotes = tokens.filter(t => t.type === "blockquote");
+    const blockquotes = tokens.filter((t) => t.type === "blockquote");
     expect(blockquotes.length).toBeGreaterThanOrEqual(2);
   });
 
   test("simple blockquote has correct structure", () => {
     const tokens = lexer("> Simple quote");
-    const blockquote = tokens.find(t => t.type === "blockquote") as any;
+    const blockquote = tokens.find((t) => t.type === "blockquote") as any;
     expect(blockquote).toBeDefined();
     expect(blockquote.tokens).toBeDefined();
   });

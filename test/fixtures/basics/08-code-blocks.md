@@ -10,7 +10,7 @@ Fenced code block:
 
 ```javascript
 function world() {
-    console.log("World");
+  console.log("World");
 }
 ```
 

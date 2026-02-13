@@ -6,13 +6,7 @@ import { describe, test, expect } from "bun:test";
 import { createCursorManager, CursorManager } from "../input/cursor.js";
 
 describe("CursorManager", () => {
-  const sampleLines = [
-    "Line 1",
-    "Line 2",
-    "Line 3",
-    "Line 4",
-    "Line 5",
-  ];
+  const sampleLines = ["Line 1", "Line 2", "Line 3", "Line 4", "Line 5"];
 
   test("starts in normal mode at line 0", () => {
     const cursor = createCursorManager(sampleLines.length, () => {});
@@ -23,7 +17,9 @@ describe("CursorManager", () => {
 
   test("enters visual mode with anchor at cursor", () => {
     let updateCount = 0;
-    const cursor = createCursorManager(sampleLines.length, () => { updateCount++; });
+    const cursor = createCursorManager(sampleLines.length, () => {
+      updateCount++;
+    });
 
     cursor.setCursor(2);
     cursor.enterVisual();
@@ -35,7 +31,9 @@ describe("CursorManager", () => {
 
   test("exits visual mode back to normal", () => {
     let updateCount = 0;
-    const cursor = createCursorManager(sampleLines.length, () => { updateCount++; });
+    const cursor = createCursorManager(sampleLines.length, () => {
+      updateCount++;
+    });
 
     cursor.enterVisual();
     cursor.exitVisual();
@@ -102,7 +100,7 @@ describe("CursorManager", () => {
     cursor.moveCursor(2); // cursor now at 3
 
     expect(cursor.selectionStart).toBe(1); // anchor
-    expect(cursor.selectionEnd).toBe(3);   // cursor
+    expect(cursor.selectionEnd).toBe(3); // cursor
   });
 
   test("selection works when cursor is before anchor", () => {
@@ -113,7 +111,7 @@ describe("CursorManager", () => {
     cursor.moveCursor(-2); // cursor now at 1
 
     expect(cursor.selectionStart).toBe(1); // cursor (smaller)
-    expect(cursor.selectionEnd).toBe(3);   // anchor (larger)
+    expect(cursor.selectionEnd).toBe(3); // anchor (larger)
   });
 
   test("getSelectedContent returns correct lines", () => {
@@ -156,7 +154,9 @@ describe("CursorManager", () => {
 
   test("moveCursor calls update callback", () => {
     let updateCount = 0;
-    const cursor = createCursorManager(sampleLines.length, () => { updateCount++; });
+    const cursor = createCursorManager(sampleLines.length, () => {
+      updateCount++;
+    });
 
     cursor.moveCursor(1);
     cursor.moveCursor(1);

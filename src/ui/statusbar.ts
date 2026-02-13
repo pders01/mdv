@@ -2,12 +2,7 @@
  * Status bar component with cursor position and notifications
  */
 
-import {
-  BoxRenderable,
-  TextRenderable,
-  TextAttributes,
-  type CliRenderer,
-} from "@opentui/core";
+import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
 import type { ThemeColors, Mode } from "../types.js";
 
 /**
@@ -21,7 +16,7 @@ export interface StatusBarSetup {
     mode: Mode,
     cursorLine: number,
     selectionStart: number,
-    selectionEnd: number
+    selectionEnd: number,
   ) => void;
 }
 
@@ -32,7 +27,7 @@ export function createStatusBar(
   renderer: CliRenderer,
   filename: string,
   colors: ThemeColors,
-  totalLines: number
+  totalLines: number,
 ): StatusBarSetup {
   const statusBar = new BoxRenderable(renderer, {
     id: "statusbar",
@@ -45,12 +40,14 @@ export function createStatusBar(
   });
 
   // Filename
-  statusBar.add(new TextRenderable(renderer, {
-    id: "filename",
-    content: filename,
-    fg: colors.link,
-    attributes: TextAttributes.BOLD,
-  }));
+  statusBar.add(
+    new TextRenderable(renderer, {
+      id: "filename",
+      content: filename,
+      fg: colors.link,
+      attributes: TextAttributes.BOLD,
+    }),
+  );
 
   // Position indicator
   const positionText = new TextRenderable(renderer, {
@@ -99,7 +96,7 @@ export function createStatusBar(
     mode: Mode,
     cursorLine: number,
     selectionStart: number,
-    selectionEnd: number
+    selectionEnd: number,
   ) {
     // Update position indicator
     const lineNum = cursorLine + 1; // 1-indexed display

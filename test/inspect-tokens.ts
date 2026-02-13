@@ -42,13 +42,11 @@ function printToken(token: any, indent: number) {
       break;
     case "html":
       console.log(
-        `${pad}[html] block=${token.block} pre=${token.pre} raw="${truncate(token.raw, 60)}"`
+        `${pad}[html] block=${token.block} pre=${token.pre} raw="${truncate(token.raw, 60)}"`,
       );
       break;
     case "code":
-      console.log(
-        `${pad}[code] lang="${token.lang || ""}" text="${truncate(token.text, 40)}"`
-      );
+      console.log(`${pad}[code] lang="${token.lang || ""}" text="${truncate(token.text, 40)}"`);
       break;
     case "blockquote":
       console.log(`${pad}[blockquote]`);
@@ -59,9 +57,7 @@ function printToken(token: any, indent: number) {
       }
       break;
     case "list":
-      console.log(
-        `${pad}[list] ordered=${token.ordered} items=${token.items?.length || 0}`
-      );
+      console.log(`${pad}[list] ordered=${token.ordered} items=${token.items?.length || 0}`);
       if (token.items) {
         for (const item of token.items) {
           console.log(`${pad}  [list_item] text="${truncate(item.text, 40)}"`);

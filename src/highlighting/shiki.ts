@@ -19,8 +19,22 @@ import type { TextChunk, ThemeColors } from "../types.js";
  * Supported languages for syntax highlighting
  */
 export const shikiLangs: BundledLanguage[] = [
-  "typescript", "javascript", "python", "json", "bash", "html", "css",
-  "yaml", "markdown", "rust", "go", "java", "c", "cpp", "ruby", "php",
+  "typescript",
+  "javascript",
+  "python",
+  "json",
+  "bash",
+  "html",
+  "css",
+  "yaml",
+  "markdown",
+  "rust",
+  "go",
+  "java",
+  "c",
+  "cpp",
+  "ruby",
+  "php",
 ];
 
 /**
@@ -55,7 +69,7 @@ export interface HighlighterInstance {
  */
 export async function createHighlighterInstance(
   theme: string,
-  colors: ThemeColors
+  colors: ThemeColors,
 ): Promise<HighlighterInstance> {
   const highlighter = await createHighlighter({
     themes: [theme as BundledTheme],
@@ -92,7 +106,7 @@ function getCachedColor(hex: string): ReturnType<typeof RGBA.fromHex> {
 export function shikiToChunks(
   instance: HighlighterInstance,
   code: string,
-  lang: string
+  lang: string,
 ): TextChunk[] {
   const { highlighter, theme, colors } = instance;
   const supportedLangs = highlighter.getLoadedLanguages();

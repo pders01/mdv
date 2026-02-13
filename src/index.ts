@@ -6,14 +6,19 @@
 import { basename } from "path";
 import { openSync } from "fs";
 import { ReadStream } from "tty";
-import {
-  createCliRenderer,
-  MarkdownRenderable,
-} from "@opentui/core";
+import { createCliRenderer, MarkdownRenderable } from "@opentui/core";
 import type { BundledTheme } from "shiki";
 
 // Local modules
-import { parseCliArgs, showHelp, listThemes, showUsageError, readContent, hasStdinContent, readStdinContent } from "./cli.js";
+import {
+  parseCliArgs,
+  showHelp,
+  listThemes,
+  showUsageError,
+  readContent,
+  hasStdinContent,
+  readStdinContent,
+} from "./cli.js";
 import { extractThemeColors, createSyntaxStyle } from "./theme/index.js";
 import { createHighlighterInstance } from "./highlighting/shiki.js";
 import { createRenderNode } from "./rendering/index.js";
@@ -149,10 +154,7 @@ const cursor = createCursorManager(contentLines.length, () => statusBarUpdate())
 // =============================================================================
 
 // Create container and scroll box
-const { container, scrollBox, setupHighlighting } = createMainContainer(
-  renderer,
-  contentLines
-);
+const { container, scrollBox, setupHighlighting } = createMainContainer(renderer, contentLines);
 
 // Create render node callback
 const renderNode = createRenderNode(renderer, themeColors, highlighterInstance);
@@ -175,10 +177,10 @@ setupHighlighting(
     selectionStart: cursor.selectionStart,
     selectionEnd: cursor.selectionEnd,
   }),
-  themeColors.cyan,    // Cursor color (subtle)
-  themeColors.yellow,  // Selection color
-  themeColors.codeBg,  // Code block background
-  markdown             // For actual rendered positions
+  themeColors.cyan, // Cursor color (subtle)
+  themeColors.yellow, // Selection color
+  themeColors.codeBg, // Code block background
+  markdown, // For actual rendered positions
 );
 
 // Create status bar
@@ -187,16 +189,12 @@ const { statusBar, showNotification, updateStatusBar } = createStatusBar(
   renderer,
   fileName,
   themeColors,
-  contentLines.length
+  contentLines.length,
 );
 
 // Connect cursor to status bar
-statusBarUpdate = () => updateStatusBar(
-  cursor.mode,
-  cursor.cursorLine,
-  cursor.selectionStart,
-  cursor.selectionEnd
-);
+statusBarUpdate = () =>
+  updateStatusBar(cursor.mode, cursor.cursorLine, cursor.selectionStart, cursor.selectionEnd);
 
 // Assemble UI
 container.add(statusBar);

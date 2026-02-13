@@ -46,7 +46,7 @@ The output was: <samp>Hello, World!</samp>
 
 ## Mixed Markdown and HTML
 
-This is *markdown italic* and <em>HTML italic</em> in one line.
+This is _markdown italic_ and <em>HTML italic</em> in one line.
 
 This is **markdown bold** and <strong>HTML bold</strong> together.
 

@@ -88,7 +88,7 @@ describe("shikiToChunks", () => {
     const code = "function test() {}";
     const chunks = shikiToChunks(instance, code, "javascript");
 
-    const allText = chunks.map(c => c.text).join("");
+    const allText = chunks.map((c) => c.text).join("");
     expect(allText).toContain("function");
     expect(allText).toContain("test");
   });
@@ -98,7 +98,7 @@ describe("shikiToChunks", () => {
     const chunks = shikiToChunks(instance, code, "javascript");
 
     // At least some chunks should have fg defined
-    const hasColors = chunks.some(c => c.fg !== undefined);
+    const hasColors = chunks.some((c) => c.fg !== undefined);
     expect(hasColors).toBe(true);
   });
 
@@ -114,7 +114,7 @@ describe("shikiToChunks", () => {
     const code = "line1\nline2\nline3";
     const chunks = shikiToChunks(instance, code, "javascript");
 
-    const allText = chunks.map(c => c.text).join("");
+    const allText = chunks.map((c) => c.text).join("");
     expect(allText).toContain("line1");
     expect(allText).toContain("line2");
     expect(allText).toContain("line3");
@@ -124,7 +124,7 @@ describe("shikiToChunks", () => {
     const code = "a\nb";
     const chunks = shikiToChunks(instance, code, "javascript");
 
-    const hasNewline = chunks.some(c => c.text === "\n");
+    const hasNewline = chunks.some((c) => c.text === "\n");
     expect(hasNewline).toBe(true);
   });
 
@@ -133,7 +133,7 @@ describe("shikiToChunks", () => {
     const chunks = shikiToChunks(instance, code, "python");
 
     expect(chunks.length).toBeGreaterThan(0);
-    const allText = chunks.map(c => c.text).join("");
+    const allText = chunks.map((c) => c.text).join("");
     expect(allText).toContain("def");
   });
 });

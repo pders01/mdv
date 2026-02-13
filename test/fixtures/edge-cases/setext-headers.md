@@ -1,43 +1,33 @@
-Main Title
-==========
+# Main Title
 
 This is content under the main H1 setext header.
 
-Section Header
---------------
+## Section Header
 
 This is content under the H2 setext header.
 
-Another H1
-==========
+# Another H1
 
 More content here.
 
-Another H2
-----------
+## Another H2
 
 And more content.
 
-Single Equals Still H1
-=
+# Single Equals Still H1
 
-Single Dash Still H2
--
+## Single Dash Still H2
 
-Many Equals
-==================================================
+# Many Equals
 
-Many Dashes
---------------------------------------------------
+## Many Dashes
 
-Mixed with ATX
-==============
+# Mixed with ATX
 
 ## ATX H2 After Setext
 
 ### ATX H3
 
-Back to Setext H2
------------------
+## Back to Setext H2
 
 Ending with text.

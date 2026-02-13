@@ -2,12 +2,7 @@
  * Blockquote rendering
  */
 
-import {
-  BoxRenderable,
-  TextRenderable,
-  TextAttributes,
-  type CliRenderer,
-} from "@opentui/core";
+import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
 import type { ThemeColors } from "../types.js";
 
@@ -27,15 +22,18 @@ export function extractBlockquoteText(token: ContentToken): string {
   if (token.text) return token.text;
   if (!token.tokens) return token.raw || "";
 
-  return token.tokens.map(t => {
-    if (t.type === "paragraph" || t.type === "text") {
-      return t.text || t.raw || "";
-    }
-    if (t.type === "blockquote") {
-      return "> " + extractBlockquoteText(t);
-    }
-    return extractBlockquoteText(t);
-  }).join("\n").trim();
+  return token.tokens
+    .map((t) => {
+      if (t.type === "paragraph" || t.type === "text") {
+        return t.text || t.raw || "";
+      }
+      if (t.type === "blockquote") {
+        return "> " + extractBlockquoteText(t);
+      }
+      return extractBlockquoteText(t);
+    })
+    .join("\n")
+    .trim();
 }
 
 /**
@@ -44,7 +42,7 @@ export function extractBlockquoteText(token: ContentToken): string {
 export function renderBlockquote(
   renderer: CliRenderer,
   colors: ThemeColors,
-  token: ContentToken
+  token: ContentToken,
 ): BoxRenderable {
   const wrapper = new BoxRenderable(renderer, {
     marginTop: 1,

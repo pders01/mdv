@@ -2,13 +2,16 @@
  * Paragraph rendering with inline HTML support
  */
 
-import {
-  BoxRenderable,
-  TextRenderable,
-  TextAttributes,
-  type CliRenderer,
-} from "@opentui/core";
-import type { ThemeColors, ParagraphToken, InlineHtmlState, StyledSegment, HtmlToken, TextToken, EscapeToken } from "../types.js";
+import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
+import type {
+  ThemeColors,
+  ParagraphToken,
+  InlineHtmlState,
+  StyledSegment,
+  HtmlToken,
+  TextToken,
+  EscapeToken,
+} from "../types.js";
 import { decodeHtmlEntities, toSubscript, toSuperscript, convertInlineToken } from "./text.js";
 
 /**
@@ -17,7 +20,7 @@ import { decodeHtmlEntities, toSubscript, toSuperscript, convertInlineToken } fr
 export function renderParagraph(
   renderer: CliRenderer,
   colors: ThemeColors,
-  token: ParagraphToken
+  token: ParagraphToken,
 ): BoxRenderable | null {
   if (!token.tokens) return null;
 
@@ -196,11 +199,13 @@ export function renderParagraph(
     if (seg.bold) attrs |= TextAttributes.BOLD;
     if (seg.italic) attrs |= TextAttributes.ITALIC;
 
-    textRow.add(new TextRenderable(renderer, {
-      content: seg.text,
-      fg: seg.fg,
-      attributes: attrs || undefined,
-    }));
+    textRow.add(
+      new TextRenderable(renderer, {
+        content: seg.text,
+        fg: seg.fg,
+        attributes: attrs || undefined,
+      }),
+    );
   }
 
   wrapper.add(textRow);

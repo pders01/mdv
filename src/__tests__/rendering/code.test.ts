@@ -10,7 +10,7 @@ describe("code block token parsing", () => {
   test("parses fenced code block", () => {
     const markdown = "```javascript\nconst x = 1;\n```";
     const tokens = lexer(markdown);
-    const code = tokens.find(t => t.type === "code") as any;
+    const code = tokens.find((t) => t.type === "code") as any;
 
     expect(code).toBeDefined();
     expect(code.lang).toBe("javascript");
@@ -20,7 +20,7 @@ describe("code block token parsing", () => {
   test("parses code block without language", () => {
     const markdown = "```\nplain code\n```";
     const tokens = lexer(markdown);
-    const code = tokens.find(t => t.type === "code") as any;
+    const code = tokens.find((t) => t.type === "code") as any;
 
     expect(code).toBeDefined();
     expect(code.lang).toBe("");
@@ -30,7 +30,7 @@ describe("code block token parsing", () => {
   test("parses multi-line code block", () => {
     const markdown = "```python\ndef hello():\n    print('hello')\n```";
     const tokens = lexer(markdown);
-    const code = tokens.find(t => t.type === "code") as any;
+    const code = tokens.find((t) => t.type === "code") as any;
 
     expect(code).toBeDefined();
     expect(code.lang).toBe("python");
@@ -41,7 +41,7 @@ describe("code block token parsing", () => {
   test("parses indented code block", () => {
     const markdown = "    const x = 1;\n    const y = 2;";
     const tokens = lexer(markdown);
-    const code = tokens.find(t => t.type === "code") as any;
+    const code = tokens.find((t) => t.type === "code") as any;
 
     expect(code).toBeDefined();
     expect(code.text).toContain("const x = 1");

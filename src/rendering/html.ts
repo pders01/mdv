@@ -2,12 +2,7 @@
  * HTML parsing and rendering utilities
  */
 
-import {
-  BoxRenderable,
-  TextRenderable,
-  TextAttributes,
-  type CliRenderer,
-} from "@opentui/core";
+import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
 import type { ThemeColors } from "../types.js";
 import { decodeHtmlEntities } from "./text.js";
 import { calculateColumnWidths, padCell, buildSeparatorLine, CELL_PADDING } from "./table-utils.js";
@@ -67,7 +62,7 @@ export function extractHtmlBlockContent(html: string): string {
 export function renderHtmlTable(
   renderer: CliRenderer,
   colors: ThemeColors,
-  html: string
+  html: string,
 ): BoxRenderable {
   const wrapper = new BoxRenderable(renderer, {
     marginTop: 1,
@@ -100,7 +95,7 @@ export function renderHtmlTable(
 
   // Calculate column widths using shared utility
   const colWidths = calculateColumnWidths(rows);
-  const paddedWidths = colWidths.map(w => w + CELL_PADDING);
+  const paddedWidths = colWidths.map((w) => w + CELL_PADDING);
   const colCount = colWidths.length;
 
   // Render header row (first row)
@@ -109,11 +104,13 @@ export function renderHtmlTable(
 
   for (let i = 0; i < colCount; i++) {
     const cellText = padCell(rows[0][i] || "", paddedWidths[i]);
-    headerRow.add(new TextRenderable(renderer, {
-      content: cellText,
-      fg: colors.cyan,
-      attributes: TextAttributes.BOLD,
-    }));
+    headerRow.add(
+      new TextRenderable(renderer, {
+        content: cellText,
+        fg: colors.cyan,
+        attributes: TextAttributes.BOLD,
+      }),
+    );
     if (i < colCount - 1) {
       headerRow.add(new TextRenderable(renderer, { content: "\u2502 ", fg: colors.gray }));
     }
@@ -122,10 +119,12 @@ export function renderHtmlTable(
   wrapper.add(headerRow);
 
   // Separator using shared utility
-  wrapper.add(new TextRenderable(renderer, {
-    content: buildSeparatorLine(paddedWidths),
-    fg: colors.gray,
-  }));
+  wrapper.add(
+    new TextRenderable(renderer, {
+      content: buildSeparatorLine(paddedWidths),
+      fg: colors.gray,
+    }),
+  );
 
   // Render data rows
   for (let r = 1; r < rows.length; r++) {
@@ -156,7 +155,7 @@ export function renderHtmlTable(
 export function renderHtmlList(
   renderer: CliRenderer,
   colors: ThemeColors,
-  html: string
+  html: string,
 ): BoxRenderable {
   const wrapper = new BoxRenderable(renderer, {
     marginTop: 1,
@@ -173,14 +172,18 @@ export function renderHtmlList(
     const marker = isOrdered ? `${index}.` : "\u2022";
 
     const itemRow = new BoxRenderable(renderer, { flexDirection: "row" });
-    itemRow.add(new TextRenderable(renderer, {
-      content: marker + " ",
-      fg: colors.cyan,
-    }));
-    itemRow.add(new TextRenderable(renderer, {
-      content: itemContent,
-      fg: colors.fg,
-    }));
+    itemRow.add(
+      new TextRenderable(renderer, {
+        content: marker + " ",
+        fg: colors.cyan,
+      }),
+    );
+    itemRow.add(
+      new TextRenderable(renderer, {
+        content: itemContent,
+        fg: colors.fg,
+      }),
+    );
 
     wrapper.add(itemRow);
     index++;
@@ -200,17 +203,17 @@ export function renderHtmlHeading(
   renderer: CliRenderer,
   colors: ThemeColors,
   html: string,
-  level: number
+  level: number,
 ): BoxRenderable | null {
   const content = extractHtmlBlockContent(html);
   if (!content) return null;
 
   const headingColors = [
-    colors.red,    // h1
+    colors.red, // h1
     colors.orange, // h2
     colors.yellow, // h3
-    colors.green,  // h4
-    colors.cyan,   // h5
+    colors.green, // h4
+    colors.cyan, // h5
     colors.purple, // h6
   ];
 
@@ -219,11 +222,13 @@ export function renderHtmlHeading(
     marginBottom: 1,
   });
 
-  wrapper.add(new TextRenderable(renderer, {
-    content: content,
-    fg: headingColors[level - 1] || colors.blue,
-    attributes: TextAttributes.BOLD,
-  }));
+  wrapper.add(
+    new TextRenderable(renderer, {
+      content: content,
+      fg: headingColors[level - 1] || colors.blue,
+      attributes: TextAttributes.BOLD,
+    }),
+  );
 
   return wrapper;
 }
@@ -238,7 +243,7 @@ export function renderHtmlHeading(
 export function renderHtmlBlock(
   renderer: CliRenderer,
   colors: ThemeColors,
-  html: string
+  html: string,
 ): BoxRenderable | null {
   // Check for specific HTML elements
   if (/<table/i.test(html)) {
@@ -259,10 +264,12 @@ export function renderHtmlBlock(
   const content = extractHtmlBlockContent(html);
   if (content) {
     const wrapper = new BoxRenderable(renderer, { marginBottom: 1 });
-    wrapper.add(new TextRenderable(renderer, {
-      content: content,
-      fg: colors.fg,
-    }));
+    wrapper.add(
+      new TextRenderable(renderer, {
+        content: content,
+        fg: colors.fg,
+      }),
+    );
     return wrapper;
   }
 
@@ -276,10 +283,7 @@ export function renderHtmlBlock(
 /**
  * Render horizontal rule
  */
-export function renderHorizontalRule(
-  renderer: CliRenderer,
-  colors: ThemeColors
-): BoxRenderable {
+export function renderHorizontalRule(renderer: CliRenderer, colors: ThemeColors): BoxRenderable {
   const width = Math.max(renderer.width - 4, 20);
   const line = "\u2500".repeat(width);
 
@@ -288,10 +292,12 @@ export function renderHorizontalRule(
     marginBottom: 1,
   });
 
-  wrapper.add(new TextRenderable(renderer, {
-    content: line,
-    fg: colors.gray,
-  }));
+  wrapper.add(
+    new TextRenderable(renderer, {
+      content: line,
+      fg: colors.gray,
+    }),
+  );
 
   return wrapper;
 }

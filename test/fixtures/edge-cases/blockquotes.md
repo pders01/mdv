@@ -8,8 +8,8 @@
 ## Lazy Blockquote
 
 > This blockquote starts with the marker
-but continues without markers on subsequent lines.
-Still part of the blockquote.
+> but continues without markers on subsequent lines.
+> Still part of the blockquote.
 
 ## Nested Blockquotes
 
@@ -25,7 +25,7 @@ Still part of the blockquote.
 
 > ## Heading in blockquote
 >
-> This is a paragraph with **bold** and *italic*.
+> This is a paragraph with **bold** and _italic_.
 >
 > - List item 1
 > - List item 2

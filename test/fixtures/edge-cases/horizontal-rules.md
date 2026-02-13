@@ -4,7 +4,7 @@
 
 Content above.
 
-***
+---
 
 Content below.
 
@@ -12,7 +12,7 @@ Content below.
 
 Above.
 
-* * *
+---
 
 Below.
 
@@ -20,7 +20,7 @@ Below.
 
 Above.
 
-*****
+---
 
 Below.
 
@@ -36,7 +36,7 @@ Below.
 
 Above.
 
-- - -
+---
 
 Below.
 
@@ -44,7 +44,7 @@ Below.
 
 Above.
 
----------------------------------------
+---
 
 Below.
 
@@ -52,7 +52,7 @@ Below.
 
 Above.
 
-___
+---
 
 Below.
 
@@ -60,7 +60,7 @@ Below.
 
 Above.
 
-_ _ _
+---
 
 Below.
 

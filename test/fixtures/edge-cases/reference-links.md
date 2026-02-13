@@ -30,8 +30,7 @@ Here's a link with [angle brackets][angle].
 
 Check out this [long link][long].
 
-[long]: http://example.com/very/long/path/to/resource
-    "Title on next line"
+[long]: http://example.com/very/long/path/to/resource "Title on next line"
 
 ## Implicit Link Names
 

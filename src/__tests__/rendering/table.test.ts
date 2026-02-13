@@ -14,7 +14,7 @@ describe("table token parsing", () => {
 | Bar  | 200   |`;
 
     const tokens = lexer(markdown);
-    const table = tokens.find(t => t.type === "table") as TableToken;
+    const table = tokens.find((t) => t.type === "table") as TableToken;
 
     expect(table).toBeDefined();
     expect(table.header.length).toBe(2);
@@ -27,7 +27,7 @@ describe("table token parsing", () => {
 | Data     | More     | Info     |`;
 
     const tokens = lexer(markdown);
-    const table = tokens.find(t => t.type === "table") as TableToken;
+    const table = tokens.find((t) => t.type === "table") as TableToken;
 
     expect(table).toBeDefined();
     expect(table.header[0].text).toBe("Column A");
@@ -42,7 +42,7 @@ describe("table token parsing", () => {
 | Jane | 30  |`;
 
     const tokens = lexer(markdown);
-    const table = tokens.find(t => t.type === "table") as TableToken;
+    const table = tokens.find((t) => t.type === "table") as TableToken;
 
     expect(table).toBeDefined();
     expect(table.rows[0][0].text).toBe("John");
@@ -57,7 +57,7 @@ describe("table token parsing", () => {
 | L    | C      | R     |`;
 
     const tokens = lexer(markdown);
-    const table = tokens.find(t => t.type === "table") as TableToken;
+    const table = tokens.find((t) => t.type === "table") as TableToken;
 
     expect(table).toBeDefined();
     expect(table.align).toBeDefined();
@@ -73,7 +73,7 @@ describe("table token parsing", () => {
 |      | More |`;
 
     const tokens = lexer(markdown);
-    const table = tokens.find(t => t.type === "table") as TableToken;
+    const table = tokens.find((t) => t.type === "table") as TableToken;
 
     expect(table).toBeDefined();
     expect(table.rows.length).toBe(2);
@@ -86,7 +86,7 @@ describe("table token parsing", () => {
 | *Italic* | WIP    |`;
 
     const tokens = lexer(markdown);
-    const table = tokens.find(t => t.type === "table") as TableToken;
+    const table = tokens.find((t) => t.type === "table") as TableToken;
 
     expect(table).toBeDefined();
     expect(table.rows.length).toBe(2);

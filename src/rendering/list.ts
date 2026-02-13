@@ -2,12 +2,7 @@
  * List rendering with nesting support
  */
 
-import {
-  BoxRenderable,
-  TextRenderable,
-  TextAttributes,
-  type CliRenderer,
-} from "@opentui/core";
+import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
 import type { ThemeColors, ListToken, ParagraphToken } from "../types.js";
 import { convertInlineToken } from "./text.js";
@@ -18,7 +13,7 @@ import { convertInlineToken } from "./text.js";
 export function renderInlineTokens(
   renderer: CliRenderer,
   colors: ThemeColors,
-  tokens: Token[]
+  tokens: Token[],
 ): BoxRenderable {
   const row = new BoxRenderable(renderer, {
     flexDirection: "row",
@@ -34,17 +29,21 @@ export function renderInlineTokens(
     if (segment.bold) attrs |= TextAttributes.BOLD;
     if (segment.italic) attrs |= TextAttributes.ITALIC;
 
-    row.add(new TextRenderable(renderer, {
-      content: segment.text,
-      fg: segment.fg,
-      attributes: attrs || undefined,
-    }));
+    row.add(
+      new TextRenderable(renderer, {
+        content: segment.text,
+        fg: segment.fg,
+        attributes: attrs || undefined,
+      }),
+    );
 
     if (urlSegment) {
-      row.add(new TextRenderable(renderer, {
-        content: urlSegment.text,
-        fg: urlSegment.fg,
-      }));
+      row.add(
+        new TextRenderable(renderer, {
+          content: urlSegment.text,
+          fg: urlSegment.fg,
+        }),
+      );
     }
   }
 
@@ -58,7 +57,7 @@ export function renderList(
   renderer: CliRenderer,
   colors: ThemeColors,
   token: ListToken,
-  depth: number = 0
+  depth: number = 0,
 ): BoxRenderable {
   const wrapper = new BoxRenderable(renderer, {
     flexDirection: "column",
@@ -94,10 +93,12 @@ export function renderList(
 
     const bulletText = token.ordered ? `${index + 1}.` : marker;
 
-    lineWrapper.add(new TextRenderable(renderer, {
-      content: indent + bulletText + " ",
-      fg: colors.cyan,
-    }));
+    lineWrapper.add(
+      new TextRenderable(renderer, {
+        content: indent + bulletText + " ",
+        fg: colors.cyan,
+      }),
+    );
 
     // Render inline content with proper token handling
     const paraTokens = (paragraphToken as ParagraphToken | null)?.tokens;
@@ -107,10 +108,12 @@ export function renderList(
     } else {
       // Fallback to plain text
       const itemText = item.text?.split("\n")[0] || "";
-      lineWrapper.add(new TextRenderable(renderer, {
-        content: itemText,
-        fg: colors.fg,
-      }));
+      lineWrapper.add(
+        new TextRenderable(renderer, {
+          content: itemText,
+          fg: colors.fg,
+        }),
+      );
     }
 
     itemWrapper.add(lineWrapper);
