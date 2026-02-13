@@ -36,7 +36,7 @@ export function codeToBlock(
     const chunks = shikiToChunks(highlighterInstance, token.text, lang);
     segments = chunks.map((chunk) => ({
       text: chunk.text,
-      fg: chunk.fg ? `#${chunk.fg.r.toString(16).padStart(2, "0")}${chunk.fg.g.toString(16).padStart(2, "0")}${chunk.fg.b.toString(16).padStart(2, "0")}` : colors.fg,
+      fg: chunk.fg ? `#${Math.round(chunk.fg.r * 255).toString(16).padStart(2, "0")}${Math.round(chunk.fg.g * 255).toString(16).padStart(2, "0")}${Math.round(chunk.fg.b * 255).toString(16).padStart(2, "0")}` : colors.fg,
       bold: chunk.bold || false,
       italic: chunk.italic || false,
     }));
