@@ -16,10 +16,7 @@ describe("CursorManager", () => {
   });
 
   test("enters visual mode with anchor at cursor", () => {
-    let updateCount = 0;
-    const cursor = createCursorManager(sampleLines.length, () => {
-      updateCount++;
-    });
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
     cursor.setCursor(2);
     cursor.enterVisual();
@@ -30,10 +27,7 @@ describe("CursorManager", () => {
   });
 
   test("exits visual mode back to normal", () => {
-    let updateCount = 0;
-    const cursor = createCursorManager(sampleLines.length, () => {
-      updateCount++;
-    });
+    const cursor = createCursorManager(sampleLines.length, () => {});
 
     cursor.enterVisual();
     cursor.exitVisual();
