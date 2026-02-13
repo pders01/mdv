@@ -38,12 +38,12 @@ export function listToBlocks(
 
   token.items.forEach((item, index) => {
     let nestedList: ListToken | null = null;
-    let paragraphToken: Token | null = null;
+    const paragraphTokens: Token[] = [];
 
     if (item.tokens) {
       for (const t of item.tokens) {
         if (t.type === "paragraph" || t.type === "text") {
-          paragraphToken = t;
+          paragraphTokens.push(t);
         } else if (t.type === "list") {
           nestedList = t as ListToken;
         }
@@ -59,11 +59,19 @@ export function listToBlocks(
       italic: false,
     };
 
-    const paraTokens = (paragraphToken as ParagraphToken | null)?.tokens;
-    let contentSegments: StyledSegment[];
-    if (paraTokens) {
-      contentSegments = inlineTokensToSegments(colors, paraTokens);
-    } else {
+    let contentSegments: StyledSegment[] = [];
+    if (paragraphTokens.length > 0) {
+      for (let i = 0; i < paragraphTokens.length; i++) {
+        const paraTokens = (paragraphTokens[i] as ParagraphToken)?.tokens;
+        if (paraTokens) {
+          if (i > 0) {
+            contentSegments.push({ text: " ", fg: colors.fg, bold: false, italic: false });
+          }
+          contentSegments.push(...inlineTokensToSegments(colors, paraTokens));
+        }
+      }
+    }
+    if (contentSegments.length === 0) {
       const itemText = item.text?.split("\n")[0] || "";
       contentSegments = [{ text: itemText, fg: colors.fg, bold: false, italic: false }];
     }
@@ -139,12 +147,12 @@ export function renderList(
     });
 
     let nestedList: ListToken | null = null;
-    let paragraphToken: Token | null = null;
+    const paragraphTokens: Token[] = [];
 
     if (item.tokens) {
       for (const t of item.tokens) {
         if (t.type === "paragraph" || t.type === "text") {
-          paragraphToken = t;
+          paragraphTokens.push(t);
         } else if (t.type === "list") {
           nestedList = t as ListToken;
         }
@@ -166,11 +174,16 @@ export function renderList(
     );
 
     // Render inline content with proper token handling
-    const paraTokens = (paragraphToken as ParagraphToken | null)?.tokens;
-    if (paraTokens) {
-      const inlineContent = renderInlineTokens(renderer, colors, paraTokens);
-      lineWrapper.add(inlineContent);
-    } else {
+    let hasContent = false;
+    for (const pt of paragraphTokens) {
+      const paraTokens = (pt as ParagraphToken)?.tokens;
+      if (paraTokens) {
+        const inlineContent = renderInlineTokens(renderer, colors, paraTokens);
+        lineWrapper.add(inlineContent);
+        hasContent = true;
+      }
+    }
+    if (!hasContent) {
       // Fallback to plain text
       const itemText = item.text?.split("\n")[0] || "";
       lineWrapper.add(
