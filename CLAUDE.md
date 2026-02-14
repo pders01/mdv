@@ -61,6 +61,7 @@ Custom markdown token renderers in `src/rendering/`:
 
 - `src/input/cursor.ts` - Cursor state management, scroll logic (uniform line height)
 - `src/input/keyboard.ts` - Vim keybindings (j/k, gg/G, Ctrl-d/u, yy, V) with error handling
+- `src/input/mouse.ts` - Mouse click-to-position (gap areas), coordinate conversion (`mouseYToLine`)
 - `src/input/clipboard.ts` - System clipboard integration (pbcopy/xclip)
 
 ### UI Components
@@ -81,6 +82,14 @@ Custom markdown token renderers in `src/rendering/`:
 - Fixed 1-row line height for cursor highlights (prevents multi-line issues in lists)
 - Viewport clipping prevents drift when blocks scroll above viewport
 
+### Selection Model
+
+- **Character-level selection** (mouse drag): handled natively by OpenTUI's renderer (`TextBufferRenderable` with `selectable: true`). Blue highlight, yanked with `y` via `renderer.getSelection()`
+- **Line-level selection** (keyboard `V` mode): custom visual mode via `CursorManager`. Yellow highlight, yanked with `y` via `cursor.getSelectedContent()`
+- Yank priority: character selection > visual line selection > `yy` document yank
+- `Esc` clears both selection types; `V` clears character selection before entering line mode
+- Renderer emits `"selection"` event on mouse-up to sync cursor position after character-level interactions
+
 ### Scroll System
 
 - Decoupled from render state - uses `scrollHeight / totalLines` for uniform line height
@@ -95,3 +104,8 @@ Custom markdown token renderers in `src/rendering/`:
 ## Testing
 
 Tests use `bun:test` and are in `src/__tests__/`. Most tests focus on token parsing via `marked.lexer()` and utility functions rather than full rendering.
+
+## Commits
+
+- Use conventional commits
+- Only use `-` delimited bullet points in commit bodies
