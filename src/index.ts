@@ -26,6 +26,7 @@ import { createMainContainer } from "./ui/container.js";
 import { createStatusBar } from "./ui/statusbar.js";
 import { createCursorManager, scrollToCursor } from "./input/cursor.js";
 import { setupKeyboardHandler } from "./input/keyboard.js";
+import { setupMouseHandler, mouseYToLine } from "./input/mouse.js";
 
 // =============================================================================
 // CLI Argument Parsing
@@ -170,7 +171,7 @@ scrollBox.add(markdown);
 
 // Setup cursor and selection highlighting (AFTER markdown is added to scrollBox)
 // Pass markdown instance to access actual rendered positions via _blockStates
-setupHighlighting(
+const getLinePosition = setupHighlighting(
   () => ({
     mode: cursor.mode,
     cursorLine: cursor.cursorLine,
@@ -214,6 +215,38 @@ setupKeyboardHandler({
   content,
   contentLines,
   showNotification,
+});
+
+// =============================================================================
+// Mouse Handling
+// =============================================================================
+
+setupMouseHandler({
+  scrollBox,
+  cursor,
+  contentLines,
+  showNotification,
+  getLinePosition,
+});
+
+// =============================================================================
+// Native Selection Event (character-level click/drag on text)
+// =============================================================================
+
+renderer.on("selection", (selection) => {
+  const line = mouseYToLine(
+    selection.anchor.y,
+    scrollBox.viewport.y,
+    scrollBox.scrollTop,
+    scrollBox.scrollHeight,
+    contentLines.length,
+    getLinePosition,
+  );
+  if (cursor.mode === "visual") {
+    cursor.exitVisual();
+  }
+  cursor.setCursor(line);
+  statusBarUpdate();
 });
 
 // Initialize cursor position and scroll

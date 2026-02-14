@@ -54,23 +54,39 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
     const now = Date.now();
     const height = renderer.height;
 
-    // Handle Escape - exit visual mode
+    // Handle Escape - exit visual mode and clear native selection
     if (event.name === "escape") {
       if (cursor.mode === "visual") {
         cursor.exitVisual();
       }
+      renderer.clearSelection();
       lastKey = "";
       return;
     }
 
-    // Handle V - enter visual line mode
+    // Handle V - enter visual line mode (clears any native character selection)
     if (cursor.mode === "normal" && (event.name === "V" || (event.name === "v" && event.shift))) {
+      renderer.clearSelection();
       cursor.enterVisual();
       lastKey = "";
       return;
     }
 
-    // Handle y in visual mode - yank selection
+    // Character-level selection (OpenTUI native) takes priority over line-based yank
+    if (event.name === "y") {
+      const selection = renderer.getSelection();
+      const selectedText = selection?.getSelectedText();
+      if (selectedText) {
+        copyToClipboard(selectedText)
+          .then(() => showNotification("Yanked selection to clipboard"))
+          .catch(() => showNotification("Failed to copy to clipboard"));
+        renderer.clearSelection();
+        lastKey = "";
+        return;
+      }
+    }
+
+    // Handle y in visual mode - yank line selection
     if (event.name === "y" && cursor.mode === "visual") {
       const lines = cursor.getSelectedLineCount();
       const selectedText = cursor.getSelectedContent(contentLines);
