@@ -83,4 +83,19 @@ describe("parseCliArgs", () => {
     const args = parseCliArgs(["node", "mdv", "file.md"]);
     expect(args.noMouse).toBe(false);
   });
+
+  test("parses version flag short form", () => {
+    const args = parseCliArgs(["node", "mdv", "-v"]);
+    expect(args.showVersion).toBe(true);
+  });
+
+  test("parses version flag long form", () => {
+    const args = parseCliArgs(["node", "mdv", "--version"]);
+    expect(args.showVersion).toBe(true);
+  });
+
+  test("defaults showVersion to false", () => {
+    const args = parseCliArgs(["node", "mdv", "file.md"]);
+    expect(args.showVersion).toBe(false);
+  });
 });

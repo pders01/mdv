@@ -39,6 +39,12 @@ if (args.showHelp) {
   process.exit(0);
 }
 
+if (args.showVersion) {
+  const pkg = await import("../package.json");
+  console.log(`mdv ${pkg.version}`);
+  process.exit(0);
+}
+
 if (args.listThemes) {
   await listThemes();
   process.exit(0);

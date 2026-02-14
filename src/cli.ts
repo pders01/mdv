@@ -11,6 +11,7 @@ export interface CliArgs {
   theme: string;
   filePath: string | null;
   showHelp: boolean;
+  showVersion: boolean;
   listThemes: boolean;
   debug: boolean;
   noMouse: boolean;
@@ -27,6 +28,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       "list-themes": { type: "boolean", short: "T" },
       "no-mouse": { type: "boolean" },
       debug: { type: "boolean" },
+      version: { type: "boolean", short: "v" },
       help: { type: "boolean", short: "h" },
     },
     allowPositionals: true,
@@ -36,6 +38,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     theme: values.theme as string,
     filePath: positionals[0] || null,
     showHelp: values.help ?? false,
+    showVersion: values.version ?? false,
     listThemes: values["list-themes"] ?? false,
     debug: values.debug ?? false,
     noMouse: values["no-mouse"] ?? false,
@@ -53,6 +56,7 @@ export function showHelp(): void {
   console.log("  -T, --list-themes    List available themes");
   console.log("      --no-mouse       Disable mouse input");
   console.log("      --debug          Enable debug logging");
+  console.log("  -v, --version        Show version");
   console.log("  -h, --help           Show this help");
 }
 
