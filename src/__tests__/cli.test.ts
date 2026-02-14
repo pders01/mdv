@@ -56,4 +56,31 @@ describe("parseCliArgs", () => {
     expect(args.showHelp).toBe(false);
     expect(args.listThemes).toBe(false);
   });
+
+  test("parses list-themes short form", () => {
+    const args = parseCliArgs(["node", "mdv", "-T"]);
+    expect(args.listThemes).toBe(true);
+  });
+
+  test("parses debug flag", () => {
+    const args = parseCliArgs(["node", "mdv", "--debug", "file.md"]);
+    expect(args.debug).toBe(true);
+    expect(args.filePath).toBe("file.md");
+  });
+
+  test("defaults debug to false", () => {
+    const args = parseCliArgs(["node", "mdv", "file.md"]);
+    expect(args.debug).toBe(false);
+  });
+
+  test("parses no-mouse flag", () => {
+    const args = parseCliArgs(["node", "mdv", "--no-mouse", "file.md"]);
+    expect(args.noMouse).toBe(true);
+    expect(args.filePath).toBe("file.md");
+  });
+
+  test("defaults noMouse to false", () => {
+    const args = parseCliArgs(["node", "mdv", "file.md"]);
+    expect(args.noMouse).toBe(false);
+  });
 });

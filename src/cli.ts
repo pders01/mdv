@@ -12,6 +12,8 @@ export interface CliArgs {
   filePath: string | null;
   showHelp: boolean;
   listThemes: boolean;
+  debug: boolean;
+  noMouse: boolean;
 }
 
 /**
@@ -22,7 +24,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
     args: argv.slice(2),
     options: {
       theme: { type: "string", short: "t", default: "github-dark" },
-      "list-themes": { type: "boolean" },
+      "list-themes": { type: "boolean", short: "T" },
+      "no-mouse": { type: "boolean" },
+      debug: { type: "boolean" },
       help: { type: "boolean", short: "h" },
     },
     allowPositionals: true,
@@ -33,6 +37,8 @@ export function parseCliArgs(argv: string[]): CliArgs {
     filePath: positionals[0] || null,
     showHelp: values.help ?? false,
     listThemes: values["list-themes"] ?? false,
+    debug: values.debug ?? false,
+    noMouse: values["no-mouse"] ?? false,
   };
 }
 
@@ -43,9 +49,11 @@ export function showHelp(): void {
   console.log("Usage: mdv [options] <markdown-file>");
   console.log("       cat file.md | mdv [options]");
   console.log("\nOptions:");
-  console.log("  -t, --theme <name>  Set syntax highlighting theme (default: github-dark)");
-  console.log("  -h, --help          Show this help");
-  console.log("  --list-themes       List available themes");
+  console.log("  -t, --theme <name>   Set syntax highlighting theme (default: github-dark)");
+  console.log("  -T, --list-themes    List available themes");
+  console.log("      --no-mouse       Disable mouse input");
+  console.log("      --debug          Enable debug logging");
+  console.log("  -h, --help           Show this help");
 }
 
 /**

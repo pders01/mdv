@@ -106,6 +106,18 @@ if (isStdin) {
 const contentLines = content.split("\n");
 
 // =============================================================================
+// Debug Logging
+// =============================================================================
+
+if (args.debug) {
+  console.error("[debug] file:", isStdin ? "<stdin>" : args.filePath);
+  console.error("[debug] theme:", args.theme);
+  console.error("[debug] lines:", contentLines.length);
+  console.error("[debug] terminal:", process.stdout.columns + "x" + process.stdout.rows);
+  console.error("[debug] mouse:", args.noMouse ? "disabled" : "enabled");
+}
+
+// =============================================================================
 // Shiki Syntax Highlighter
 // =============================================================================
 
@@ -136,7 +148,7 @@ highlighterInstance.colors = themeColors;
 
 const renderer = await createCliRenderer({
   exitOnCtrlC: false,
-  useMouse: true,
+  useMouse: !args.noMouse,
 });
 
 // Create syntax style from theme colors
@@ -221,33 +233,35 @@ setupKeyboardHandler({
 // Mouse Handling
 // =============================================================================
 
-setupMouseHandler({
-  scrollBox,
-  cursor,
-  contentLines,
-  showNotification,
-  getLinePosition,
-});
-
-// =============================================================================
-// Native Selection Event (character-level click/drag on text)
-// =============================================================================
-
-renderer.on("selection", (selection) => {
-  const line = mouseYToLine(
-    selection.anchor.y,
-    scrollBox.viewport.y,
-    scrollBox.scrollTop,
-    scrollBox.scrollHeight,
-    contentLines.length,
+if (!args.noMouse) {
+  setupMouseHandler({
+    scrollBox,
+    cursor,
+    contentLines,
+    showNotification,
     getLinePosition,
-  );
-  if (cursor.mode === "visual") {
-    cursor.exitVisual();
-  }
-  cursor.setCursor(line);
-  statusBarUpdate();
-});
+  });
+
+  // =============================================================================
+  // Native Selection Event (character-level click/drag on text)
+  // =============================================================================
+
+  renderer.on("selection", (selection) => {
+    const line = mouseYToLine(
+      selection.anchor.y,
+      scrollBox.viewport.y,
+      scrollBox.scrollTop,
+      scrollBox.scrollHeight,
+      contentLines.length,
+      getLinePosition,
+    );
+    if (cursor.mode === "visual") {
+      cursor.exitVisual();
+    }
+    cursor.setCursor(line);
+    statusBarUpdate();
+  });
+}
 
 // Initialize cursor position and scroll
 scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
