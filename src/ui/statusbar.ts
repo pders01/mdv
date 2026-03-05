@@ -18,6 +18,8 @@ export interface StatusBarSetup {
     selectionStart: number,
     selectionEnd: number,
   ) => void;
+  setFileName: (name: string) => void;
+  setTotalLines: (total: number) => void;
 }
 
 /**
@@ -27,8 +29,9 @@ export function createStatusBar(
   renderer: CliRenderer,
   filename: string,
   colors: ThemeColors,
-  totalLines: number,
+  initialTotalLines: number,
 ): StatusBarSetup {
+  let totalLines = initialTotalLines;
   const statusBar = new BoxRenderable(renderer, {
     id: "statusbar",
     flexDirection: "row",
@@ -40,14 +43,13 @@ export function createStatusBar(
   });
 
   // Filename
-  statusBar.add(
-    new TextRenderable(renderer, {
-      id: "filename",
-      content: filename,
-      fg: colors.link,
-      attributes: TextAttributes.BOLD,
-    }),
-  );
+  const filenameText = new TextRenderable(renderer, {
+    id: "filename",
+    content: filename,
+    fg: colors.link,
+    attributes: TextAttributes.BOLD,
+  });
+  statusBar.add(filenameText);
 
   // Position indicator
   const positionText = new TextRenderable(renderer, {
@@ -118,10 +120,20 @@ export function createStatusBar(
     }
   }
 
+  function setFileName(name: string) {
+    filenameText.content = name;
+  }
+
+  function setTotalLines(total: number) {
+    totalLines = total;
+  }
+
   return {
     statusBar,
     helpText,
     showNotification,
     updateStatusBar,
+    setFileName,
+    setTotalLines,
   };
 }

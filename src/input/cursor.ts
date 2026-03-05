@@ -143,6 +143,19 @@ export class CursorManager {
   }
 
   /**
+   * Reset cursor for new content (directory mode file switch)
+   */
+  reset(newTotalLines: number): void {
+    this.totalLines = newTotalLines;
+    this._cursorLine = 0;
+    this._anchorLine = 0;
+    this._selectionStart = 0;
+    this._selectionEnd = 0;
+    this._mode = "normal";
+    this.onUpdate();
+  }
+
+  /**
    * Initialize cursor from scroll position (center of viewport)
    */
   initFromScroll(scrollBox: ScrollBoxRenderable): void {

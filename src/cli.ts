@@ -49,7 +49,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
  * Show help text
  */
 export function showHelp(): void {
-  console.log("Usage: mdv [options] <markdown-file>");
+  console.log("Usage: mdv [options] <markdown-file|directory>");
   console.log("       cat file.md | mdv [options]");
   console.log("\nOptions:");
   console.log("  -t, --theme <name>   Set syntax highlighting theme (default: github-dark)");
@@ -58,6 +58,11 @@ export function showHelp(): void {
   console.log("      --debug          Enable debug logging");
   console.log("  -v, --version        Show version");
   console.log("  -h, --help           Show this help");
+  console.log("\nDirectory mode:");
+  console.log("  Pass a directory to browse all markdown files with a sidebar.");
+  console.log("  Tab/Ctrl-h/Ctrl-l   Switch panes");
+  console.log("  \\                    Toggle sidebar");
+  console.log("  j/k, Enter           Navigate and open files");
 }
 
 /**
@@ -75,7 +80,7 @@ export async function listThemes(): Promise<void> {
  * Show usage error
  */
 export function showUsageError(): void {
-  console.error("Usage: mdv [options] <markdown-file>");
+  console.error("Usage: mdv [options] <markdown-file|directory>");
   console.error("       cat file.md | mdv [options]");
   console.error("\nRun 'mdv --help' for more options");
 }

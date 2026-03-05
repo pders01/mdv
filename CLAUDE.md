@@ -60,14 +60,21 @@ Custom markdown token renderers in `src/rendering/`:
 ### Input Handling
 
 - `src/input/cursor.ts` - Cursor state management, scroll logic (uniform line height)
-- `src/input/keyboard.ts` - Vim keybindings (j/k, gg/G, Ctrl-d/u, yy, V) with error handling
+- `src/input/keyboard.ts` - Vim keybindings (j/k, gg/G, Ctrl-d/u, yy, V); exports `handleContentKey` for pane dispatch
 - `src/input/mouse.ts` - Mouse click-to-position (gap areas), coordinate conversion (`mouseYToLine`)
 - `src/input/clipboard.ts` - System clipboard integration (pbcopy/xclip)
+- `src/input/focus.ts` - Pane focus state machine (`"sidebar" | "content"`) for directory mode
+- `src/input/pane-keyboard.ts` - Key dispatcher that routes input to sidebar or content handler based on active pane
 
 ### UI Components
 
-- `src/ui/container.ts` - Main scrollable container, cursor/selection highlighting, code block backgrounds
-- `src/ui/statusbar.ts` - Status bar with mode indicator and notifications
+- `src/ui/container.ts` - Main scrollable container, cursor/selection highlighting, code block backgrounds; supports `reloadMarkdown` for directory mode file switching
+- `src/ui/statusbar.ts` - Status bar with mode indicator, notifications, and dynamic filename/line count updates
+- `src/ui/sidebar.ts` - File tree sidebar for directory browsing mode (vim j/k navigation, Enter to open)
+
+### File System
+
+- `src/fs/tree.ts` - Recursive directory scanner for `.md` files, returns sorted `FileTree` with depth info
 
 ### Type Definitions
 
@@ -94,6 +101,16 @@ Custom markdown token renderers in `src/rendering/`:
 
 - Decoupled from render state - uses `scrollHeight / totalLines` for uniform line height
 - Cursor follows vim-style navigation (j/k moves cursor, scroll follows)
+
+### Directory Browsing Mode
+
+- Activated when a directory path is passed instead of a file
+- Two-pane layout: sidebar (30 cols, file tree) + content (markdown viewer)
+- `FocusManager` tracks active pane; single `keypress` listener dispatches to sidebar or content handler
+- File switch via sidebar `Enter`: creates new `MarkdownRenderable`, calls `reloadMarkdown`, resets cursor
+- Pane switching: `Tab`, `Ctrl-h` (sidebar), `Ctrl-l` (content), `Esc` (back to content)
+- `\` toggles sidebar visibility
+- Zero-cost for single-file mode — all sidebar code behind `isDirectory` branch
 
 ## Key Dependencies
 

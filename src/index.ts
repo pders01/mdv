@@ -4,9 +4,9 @@
  */
 
 import { basename } from "path";
-import { openSync } from "fs";
+import { openSync, statSync } from "fs";
 import { ReadStream } from "tty";
-import { createCliRenderer, MarkdownRenderable } from "@opentui/core";
+import { createCliRenderer, MarkdownRenderable, BoxRenderable } from "@opentui/core";
 import type { BundledTheme } from "shiki";
 
 // Local modules
@@ -27,6 +27,10 @@ import { createStatusBar } from "./ui/statusbar.js";
 import { createCursorManager, scrollToCursor } from "./input/cursor.js";
 import { setupKeyboardHandler } from "./input/keyboard.js";
 import { setupMouseHandler, mouseYToLine } from "./input/mouse.js";
+import { scanDirectory } from "./fs/tree.js";
+import { createSidebar } from "./ui/sidebar.js";
+import { createFocusManager } from "./input/focus.js";
+import { setupPaneKeyboardHandler } from "./input/pane-keyboard.js";
 
 // =============================================================================
 // CLI Argument Parsing
@@ -51,11 +55,13 @@ if (args.listThemes) {
 }
 
 // =============================================================================
-// Read Content (stdin or file)
+// Read Content (stdin or file or directory)
 // =============================================================================
 
 let content: string;
 let isStdin = false;
+let isDirectory = false;
+let fileTree: Awaited<ReturnType<typeof scanDirectory>> | null = null;
 
 try {
   if (hasStdinContent()) {
@@ -63,7 +69,24 @@ try {
     content = await readStdinContent();
     isStdin = true;
   } else if (args.filePath) {
-    content = await readContent(args.filePath);
+    // Check if path is a directory
+    try {
+      const pathStat = statSync(args.filePath);
+      isDirectory = pathStat.isDirectory();
+    } catch {
+      // Not a valid path — will fail in readContent with a clear error
+    }
+
+    if (isDirectory) {
+      fileTree = await scanDirectory(args.filePath);
+      if (fileTree.entries.length === 0) {
+        console.error(`No markdown files found in directory: ${args.filePath}`);
+        process.exit(1);
+      }
+      content = await readContent(fileTree.entries[0]!.path);
+    } else {
+      content = await readContent(args.filePath);
+    }
   } else {
     showUsageError();
     process.exit(1);
@@ -78,8 +101,6 @@ try {
       console.error(`File does not exist: ${args.filePath}`);
     } else if (message.includes("EACCES") || message.includes("permission")) {
       console.error(`Permission denied: ${args.filePath}`);
-    } else if (message.includes("EISDIR") || message.includes("directory")) {
-      console.error(`Path is a directory, not a file: ${args.filePath}`);
     }
   }
 
@@ -164,23 +185,31 @@ const syntaxStyle = createSyntaxStyle(themeColors);
 // Cursor Manager Setup
 // =============================================================================
 
+// Mutable content state (for directory mode reloads)
+let currentContent = content;
+let currentContentLines = contentLines;
+
 // Create cursor manager (will get status bar update function later)
 let statusBarUpdate: () => void = () => {};
-const cursor = createCursorManager(contentLines.length, () => statusBarUpdate());
+const cursor = createCursorManager(currentContentLines.length, () => statusBarUpdate());
 
 // =============================================================================
 // UI Components
 // =============================================================================
 
 // Create container and scroll box
-const { container, scrollBox, setupHighlighting } = createMainContainer(renderer, contentLines);
+const { container, scrollBox, setupHighlighting, reloadMarkdown } = createMainContainer(
+  renderer,
+  currentContentLines,
+);
 
 // Create render node callback
 const renderNode = createRenderNode(renderer, themeColors, highlighterInstance);
 
 // Create markdown renderable
-const markdown = new MarkdownRenderable(renderer, {
-  content,
+let markdown = new MarkdownRenderable(renderer, {
+  id: "markdown-content",
+  content: currentContent,
   syntaxStyle,
   conceal: true,
   renderNode,
@@ -189,7 +218,7 @@ scrollBox.add(markdown);
 
 // Setup cursor and selection highlighting (AFTER markdown is added to scrollBox)
 // Pass markdown instance to access actual rendered positions via _blockStates
-const getLinePosition = setupHighlighting(
+let getLinePosition = setupHighlighting(
   () => ({
     mode: cursor.mode,
     cursorLine: cursor.cursorLine,
@@ -203,37 +232,122 @@ const getLinePosition = setupHighlighting(
 );
 
 // Create status bar
-const fileName = isStdin ? "stdin" : basename(args.filePath!);
-const { statusBar, showNotification, updateStatusBar } = createStatusBar(
-  renderer,
-  fileName,
-  themeColors,
-  contentLines.length,
-);
+const initialFileName = isDirectory
+  ? basename(fileTree!.entries[0]!.path)
+  : isStdin
+    ? "stdin"
+    : basename(args.filePath!);
+const { statusBar, showNotification, updateStatusBar, setFileName, setTotalLines } =
+  createStatusBar(renderer, initialFileName, themeColors, currentContentLines.length);
 
 // Connect cursor to status bar
 statusBarUpdate = () =>
   updateStatusBar(cursor.mode, cursor.cursorLine, cursor.selectionStart, cursor.selectionEnd);
 
-// Assemble UI
+// =============================================================================
+// UI Assembly
+// =============================================================================
+
 container.add(statusBar);
-renderer.root.add(container);
+
+if (isDirectory && fileTree) {
+  // Directory mode: sidebar + content in a row layout
+  const appRow = new BoxRenderable(renderer, {
+    id: "app-row",
+    flexDirection: "row",
+    flexGrow: 1,
+  });
+
+  const focusManager = createFocusManager("content");
+
+  // Reload content when a file is opened from the sidebar
+  const onOpenFile = async (filePath: string) => {
+    try {
+      const newContent = await readContent(filePath);
+      currentContent = newContent;
+      currentContentLines = newContent.split("\n");
+
+      // Recreate markdown renderable
+      const newMarkdown = new MarkdownRenderable(renderer, {
+        id: "markdown-content",
+        content: currentContent,
+        syntaxStyle,
+        conceal: true,
+        renderNode,
+      });
+      markdown = newMarkdown;
+
+      getLinePosition = reloadMarkdown(newMarkdown, currentContentLines);
+
+      // Reset cursor for new content
+      cursor.reset(currentContentLines.length);
+
+      // Update status bar
+      setFileName(basename(filePath));
+      setTotalLines(currentContentLines.length);
+
+      // Re-setup mouse handler for new content
+      if (!args.noMouse) {
+        setupMouseHandler({
+          scrollBox,
+          cursor,
+          contentLines: currentContentLines,
+          showNotification,
+          getLinePosition,
+        });
+      }
+
+      statusBarUpdate();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      showNotification(`Error: ${msg}`);
+    }
+  };
+
+  const sidebar = createSidebar(renderer, fileTree, themeColors, onOpenFile);
+  sidebar.highlightEntry(fileTree.entries[0]!.path);
+
+  appRow.add(sidebar.sidebarBox);
+  appRow.add(container);
+  renderer.root.add(appRow);
+
+  // Update status bar help text based on pane focus
+  focusManager.onFocusChange((pane) => {
+    if (pane === "sidebar") {
+      showNotification("SIDEBAR: j/k navigate, Enter open, Tab/Esc back", 1500);
+    }
+  });
+
+  // Pane-aware keyboard handler
+  setupPaneKeyboardHandler({
+    renderer,
+    focusManager,
+    sidebar,
+    contentOptions: {
+      renderer,
+      scrollBox,
+      cursor,
+      content: currentContent,
+      contentLines: currentContentLines,
+      showNotification,
+    },
+  });
+} else {
+  // Single-file mode (unchanged)
+  renderer.root.add(container);
+
+  setupKeyboardHandler({
+    renderer,
+    scrollBox,
+    cursor,
+    content: currentContent,
+    contentLines: currentContentLines,
+    showNotification,
+  });
+}
 
 // Initial status bar update
 statusBarUpdate();
-
-// =============================================================================
-// Keyboard Handling
-// =============================================================================
-
-setupKeyboardHandler({
-  renderer,
-  scrollBox,
-  cursor,
-  content,
-  contentLines,
-  showNotification,
-});
 
 // =============================================================================
 // Mouse Handling
@@ -243,7 +357,7 @@ if (!args.noMouse) {
   setupMouseHandler({
     scrollBox,
     cursor,
-    contentLines,
+    contentLines: currentContentLines,
     showNotification,
     getLinePosition,
   });
@@ -258,7 +372,7 @@ if (!args.noMouse) {
       scrollBox.viewport.y,
       scrollBox.scrollTop,
       scrollBox.scrollHeight,
-      contentLines.length,
+      currentContentLines.length,
       getLinePosition,
     );
     if (cursor.mode === "visual") {
@@ -270,4 +384,4 @@ if (!args.noMouse) {
 }
 
 // Initialize cursor position and scroll
-scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+scrollToCursor(scrollBox, cursor.cursorLine, currentContentLines.length, true);

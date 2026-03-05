@@ -25,16 +25,26 @@ export interface KeyboardHandlerOptions {
 }
 
 /**
- * Setup keyboard event handler
+ * Mutable state for double-key shortcuts (gg, yy)
  */
-export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
+export interface KeyboardState {
+  lastKey: string;
+  lastKeyTime: number;
+}
+
+/**
+ * Handle a content-pane key event. Returns true if consumed.
+ */
+export function handleContentKey(
+  event: KeyEvent,
+  options: KeyboardHandlerOptions,
+  state: KeyboardState,
+): boolean {
   const { renderer, scrollBox, cursor, content, contentLines, showNotification } = options;
 
-  let lastKey = "";
-  let lastKeyTime = 0;
+  const now = Date.now();
+  const height = renderer.height;
 
-  // Helper: move cursor and scroll to follow
-  // Uses uniform line height for scroll (decoupled from render state)
   const moveCursor = (delta: number, center: boolean = false) => {
     cursor.moveCursor(delta);
     scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, center);
@@ -50,159 +60,172 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
     scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
   };
 
-  renderer.keyInput.on("keypress", (event: KeyEvent) => {
-    const now = Date.now();
-    const height = renderer.height;
-
-    // Handle Escape - exit visual mode and clear native selection
-    if (event.name === "escape") {
-      if (cursor.mode === "visual") {
-        cursor.exitVisual();
-      }
-      renderer.clearSelection();
-      lastKey = "";
-      return;
+  // Handle Escape - exit visual mode and clear native selection
+  if (event.name === "escape") {
+    if (cursor.mode === "visual") {
+      cursor.exitVisual();
     }
+    renderer.clearSelection();
+    state.lastKey = "";
+    return true;
+  }
 
-    // Handle V - enter visual line mode (clears any native character selection)
-    if (cursor.mode === "normal" && (event.name === "V" || (event.name === "v" && event.shift))) {
-      renderer.clearSelection();
-      cursor.enterVisual();
-      lastKey = "";
-      return;
-    }
+  // Handle V - enter visual line mode (clears any native character selection)
+  if (cursor.mode === "normal" && (event.name === "V" || (event.name === "v" && event.shift))) {
+    renderer.clearSelection();
+    cursor.enterVisual();
+    state.lastKey = "";
+    return true;
+  }
 
-    // Character-level selection (OpenTUI native) takes priority over line-based yank
-    if (event.name === "y") {
-      const selection = renderer.getSelection();
-      const selectedText = selection?.getSelectedText();
-      if (selectedText) {
-        copyToClipboard(selectedText)
-          .then(() => showNotification("Yanked selection to clipboard"))
-          .catch(() => showNotification("Failed to copy to clipboard"));
-        renderer.clearSelection();
-        lastKey = "";
-        return;
-      }
-    }
-
-    // Handle y in visual mode - yank line selection
-    if (event.name === "y" && cursor.mode === "visual") {
-      const lines = cursor.getSelectedLineCount();
-      const selectedText = cursor.getSelectedContent(contentLines);
+  // Character-level selection (OpenTUI native) takes priority over line-based yank
+  if (event.name === "y") {
+    const selection = renderer.getSelection();
+    const selectedText = selection?.getSelectedText();
+    if (selectedText) {
       copyToClipboard(selectedText)
+        .then(() => showNotification("Yanked selection to clipboard"))
+        .catch(() => showNotification("Failed to copy to clipboard"));
+      renderer.clearSelection();
+      state.lastKey = "";
+      return true;
+    }
+  }
+
+  // Handle y in visual mode - yank line selection
+  if (event.name === "y" && cursor.mode === "visual") {
+    const lines = cursor.getSelectedLineCount();
+    const selectedText = cursor.getSelectedContent(contentLines);
+    copyToClipboard(selectedText)
+      .then(() => {
+        showNotification(`Yanked ${lines} line${lines > 1 ? "s" : ""} to clipboard`);
+      })
+      .catch(() => {
+        showNotification("Failed to copy to clipboard");
+      });
+    cursor.exitVisual();
+    state.lastKey = "";
+    return true;
+  }
+
+  // gg - go to top
+  if (event.name === "g" && !event.ctrl && !event.shift) {
+    if (state.lastKey === "g" && now - state.lastKeyTime < DOUBLE_KEY_TIMEOUT_MS) {
+      goToFirst();
+      state.lastKey = "";
+    } else {
+      state.lastKey = "g";
+      state.lastKeyTime = now;
+    }
+    return true;
+  }
+
+  // yy - yank current line (normal mode) or entire document
+  if (event.name === "y" && !event.ctrl && !event.shift && cursor.mode === "normal") {
+    if (state.lastKey === "y" && now - state.lastKeyTime < DOUBLE_KEY_TIMEOUT_MS) {
+      copyToClipboard(content)
         .then(() => {
-          showNotification(`Yanked ${lines} line${lines > 1 ? "s" : ""} to clipboard`);
+          showNotification(`Yanked entire document (${contentLines.length} lines) to clipboard`);
         })
         .catch(() => {
           showNotification("Failed to copy to clipboard");
         });
-      cursor.exitVisual();
-      lastKey = "";
-      return;
+      state.lastKey = "";
+    } else {
+      state.lastKey = "y";
+      state.lastKeyTime = now;
     }
+    return true;
+  }
 
-    // gg - go to top
-    if (event.name === "g" && !event.ctrl && !event.shift) {
-      if (lastKey === "g" && now - lastKeyTime < DOUBLE_KEY_TIMEOUT_MS) {
-        goToFirst();
-        lastKey = "";
-      } else {
-        lastKey = "g";
-        lastKeyTime = now;
-      }
-      return;
-    }
+  // G - go to bottom
+  if (event.name === "G" || (event.name === "g" && event.shift)) {
+    goToLast();
+    state.lastKey = "";
+    return true;
+  }
 
-    // yy - yank current line (normal mode) or entire document
-    if (event.name === "y" && !event.ctrl && !event.shift && cursor.mode === "normal") {
-      if (lastKey === "y" && now - lastKeyTime < DOUBLE_KEY_TIMEOUT_MS) {
-        copyToClipboard(content)
-          .then(() => {
-            showNotification(`Yanked entire document (${contentLines.length} lines) to clipboard`);
-          })
-          .catch(() => {
-            showNotification("Failed to copy to clipboard");
-          });
-        lastKey = "";
-      } else {
-        lastKey = "y";
-        lastKeyTime = now;
-      }
-      return;
-    }
+  state.lastKey = "";
 
-    // G - go to bottom
-    if (event.name === "G" || (event.name === "g" && event.shift)) {
-      goToLast();
-      lastKey = "";
-      return;
-    }
+  switch (event.name) {
+    case "q":
+      renderer.destroy();
+      process.exit(0);
 
-    lastKey = "";
-
-    switch (event.name) {
-      case "q":
+    case "c":
+      if (event.ctrl) {
         renderer.destroy();
         process.exit(0);
+      }
+      return false;
 
-      case "c":
-        if (event.ctrl) {
-          renderer.destroy();
-          process.exit(0);
-        }
-        break;
+    case "j":
+    case "down":
+      moveCursor(1);
+      return true;
 
-      case "j":
-      case "down":
-        moveCursor(1);
-        break;
+    case "k":
+    case "up":
+      moveCursor(-1);
+      return true;
 
-      case "k":
-      case "up":
-        moveCursor(-1);
-        break;
+    case "d":
+      if (event.ctrl) {
+        moveCursor(Math.floor(height / 2));
+        return true;
+      }
+      return false;
 
-      case "d":
-        if (event.ctrl) {
-          moveCursor(Math.floor(height / 2));
-        }
-        break;
+    case "u":
+      if (event.ctrl) {
+        moveCursor(-Math.floor(height / 2));
+        return true;
+      }
+      return false;
 
-      case "u":
-        if (event.ctrl) {
-          moveCursor(-Math.floor(height / 2));
-        }
-        break;
-
-      case "f":
-        if (event.ctrl) {
-          moveCursor(height - 2);
-        }
-        break;
-
-      case "b":
-        if (event.ctrl) {
-          moveCursor(-(height - 2));
-        }
-        break;
-
-      case "pagedown":
-      case "space":
+    case "f":
+      if (event.ctrl) {
         moveCursor(height - 2);
-        break;
+        return true;
+      }
+      return false;
 
-      case "pageup":
+    case "b":
+      if (event.ctrl) {
         moveCursor(-(height - 2));
-        break;
+        return true;
+      }
+      return false;
 
-      case "home":
-        goToFirst();
-        break;
+    case "pagedown":
+    case "space":
+      moveCursor(height - 2);
+      return true;
 
-      case "end":
-        goToLast();
-        break;
-    }
+    case "pageup":
+      moveCursor(-(height - 2));
+      return true;
+
+    case "home":
+      goToFirst();
+      return true;
+
+    case "end":
+      goToLast();
+      return true;
+  }
+
+  return false;
+}
+
+/**
+ * Setup keyboard event handler (single-file mode — backward compatible wrapper)
+ */
+export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
+  const { renderer } = options;
+  const state: KeyboardState = { lastKey: "", lastKeyTime: 0 };
+
+  renderer.keyInput.on("keypress", (event: KeyEvent) => {
+    handleContentKey(event, options, state);
   });
 }
