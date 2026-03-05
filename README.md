@@ -122,6 +122,17 @@ All navigation keys (j/k, Ctrl-d/u, etc.) work in both panes.
 | `y` (in visual mode) | Copy selection to clipboard       |
 | `Esc`                | Exit visual mode                  |
 
+### Search
+
+| Key   | Action                          |
+| ----- | ------------------------------- |
+| `/`   | Start search                    |
+| `n`   | Next match                      |
+| `N`   | Previous match                  |
+| `Esc` | Clear search / cancel input     |
+
+Search works in both the reader pane and the sidebar file list. Matches are highlighted inline with exact position awareness (accounts for markdown conceal).
+
 ### General
 
 | Key            | Action |
@@ -134,6 +145,7 @@ All navigation keys (j/k, Ctrl-d/u, etc.) work in both panes.
 - Syntax highlighting for code blocks (50+ languages)
 - Theme support via shiki (github-dark default, 30+ themes available)
 - Directory browsing with sidebar file tree
+- Pager-style search (`/`, `n`/`N`) with inline match highlighting
 - Vim-style navigation (works in both sidebar and reader panes)
 - Supports:
   - Headings (ATX and Setext style)

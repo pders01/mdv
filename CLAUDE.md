@@ -60,7 +60,8 @@ Custom markdown token renderers in `src/rendering/`:
 ### Input Handling
 
 - `src/input/cursor.ts` - Cursor state management, scroll logic (uniform line height)
-- `src/input/keyboard.ts` - Vim keybindings (j/k, gg/G, Ctrl-d/u, yy, V); exports `handleContentKey` for pane dispatch
+- `src/input/search.ts` - Pager-style `/` search: `SearchManager` state machine, `stripMarkdownInline` for conceal-aware column mapping
+- `src/input/keyboard.ts` - Vim keybindings (j/k, gg/G, Ctrl-d/u, yy, V, /, n/N); exports `handleContentKey` for pane dispatch
 - `src/input/mouse.ts` - Mouse click-to-position (gap areas), coordinate conversion (`mouseYToLine`)
 - `src/input/clipboard.ts` - System clipboard integration (pbcopy/xclip)
 - `src/input/focus.ts` - Pane focus state machine (`"sidebar" | "content"`) for directory mode
@@ -70,7 +71,7 @@ Custom markdown token renderers in `src/rendering/`:
 
 - `src/ui/container.ts` - Main scrollable container, cursor/selection highlighting, code block backgrounds; supports `reloadMarkdown` for directory mode file switching
 - `src/ui/statusbar.ts` - Status bar with mode indicator, notifications, and dynamic filename/line count updates
-- `src/ui/sidebar.ts` - File tree sidebar for directory browsing mode (vim j/k navigation, Enter to open)
+- `src/ui/sidebar.ts` - File tree sidebar for directory browsing mode (vim j/k navigation, Enter to open, `/` search)
 
 ### File System
 
@@ -96,6 +97,14 @@ Custom markdown token renderers in `src/rendering/`:
 - Yank priority: character selection > visual line selection > `yy` document yank
 - `Esc` clears both selection types; `V` clears character selection before entering line mode
 - Renderer emits `"selection"` event on mouse-up to sync cursor position after character-level interactions
+
+### Search System
+
+- Pager-style `/` search with `n`/`N` navigation, works in both content pane and sidebar
+- `stripMarkdownInline` strips concealed syntax (headings, links, bold, code spans) to compute accurate column offsets matching rendered output
+- Underscore-based bold/italic intentionally not stripped — too ambiguous with code identifiers like `__tests__`
+- Index-based match navigation: `nextMatch`/`prevMatch` cycle through individual matches including multiple hits on the same line
+- Search highlights drawn via `renderAfter` as per-match `fillRect` at exact `(x + col, y, length, 1)` positions
 
 ### Scroll System
 
