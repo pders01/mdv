@@ -10,7 +10,13 @@ import { paragraphToSegments } from "../../rendering/paragraph.js";
 import { listToBlocks } from "../../rendering/list.js";
 import { tableToBlock } from "../../rendering/table.js";
 import { blockquoteToBlock, extractBlockquoteText } from "../../rendering/blockquote.js";
-import { htmlBlockToBlocks, htmlTableToBlock, htmlListToBlocks, htmlHeadingToBlock, hrToBlock } from "../../rendering/html.js";
+import {
+  htmlBlockToBlocks,
+  htmlTableToBlock,
+  htmlListToBlocks,
+  htmlHeadingToBlock,
+  hrToBlock,
+} from "../../rendering/html.js";
 import {
   TEST_COLORS,
   renderToBlocks,
@@ -115,7 +121,7 @@ describe("paragraph edge cases", () => {
   });
 
   test("link without href shows text without URL", () => {
-    const token = getParagraphToken('<a>just text</a>');
+    const token = getParagraphToken("<a>just text</a>");
     const segments = paragraphToSegments(TEST_COLORS, token);
 
     const linkSeg = segments.find((s) => s.text.includes("just text"));
@@ -146,17 +152,17 @@ describe("paragraph edge cases", () => {
 
   test("color priority: link > code > strikethrough > highlight > underline", () => {
     // Link color takes priority
-    const linkToken = getParagraphToken('[link](http://x.com)');
+    const linkToken = getParagraphToken("[link](http://x.com)");
     const linkSegs = paragraphToSegments(TEST_COLORS, linkToken);
     expectSegment(linkSegs, "link", { fg: TEST_COLORS.link });
 
     // Code color
-    const codeToken = getParagraphToken('`code`');
+    const codeToken = getParagraphToken("`code`");
     const codeSegs = paragraphToSegments(TEST_COLORS, codeToken);
     expectSegment(codeSegs, "code", { fg: TEST_COLORS.cyan });
 
     // Strikethrough color
-    const delToken = getParagraphToken('~~deleted~~');
+    const delToken = getParagraphToken("~~deleted~~");
     const delSegs = paragraphToSegments(TEST_COLORS, delToken);
     expectSegment(delSegs, "deleted", { fg: TEST_COLORS.gray });
   });
@@ -177,9 +183,7 @@ describe("list edge cases", () => {
     const token = getListToken(markdown);
     const blocks = listToBlocks(TEST_COLORS, token);
 
-    const firstItemText = blocks[0].lines
-      .flatMap((l) => l.map((s) => s.text))
-      .join("");
+    const firstItemText = blocks[0].lines.flatMap((l) => l.map((s) => s.text)).join("");
     expect(firstItemText).toContain("First paragraph");
     expect(firstItemText).toContain("Second paragraph");
   });
@@ -258,9 +262,7 @@ describe("list edge cases", () => {
 
     // Should not crash
     expect(blocks.length).toBe(1);
-    const text = blocks[0].lines
-      .flatMap((l) => l.map((s) => s.text))
-      .join("");
+    const text = blocks[0].lines.flatMap((l) => l.map((s) => s.text)).join("");
     // The text around the HTML tags should still be present
     expect(text).toContain("item with");
   });
@@ -414,10 +416,7 @@ describe("HTML block edge cases", () => {
   });
 
   test("ordered HTML list uses numbers", () => {
-    const blocks = htmlListToBlocks(
-      TEST_COLORS,
-      "<ol><li>First</li><li>Second</li></ol>",
-    );
+    const blocks = htmlListToBlocks(TEST_COLORS, "<ol><li>First</li><li>Second</li></ol>");
     expect(blocks[0].lines[0][0].text).toContain("1.");
     expect(blocks[1].lines[0][0].text).toContain("2.");
   });
@@ -461,10 +460,7 @@ describe("HTML block edge cases", () => {
   });
 
   test("HTML with entities is decoded", () => {
-    const blocks = htmlBlockToBlocks(
-      TEST_COLORS,
-      "<div>&lt;hello&gt; &amp; world</div>",
-    );
+    const blocks = htmlBlockToBlocks(TEST_COLORS, "<div>&lt;hello&gt; &amp; world</div>");
     expect(blocks.length).toBe(1);
     const text = blocks[0].lines[0].map((s) => s.text).join("");
     expect(text).toContain("<hello>");
@@ -472,10 +468,7 @@ describe("HTML block edge cases", () => {
   });
 
   test("malformed HTML table with unclosed tags", () => {
-    const block = htmlTableToBlock(
-      TEST_COLORS,
-      "<table><tr><td>unclosed",
-    );
+    const block = htmlTableToBlock(TEST_COLORS, "<table><tr><td>unclosed");
     // Unclosed rows/cells are not matched by regex, returns empty
     expect(block.lines).toEqual([]);
   });
@@ -634,7 +627,7 @@ code
   });
 
   test("special characters in markdown", () => {
-    const blocks = renderToBlocks("Text with < and > and & and \"quotes\"");
+    const blocks = renderToBlocks('Text with < and > and & and "quotes"');
     const text = flattenToText(blocks);
     expect(text).toContain("<");
     expect(text).toContain(">");

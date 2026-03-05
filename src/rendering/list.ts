@@ -4,7 +4,13 @@
 
 import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
-import type { ThemeColors, ListToken, ParagraphToken, StyledSegment, RenderBlock } from "../types.js";
+import type {
+  ThemeColors,
+  ListToken,
+  ParagraphToken,
+  StyledSegment,
+  RenderBlock,
+} from "../types.js";
 import { convertInlineToken } from "./text.js";
 
 /**

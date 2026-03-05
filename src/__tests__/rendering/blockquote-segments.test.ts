@@ -6,11 +6,7 @@ import { describe, test, expect } from "bun:test";
 import { lexer } from "marked";
 import type { Token } from "marked";
 import { blockquoteToBlock } from "../../rendering/blockquote.js";
-import {
-  TEST_COLORS,
-  renderToBlocks,
-  flattenToText,
-} from "../helpers/render-harness.js";
+import { TEST_COLORS, renderToBlocks, flattenToText } from "../helpers/render-harness.js";
 
 function getBlockquoteToken(markdown: string): Token {
   const tokens = lexer(markdown);

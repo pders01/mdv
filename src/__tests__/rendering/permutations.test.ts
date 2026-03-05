@@ -4,10 +4,7 @@
 
 import { describe, test, expect } from "bun:test";
 import { markdownPermutations } from "../helpers/markdown-gen.js";
-import {
-  renderToBlocks,
-  flattenToSegments,
-} from "../helpers/render-harness.js";
+import { renderToBlocks, flattenToSegments } from "../helpers/render-harness.js";
 
 describe("markdown permutation smoke tests", () => {
   const permutations = [...markdownPermutations()];

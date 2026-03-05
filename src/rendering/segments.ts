@@ -4,7 +4,14 @@
  */
 
 import { lexer, type Token } from "marked";
-import type { ThemeColors, RenderBlock, ListToken, TableToken, ParagraphToken, HtmlToken } from "../types.js";
+import type {
+  ThemeColors,
+  RenderBlock,
+  ListToken,
+  TableToken,
+  ParagraphToken,
+  HtmlToken,
+} from "../types.js";
 import type { HighlighterInstance } from "../highlighting/shiki.js";
 import { paragraphToBlock, paragraphToSegments } from "./paragraph.js";
 import { listToBlocks } from "./list.js";
@@ -12,7 +19,6 @@ import { tableToBlock } from "./table.js";
 import { blockquoteToBlock } from "./blockquote.js";
 import { codeToBlock } from "./code.js";
 import { htmlBlockToBlocks, hrToBlock } from "./html.js";
-
 
 /**
  * Convert a single token to RenderBlock(s)
@@ -23,7 +29,9 @@ function tokenToBlocks(
   highlighterInstance?: HighlighterInstance,
 ): RenderBlock[] {
   if (token.type === "code") {
-    return [codeToBlock(colors, token as Token & { text: string; lang?: string }, highlighterInstance)];
+    return [
+      codeToBlock(colors, token as Token & { text: string; lang?: string }, highlighterInstance),
+    ];
   }
 
   if (token.type === "hr") {

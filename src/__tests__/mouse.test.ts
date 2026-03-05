@@ -95,12 +95,16 @@ describe("uniformMouseYToLine", () => {
 
   test("click 1 lineHeight into viewport → line 1", () => {
     const lineHeight = scrollHeight / totalLines;
-    expect(uniformMouseYToLine(viewportTop + lineHeight, viewportTop, 0, scrollHeight, totalLines)).toBe(1);
+    expect(
+      uniformMouseYToLine(viewportTop + lineHeight, viewportTop, 0, scrollHeight, totalLines),
+    ).toBe(1);
   });
 
   test("click midway through a line rounds down", () => {
     const lineHeight = scrollHeight / totalLines;
-    expect(uniformMouseYToLine(viewportTop + lineHeight * 1.5, viewportTop, 0, scrollHeight, totalLines)).toBe(1);
+    expect(
+      uniformMouseYToLine(viewportTop + lineHeight * 1.5, viewportTop, 0, scrollHeight, totalLines),
+    ).toBe(1);
   });
 
   test("scroll offset shifts the mapping", () => {
@@ -112,13 +116,27 @@ describe("uniformMouseYToLine", () => {
   });
 
   test("clamps to last line when clicking far below", () => {
-    expect(uniformMouseYToLine(viewportTop + 9999, viewportTop, 0, scrollHeight, totalLines)).toBe(99);
+    expect(uniformMouseYToLine(viewportTop + 9999, viewportTop, 0, scrollHeight, totalLines)).toBe(
+      99,
+    );
   });
 
   test("adjacent clicks resolve to adjacent lines", () => {
     const lineHeight = scrollHeight / totalLines;
-    const a = uniformMouseYToLine(viewportTop + lineHeight * 5, viewportTop, 0, scrollHeight, totalLines);
-    const b = uniformMouseYToLine(viewportTop + lineHeight * 6, viewportTop, 0, scrollHeight, totalLines);
+    const a = uniformMouseYToLine(
+      viewportTop + lineHeight * 5,
+      viewportTop,
+      0,
+      scrollHeight,
+      totalLines,
+    );
+    const b = uniformMouseYToLine(
+      viewportTop + lineHeight * 6,
+      viewportTop,
+      0,
+      scrollHeight,
+      totalLines,
+    );
     expect(b - a).toBe(1);
   });
 
@@ -154,10 +172,10 @@ describe("mouseYToLine with getLinePosition", () => {
     // This is the actual bug scenario: a code block where each source line
     // occupies 1 terminal row, but the uniform model would give lineHeight > 1.
     const positions = realisticPositions([
-      { type: "header", lines: 1 },     // line 0 at y=0,  then margin y=1
-      { type: "paragraph", lines: 2 },  // lines 1-2 at y=2-3, then margin y=4
-      { type: "code", lines: 4 },       // lines 3-6 at y=6-9 (padding at y=5 and y=10)
-      { type: "paragraph", lines: 1 },  // line 7 at y=11, margin y=12
+      { type: "header", lines: 1 }, // line 0 at y=0,  then margin y=1
+      { type: "paragraph", lines: 2 }, // lines 1-2 at y=2-3, then margin y=4
+      { type: "code", lines: 4 }, // lines 3-6 at y=6-9 (padding at y=5 and y=10)
+      { type: "paragraph", lines: 1 }, // line 7 at y=11, margin y=12
     ]);
     const totalLines = positions.length; // 8
     // scrollHeight is the total rendered height (all blocks + margins + padding)
@@ -166,10 +184,18 @@ describe("mouseYToLine with getLinePosition", () => {
     const getLinePos = makeGetLinePos(positions);
 
     // Position-based should always get it right:
-    expect(mouseYToLine(viewportTop + 6, viewportTop, 0, scrollHeight, totalLines, getLinePos)).toBe(3);
-    expect(mouseYToLine(viewportTop + 7, viewportTop, 0, scrollHeight, totalLines, getLinePos)).toBe(4);
-    expect(mouseYToLine(viewportTop + 8, viewportTop, 0, scrollHeight, totalLines, getLinePos)).toBe(5);
-    expect(mouseYToLine(viewportTop + 9, viewportTop, 0, scrollHeight, totalLines, getLinePos)).toBe(6);
+    expect(
+      mouseYToLine(viewportTop + 6, viewportTop, 0, scrollHeight, totalLines, getLinePos),
+    ).toBe(3);
+    expect(
+      mouseYToLine(viewportTop + 7, viewportTop, 0, scrollHeight, totalLines, getLinePos),
+    ).toBe(4);
+    expect(
+      mouseYToLine(viewportTop + 8, viewportTop, 0, scrollHeight, totalLines, getLinePos),
+    ).toBe(5);
+    expect(
+      mouseYToLine(viewportTop + 9, viewportTop, 0, scrollHeight, totalLines, getLinePos),
+    ).toBe(6);
   });
 
   test("position-based fixes the 2-adjacent-rows-same-line bug", () => {
@@ -178,16 +204,16 @@ describe("mouseYToLine with getLinePosition", () => {
     // Total 10 lines, scrollHeight = 30 → uniform lineHeight = 3.0
     // Lines 5-8 are in a code block with 1-row-per-line at y=16,17,18,19
     const positions: (LinePosition | null)[] = [
-      { y: 0, height: 1 },   // line 0 - header
-      { y: 3, height: 1 },   // line 1 - paragraph
-      { y: 4, height: 1 },   // line 2 - paragraph
-      { y: 7, height: 1 },   // line 3 - paragraph
-      { y: 10, height: 1 },  // line 4 - paragraph
-      { y: 16, height: 1 },  // line 5 - code (after padding)
-      { y: 17, height: 1 },  // line 6 - code
-      { y: 18, height: 1 },  // line 7 - code
-      { y: 19, height: 1 },  // line 8 - code
-      { y: 23, height: 1 },  // line 9 - paragraph
+      { y: 0, height: 1 }, // line 0 - header
+      { y: 3, height: 1 }, // line 1 - paragraph
+      { y: 4, height: 1 }, // line 2 - paragraph
+      { y: 7, height: 1 }, // line 3 - paragraph
+      { y: 10, height: 1 }, // line 4 - paragraph
+      { y: 16, height: 1 }, // line 5 - code (after padding)
+      { y: 17, height: 1 }, // line 6 - code
+      { y: 18, height: 1 }, // line 7 - code
+      { y: 19, height: 1 }, // line 8 - code
+      { y: 23, height: 1 }, // line 9 - paragraph
     ];
     const totalLines = 10;
     const scrollHeight = 30;
@@ -213,10 +239,10 @@ describe("mouseYToLine with getLinePosition", () => {
   test("click in gap between blocks finds closest line", () => {
     // Gap at y=5 (between header margin and paragraph)
     const positions: (LinePosition | null)[] = [
-      { y: 0, height: 1 },  // line 0 - header at y=0
+      { y: 0, height: 1 }, // line 0 - header at y=0
       // gap at y=1 (header margin)
-      { y: 2, height: 1 },  // line 1 - paragraph at y=2
-      { y: 3, height: 1 },  // line 2 - paragraph at y=3
+      { y: 2, height: 1 }, // line 1 - paragraph at y=2
+      { y: 3, height: 1 }, // line 2 - paragraph at y=3
     ];
     const getLinePos = makeGetLinePos(positions);
 
@@ -228,9 +254,9 @@ describe("mouseYToLine with getLinePosition", () => {
 
   test("click in gap closer to next block finds next line", () => {
     const positions: (LinePosition | null)[] = [
-      { y: 0, height: 1 },   // line 0
+      { y: 0, height: 1 }, // line 0
       // gap at y=1, y=2
-      { y: 3, height: 1 },   // line 1
+      { y: 3, height: 1 }, // line 1
     ];
     const getLinePos = makeGetLinePos(positions);
 
@@ -284,7 +310,9 @@ describe("mouse click → cursor state", () => {
 
   function makeCursor(): { cursor: CursorManager; updates: { count: number } } {
     const updates = { count: 0 };
-    const cursor = createCursorManager(lines.length, () => { updates.count++; });
+    const cursor = createCursorManager(lines.length, () => {
+      updates.count++;
+    });
     return { cursor, updates };
   }
 

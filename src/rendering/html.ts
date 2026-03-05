@@ -279,9 +279,16 @@ export function htmlTableToBlock(colors: ThemeColors, html: string): RenderBlock
   const lines: StyledSegment[][] = [];
 
   // Header row
-  const headerLine: StyledSegment[] = [{ text: "\u2502 ", fg: colors.gray, bold: false, italic: false }];
+  const headerLine: StyledSegment[] = [
+    { text: "\u2502 ", fg: colors.gray, bold: false, italic: false },
+  ];
   for (let i = 0; i < colCount; i++) {
-    headerLine.push({ text: padCell(rows[0][i] || "", paddedWidths[i]), fg: colors.cyan, bold: true, italic: false });
+    headerLine.push({
+      text: padCell(rows[0][i] || "", paddedWidths[i]),
+      fg: colors.cyan,
+      bold: true,
+      italic: false,
+    });
     if (i < colCount - 1) {
       headerLine.push({ text: "\u2502 ", fg: colors.gray, bold: false, italic: false });
     }
@@ -290,13 +297,22 @@ export function htmlTableToBlock(colors: ThemeColors, html: string): RenderBlock
   lines.push(headerLine);
 
   // Separator
-  lines.push([{ text: buildSeparatorLine(paddedWidths), fg: colors.gray, bold: false, italic: false }]);
+  lines.push([
+    { text: buildSeparatorLine(paddedWidths), fg: colors.gray, bold: false, italic: false },
+  ]);
 
   // Data rows
   for (let r = 1; r < rows.length; r++) {
-    const dataLine: StyledSegment[] = [{ text: "\u2502 ", fg: colors.gray, bold: false, italic: false }];
+    const dataLine: StyledSegment[] = [
+      { text: "\u2502 ", fg: colors.gray, bold: false, italic: false },
+    ];
     for (let i = 0; i < colCount; i++) {
-      dataLine.push({ text: padCell(rows[r][i] || "", paddedWidths[i]), fg: colors.fg, bold: false, italic: false });
+      dataLine.push({
+        text: padCell(rows[r][i] || "", paddedWidths[i]),
+        fg: colors.fg,
+        bold: false,
+        italic: false,
+      });
       if (i < colCount - 1) {
         dataLine.push({ text: "\u2502 ", fg: colors.gray, bold: false, italic: false });
       }
@@ -346,7 +362,11 @@ export function htmlListToBlocks(colors: ThemeColors, html: string): RenderBlock
 /**
  * Convert an HTML heading to a RenderBlock (pure function)
  */
-export function htmlHeadingToBlock(colors: ThemeColors, html: string, level: number): RenderBlock | null {
+export function htmlHeadingToBlock(
+  colors: ThemeColors,
+  html: string,
+  level: number,
+): RenderBlock | null {
   const content = extractHtmlBlockContent(html);
   if (!content) return null;
 
@@ -354,7 +374,9 @@ export function htmlHeadingToBlock(colors: ThemeColors, html: string, level: num
 
   return {
     type: "heading",
-    lines: [[{ text: content, fg: headingColors[level - 1] || colors.blue, bold: true, italic: false }]],
+    lines: [
+      [{ text: content, fg: headingColors[level - 1] || colors.blue, bold: true, italic: false }],
+    ],
     indent: 0,
     marginTop: level === 1 ? 1 : 0,
     marginBottom: 1,

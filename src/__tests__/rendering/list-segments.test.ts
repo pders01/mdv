@@ -6,11 +6,7 @@ import { describe, test, expect } from "bun:test";
 import { lexer } from "marked";
 import type { ListToken } from "../../types.js";
 import { listToBlocks, inlineTokensToSegments } from "../../rendering/list.js";
-import {
-  TEST_COLORS,
-  renderToBlocks,
-  flattenToText,
-} from "../helpers/render-harness.js";
+import { TEST_COLORS, renderToBlocks, flattenToText } from "../helpers/render-harness.js";
 
 function getListToken(markdown: string): ListToken {
   const tokens = lexer(markdown);

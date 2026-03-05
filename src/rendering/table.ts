@@ -21,7 +21,9 @@ export function tableToBlock(colors: ThemeColors, token: TableToken): RenderBloc
   const lines: StyledSegment[][] = [];
 
   // Header row
-  const headerLine: StyledSegment[] = [{ text: "\u2502 ", fg: colors.gray, bold: false, italic: false }];
+  const headerLine: StyledSegment[] = [
+    { text: "\u2502 ", fg: colors.gray, bold: false, italic: false },
+  ];
   for (let i = 0; i < colCount; i++) {
     const align = token.align?.[i] || "left";
     const cellText = padCell(token.header[i].text, paddedWidths[i], align);
@@ -34,11 +36,15 @@ export function tableToBlock(colors: ThemeColors, token: TableToken): RenderBloc
   lines.push(headerLine);
 
   // Separator row
-  lines.push([{ text: buildSeparatorLine(paddedWidths), fg: colors.gray, bold: false, italic: false }]);
+  lines.push([
+    { text: buildSeparatorLine(paddedWidths), fg: colors.gray, bold: false, italic: false },
+  ]);
 
   // Data rows
   for (const row of token.rows) {
-    const dataLine: StyledSegment[] = [{ text: "\u2502 ", fg: colors.gray, bold: false, italic: false }];
+    const dataLine: StyledSegment[] = [
+      { text: "\u2502 ", fg: colors.gray, bold: false, italic: false },
+    ];
     for (let i = 0; i < colCount; i++) {
       const align = token.align?.[i] || "left";
       const cellContent = i < row.length ? row[i].text : "";

@@ -141,9 +141,7 @@ describe("codeToBlock with mock highlighter", () => {
   });
 
   test("falls back to fg color when token has no color", () => {
-    const mock = createMockHighlighter([
-      [{ content: "no color" }],
-    ]);
+    const mock = createMockHighlighter([[{ content: "no color" }]]);
 
     const token = getCodeToken("```javascript\nno color\n```");
     const block = codeToBlock(TEST_COLORS, token, mock);
@@ -154,9 +152,7 @@ describe("codeToBlock with mock highlighter", () => {
   });
 
   test("handles empty code block", () => {
-    const mock = createMockHighlighter([
-      [{ content: "", color: "#e1e4e8" }],
-    ]);
+    const mock = createMockHighlighter([[{ content: "", color: "#e1e4e8" }]]);
 
     const token = getCodeToken("```javascript\n\n```");
     const block = codeToBlock(TEST_COLORS, token, mock);
@@ -169,7 +165,7 @@ describe("codeToBlock with mock highlighter", () => {
     // Mock highlighter that doesn't include "haskell"
     const mock = createMockHighlighter([]);
 
-    const token = getCodeToken("```haskell\nmain = putStrLn \"hello\"\n```");
+    const token = getCodeToken('```haskell\nmain = putStrLn "hello"\n```');
     const block = codeToBlock(TEST_COLORS, token, mock);
 
     // Falls back to plain text (shikiToChunks checks getLoadedLanguages)

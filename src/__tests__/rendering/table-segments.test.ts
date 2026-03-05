@@ -6,11 +6,7 @@ import { describe, test, expect } from "bun:test";
 import { lexer } from "marked";
 import type { TableToken } from "../../types.js";
 import { tableToBlock } from "../../rendering/table.js";
-import {
-  TEST_COLORS,
-  renderToBlocks,
-  flattenToText,
-} from "../helpers/render-harness.js";
+import { TEST_COLORS, renderToBlocks, flattenToText } from "../helpers/render-harness.js";
 
 function getTableToken(markdown: string): TableToken {
   const tokens = lexer(markdown);
@@ -71,9 +67,7 @@ describe("tableToBlock", () => {
     const block = tableToBlock(TEST_COLORS, token);
 
     const headerLine = block.lines[0];
-    const pipes = headerLine.filter(
-      (s) => s.text.includes("\u2502") && s.fg === TEST_COLORS.gray,
-    );
+    const pipes = headerLine.filter((s) => s.text.includes("\u2502") && s.fg === TEST_COLORS.gray);
     expect(pipes.length).toBeGreaterThan(0);
   });
 
@@ -127,9 +121,7 @@ describe("table via full pipeline", () => {
   });
 
   test("preserves all cell content", () => {
-    const blocks = renderToBlocks(
-      "| Name | Score |\n| --- | --- |\n| Alice | 95 |\n| Bob | 87 |",
-    );
+    const blocks = renderToBlocks("| Name | Score |\n| --- | --- |\n| Alice | 95 |\n| Bob | 87 |");
     const text = flattenToText(blocks);
     expect(text).toContain("Name");
     expect(text).toContain("Score");

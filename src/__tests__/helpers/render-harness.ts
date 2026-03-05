@@ -36,9 +36,7 @@ export function renderToBlocks(markdown: string, colors: ThemeColors = TEST_COLO
  */
 export function flattenToText(blocks: RenderBlock[]): string {
   return blocks
-    .flatMap((block) =>
-      block.lines.map((line) => line.map((seg) => seg.text).join("")),
-    )
+    .flatMap((block) => block.lines.map((line) => line.map((seg) => seg.text).join("")))
     .join("\n");
 }
 
@@ -97,7 +95,9 @@ export function serializeBlocks(blocks: RenderBlock[]): string {
   const lines: string[] = [];
 
   for (const block of blocks) {
-    lines.push(`[${block.type}] (indent: ${block.indent}, margin: ${block.marginTop}/${block.marginBottom})`);
+    lines.push(
+      `[${block.type}] (indent: ${block.indent}, margin: ${block.marginTop}/${block.marginBottom})`,
+    );
     for (const line of block.lines) {
       for (const seg of line) {
         const styles: string[] = [`fg:${seg.fg}`];

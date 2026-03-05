@@ -6,11 +6,7 @@ import { describe, test, expect } from "bun:test";
 import { lexer } from "marked";
 import type { ParagraphToken } from "../../types.js";
 import { paragraphToSegments } from "../../rendering/paragraph.js";
-import {
-  TEST_COLORS,
-  expectSegment,
-  renderToBlocks,
-} from "../helpers/render-harness.js";
+import { TEST_COLORS, expectSegment, renderToBlocks } from "../helpers/render-harness.js";
 
 function getParagraphToken(markdown: string): ParagraphToken {
   const tokens = lexer(markdown);
@@ -157,9 +153,7 @@ describe("paragraphToSegments", () => {
       const segments = paragraphToSegments(TEST_COLORS, token);
 
       // The bold-italic text should have both flags
-      const biSegment = segments.find(
-        (s) => s.text.includes("bold-italic"),
-      );
+      const biSegment = segments.find((s) => s.text.includes("bold-italic"));
       expect(biSegment).toBeDefined();
       if (biSegment) {
         expect(biSegment.bold).toBe(true);
