@@ -135,40 +135,22 @@ export class SearchManager {
   }
 
   /**
-   * Jump to the next match at or after the given line. Returns match line or -1.
+   * Advance to next match (wraps around). Returns match line or -1.
    */
-  nextMatch(fromLine: number): number {
+  nextMatch(): number {
     if (this._matches.length === 0) return -1;
 
-    // Find first match after fromLine
-    for (let i = 0; i < this._matches.length; i++) {
-      if (this._matches[i]!.line > fromLine) {
-        this._currentIndex = i;
-        return this._matches[i]!.line;
-      }
-    }
-
-    // Wrap around
-    this._currentIndex = 0;
-    return this._matches[0]!.line;
+    this._currentIndex = (this._currentIndex + 1) % this._matches.length;
+    return this._matches[this._currentIndex]!.line;
   }
 
   /**
-   * Jump to the previous match before the given line. Returns match line or -1.
+   * Go to previous match (wraps around). Returns match line or -1.
    */
-  prevMatch(fromLine: number): number {
+  prevMatch(): number {
     if (this._matches.length === 0) return -1;
 
-    // Find last match before fromLine
-    for (let i = this._matches.length - 1; i >= 0; i--) {
-      if (this._matches[i]!.line < fromLine) {
-        this._currentIndex = i;
-        return this._matches[i]!.line;
-      }
-    }
-
-    // Wrap around
-    this._currentIndex = this._matches.length - 1;
+    this._currentIndex = (this._currentIndex - 1 + this._matches.length) % this._matches.length;
     return this._matches[this._currentIndex]!.line;
   }
 

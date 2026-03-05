@@ -176,6 +176,23 @@ describe("SearchManager match columns", () => {
     }
   });
 
+  test("multiple case-insensitive matches on same line", () => {
+    // "Claude" and "claude" should both match on the same line
+    const search = new SearchManager();
+    search.startInput();
+    "claude".split("").forEach((c) => search.appendChar(c));
+    search.confirm([
+      "This file provides guidance to Claude Code (claude.ai/code) when working with code.",
+    ]);
+
+    expect(search.matchCount).toBe(2);
+    expect(search.matches[0]!.col).toBe(31); // "Claude"
+    expect(search.matches[1]!.col).toBe(44); // "claude"
+    // Both on line 0
+    expect(search.matches[0]!.line).toBe(0);
+    expect(search.matches[1]!.line).toBe(0);
+  });
+
   test("case insensitive search", () => {
     const search = new SearchManager();
     search.startInput();
@@ -193,7 +210,7 @@ describe("SearchManager match columns", () => {
 // =============================================================================
 
 describe("SearchManager navigation", () => {
-  test("nextMatch wraps around", () => {
+  test("nextMatch cycles through all matches including same-line", () => {
     const search = new SearchManager();
     search.startInput();
     "foo".split("").forEach((c) => search.appendChar(c));
@@ -201,10 +218,36 @@ describe("SearchManager navigation", () => {
 
     expect(search.matchCount).toBe(2);
 
-    // From line 0, next should be line 2
-    expect(search.nextMatch(0)).toBe(2);
-    // From line 2, next should wrap to line 0
-    expect(search.nextMatch(2)).toBe(0);
+    // firstMatchFrom sets index to 0
+    search.firstMatchFrom(0);
+    expect(search.currentIndex).toBe(0);
+
+    // next → index 1 (line 2)
+    expect(search.nextMatch()).toBe(2);
+    expect(search.currentIndex).toBe(1);
+
+    // next → wraps to index 0 (line 0)
+    expect(search.nextMatch()).toBe(0);
+    expect(search.currentIndex).toBe(0);
+  });
+
+  test("nextMatch steps through multiple matches on same line", () => {
+    const search = new SearchManager();
+    search.startInput();
+    "claude".split("").forEach((c) => search.appendChar(c));
+    search.confirm(["This has Claude and claude in it", "other line"]);
+
+    expect(search.matchCount).toBe(2);
+
+    // Both matches are on line 0
+    search.firstMatchFrom(0);
+    expect(search.currentIndex).toBe(0);
+    expect(search.matches[0]!.line).toBe(0);
+
+    // n should advance to the second match (still line 0, different col)
+    expect(search.nextMatch()).toBe(0);
+    expect(search.currentIndex).toBe(1);
+    expect(search.matches[1]!.col).toBeGreaterThan(search.matches[0]!.col);
   });
 
   test("prevMatch wraps around", () => {
@@ -213,10 +256,14 @@ describe("SearchManager navigation", () => {
     "foo".split("").forEach((c) => search.appendChar(c));
     search.confirm(["foo", "bar", "foo"]);
 
-    // From line 2, prev should be line 0
-    expect(search.prevMatch(2)).toBe(0);
-    // From line 0, prev should wrap to line 2
-    expect(search.prevMatch(0)).toBe(2);
+    // Start at first match
+    search.firstMatchFrom(0);
+    // prev wraps to last match (line 2)
+    expect(search.prevMatch()).toBe(2);
+    expect(search.currentIndex).toBe(1);
+    // prev again → back to line 0
+    expect(search.prevMatch()).toBe(0);
+    expect(search.currentIndex).toBe(0);
   });
 
   test("firstMatchFrom finds match at current line", () => {

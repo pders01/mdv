@@ -209,7 +209,7 @@ export function handleContentKey(
   // n - next search match
   if (event.name === "n" && !event.ctrl && !event.shift && cursor.mode === "normal") {
     if (search.pattern) {
-      const line = search.nextMatch(cursor.cursorLine);
+      const line = search.nextMatch();
       if (line >= 0) {
         cursor.setCursor(line);
         scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
@@ -223,7 +223,7 @@ export function handleContentKey(
   // N - previous search match
   if (event.name === "N" || (event.name === "n" && event.shift)) {
     if (search.pattern) {
-      const line = search.prevMatch(cursor.cursorLine);
+      const line = search.prevMatch();
       if (line >= 0) {
         cursor.setCursor(line);
         scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);

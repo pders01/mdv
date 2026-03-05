@@ -210,7 +210,7 @@ export function createSidebar(
     // n - next search match
     if (event.name === "n" && !event.ctrl && !event.shift) {
       if (sidebarSearch.pattern) {
-        const line = sidebarSearch.nextMatch(cursorIndex);
+        const line = sidebarSearch.nextMatch();
         if (line >= 0) {
           cursorIndex = line;
           refreshList();
@@ -223,7 +223,7 @@ export function createSidebar(
     // N - previous search match
     if (event.name === "N" || (event.name === "n" && event.shift)) {
       if (sidebarSearch.pattern) {
-        const line = sidebarSearch.prevMatch(cursorIndex);
+        const line = sidebarSearch.prevMatch();
         if (line >= 0) {
           cursorIndex = line;
           refreshList();
