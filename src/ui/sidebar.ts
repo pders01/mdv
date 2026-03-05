@@ -64,6 +64,7 @@ export function createSidebar(
     width: SIDEBAR_WIDTH,
     flexShrink: 0,
     flexDirection: "column",
+    overflow: "hidden",
   });
 
   // Header
@@ -225,8 +226,17 @@ export function createSidebar(
   const setVisible = (show: boolean) => {
     if (visible === show) return;
     visible = show;
-    sidebarBox.width = show ? SIDEBAR_WIDTH : 0;
-    sidebarBox.flexShrink = show ? 0 : 1;
+    if (show) {
+      sidebarBox.width = SIDEBAR_WIDTH;
+      sidebarBox.flexShrink = 0;
+      header.content = "FILES";
+      refreshList();
+    } else {
+      sidebarBox.width = 0;
+      sidebarBox.flexShrink = 1;
+      header.content = "";
+      listText.content = "";
+    }
   };
 
   const highlightEntry = (filePath: string) => {

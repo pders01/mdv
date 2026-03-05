@@ -53,17 +53,35 @@ bun run src/index.ts README.md
 # View a markdown file
 mdv README.md
 
+# Browse a directory of markdown files
+mdv ./docs
+mdv .
+
 # Read from stdin (pipe)
 cat README.md | mdv
 curl -s https://example.com/doc.md | mdv
 
 # With a specific theme
 mdv -t dracula README.md
-cat README.md | mdv -t dracula
+
+# Exclude directories when browsing
+mdv -e drafts -e tmp ./docs
 
 # List available themes
 mdv --list-themes
 ```
+
+## Directory Browsing
+
+Pass a directory instead of a file to open a sidebar file browser:
+
+```bash
+mdv ./docs
+```
+
+This recursively scans for `.md` files and displays them in a navigable sidebar. The following directories are excluded by default: `node_modules`, `.git`, `vendor`, `dist`, `build`, `.next`, `.nuxt`, `__pycache__`, `.venv`, `target`, `.hg`, `.svn`.
+
+Use `-e`/`--exclude` to add custom exclusions (repeatable).
 
 ## Keybindings
 
@@ -81,6 +99,19 @@ mdv --list-themes
 | `Ctrl-b` / `PageUp`             | Scroll up full page   |
 | `Home`                          | Go to top             |
 | `End`                           | Go to bottom          |
+
+### Directory Mode
+
+| Key      | Action                 |
+| -------- | ---------------------- |
+| `Tab`    | Switch panes           |
+| `Ctrl-h` | Focus sidebar          |
+| `Ctrl-l` | Focus reader           |
+| `\`      | Toggle sidebar         |
+| `Enter`  | Open file from sidebar |
+| `Esc`    | Back to reader pane    |
+
+All navigation keys (j/k, Ctrl-d/u, etc.) work in both panes.
 
 ### Yank (Copy)
 
@@ -102,7 +133,8 @@ mdv --list-themes
 - Full markdown rendering with proper styling
 - Syntax highlighting for code blocks (50+ languages)
 - Theme support via shiki (github-dark default, 30+ themes available)
-- Vim-style navigation
+- Directory browsing with sidebar file tree
+- Vim-style navigation (works in both sidebar and reader panes)
 - Supports:
   - Headings (ATX and Setext style)
   - Bold, italic, strikethrough
@@ -122,9 +154,13 @@ mdv --list-themes
 ## Options
 
 ```
--t, --theme <name>  Set syntax highlighting theme (default: github-dark)
---list-themes       List available themes
--h, --help          Show help
+-t, --theme <name>    Set syntax highlighting theme (default: github-dark)
+-T, --list-themes     List available themes
+-e, --exclude <dir>   Exclude directory from scan (repeatable)
+    --no-mouse        Disable mouse input
+    --debug           Enable debug logging
+-v, --version         Show version
+-h, --help            Show help
 ```
 
 ## Development
