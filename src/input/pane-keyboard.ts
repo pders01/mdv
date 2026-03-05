@@ -40,8 +40,8 @@ export function setupPaneKeyboardHandler(options: PaneKeyboardOptions): void {
 
     // Backslash toggles sidebar visibility
     if (event.name === "\\") {
-      sidebar.setVisible(focusManager.activePane !== "sidebar");
-      if (focusManager.activePane === "sidebar") {
+      const nowVisible = sidebar.toggleVisible();
+      if (!nowVisible && focusManager.activePane === "sidebar") {
         focusManager.switchTo("content");
       }
       return;

@@ -19,15 +19,29 @@ describe("scanDirectory", () => {
 
     mkdirSync(join(tempDir, "docs", "nested"));
     writeFileSync(join(tempDir, "docs", "nested", "deep.md"), "# Deep");
+
+    // Directories that should be excluded by default
+    mkdirSync(join(tempDir, "node_modules"));
+    writeFileSync(join(tempDir, "node_modules", "pkg.md"), "# Pkg");
+
+    mkdirSync(join(tempDir, ".git"));
+    writeFileSync(join(tempDir, ".git", "info.md"), "# Git");
+
+    mkdirSync(join(tempDir, "vendor"));
+    writeFileSync(join(tempDir, "vendor", "lib.md"), "# Vendor");
+
+    // Custom directory for exclusion testing
+    mkdirSync(join(tempDir, "drafts"));
+    writeFileSync(join(tempDir, "drafts", "wip.md"), "# WIP");
   });
 
   afterAll(() => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  test("finds all markdown files recursively", async () => {
+  test("finds all markdown files recursively (excluding defaults)", async () => {
     const tree = await scanDirectory(tempDir);
-    expect(tree.entries).toHaveLength(4);
+    expect(tree.entries).toHaveLength(5); // README, notes, docs/guide, docs/nested/deep, drafts/wip
   });
 
   test("excludes non-markdown files", async () => {
@@ -36,10 +50,41 @@ describe("scanDirectory", () => {
     expect(paths).not.toContain("ignore.txt");
   });
 
+  test("excludes node_modules by default", async () => {
+    const tree = await scanDirectory(tempDir);
+    const paths = tree.entries.map((e) => e.relativePath);
+    expect(paths.some((p) => p.includes("node_modules"))).toBe(false);
+  });
+
+  test("excludes .git by default", async () => {
+    const tree = await scanDirectory(tempDir);
+    const paths = tree.entries.map((e) => e.relativePath);
+    expect(paths.some((p) => p.includes(".git"))).toBe(false);
+  });
+
+  test("excludes vendor by default", async () => {
+    const tree = await scanDirectory(tempDir);
+    const paths = tree.entries.map((e) => e.relativePath);
+    expect(paths.some((p) => p.includes("vendor"))).toBe(false);
+  });
+
+  test("excludes custom directories via options", async () => {
+    const tree = await scanDirectory(tempDir, { exclude: ["drafts"] });
+    const paths = tree.entries.map((e) => e.relativePath);
+    expect(paths.some((p) => p.includes("drafts"))).toBe(false);
+    expect(tree.entries).toHaveLength(4); // README, notes, docs/guide, docs/nested/deep
+  });
+
   test("sorts entries by relative path", async () => {
     const tree = await scanDirectory(tempDir);
     const paths = tree.entries.map((e) => e.relativePath);
-    expect(paths).toEqual(["docs/guide.md", "docs/nested/deep.md", "notes.md", "README.md"]);
+    expect(paths).toEqual([
+      "docs/guide.md",
+      "docs/nested/deep.md",
+      "drafts/wip.md",
+      "notes.md",
+      "README.md",
+    ]);
   });
 
   test("sets correct depth", async () => {

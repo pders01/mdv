@@ -1,5 +1,8 @@
 /**
  * Sidebar file tree component for directory browsing mode
+ *
+ * Uses a single TextRenderable for the file list to avoid per-child
+ * layout issues in ScrollBox. Cursor highlight is drawn via renderAfter.
  */
 
 import {
@@ -11,17 +14,36 @@ import {
   type CliRenderer,
   type KeyEvent,
 } from "@opentui/core";
-import type { FileTree } from "../fs/tree.js";
+import type { FileTree, FileEntry } from "../fs/tree.js";
 import type { ThemeColors } from "../types.js";
 
 export interface SidebarSetup {
   sidebarBox: BoxRenderable;
   handleKey: (event: KeyEvent) => boolean;
   setVisible: (visible: boolean) => void;
+  toggleVisible: () => boolean;
   highlightEntry: (filePath: string) => void;
 }
 
 const SIDEBAR_WIDTH = 30;
+const MAX_LABEL_LEN = SIDEBAR_WIDTH - 3;
+
+function formatEntryLabel(entry: FileEntry): string {
+  // Show relative path to distinguish files in different directories
+  const relPath = entry.relativePath;
+  if (relPath.length <= MAX_LABEL_LEN) return relPath;
+  // Truncate from the left, keeping the filename visible
+  return "..." + relPath.slice(relPath.length - MAX_LABEL_LEN + 3);
+}
+
+function buildListContent(entries: FileEntry[], selected: number): string {
+  return entries
+    .map((e, i) => {
+      const prefix = i === selected ? ">" : " ";
+      return prefix + formatEntryLabel(e);
+    })
+    .join("\n");
+}
 
 export function createSidebar(
   renderer: CliRenderer,
@@ -47,21 +69,13 @@ export function createSidebar(
   // Header
   const header = new TextRenderable(renderer, {
     id: "sidebar-header",
-    content: " FILES",
+    content: "FILES",
     fg: colors.fg,
     attributes: TextAttributes.BOLD,
     height: 1,
+    paddingLeft: 1,
   });
   sidebarBox.add(header);
-
-  // Separator line under header
-  const sep = new TextRenderable(renderer, {
-    id: "sidebar-sep",
-    content: "─".repeat(SIDEBAR_WIDTH),
-    fg: colors.gray,
-    height: 1,
-  });
-  sidebarBox.add(sep);
 
   // Scrollable file list
   const scrollBox = new ScrollBoxRenderable(renderer, {
@@ -72,69 +86,68 @@ export function createSidebar(
   });
   sidebarBox.add(scrollBox);
 
-  // File entry renderables
-  const entryRenderables: TextRenderable[] = [];
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i]!;
-    const indent = "  ".repeat(entry.depth);
-    const label = indent + entry.relativePath.split("/").pop()!;
-    const truncated =
-      label.length > SIDEBAR_WIDTH - 2 ? label.slice(0, SIDEBAR_WIDTH - 5) + "..." : label;
+  // Single text renderable for the entire file list
+  const listText = new TextRenderable(renderer, {
+    id: "sidebar-list",
+    content: buildListContent(entries, cursorIndex),
+    fg: colors.fg,
+    wrapMode: "none",
+    truncate: true,
+  });
+  scrollBox.add(listText);
 
-    const text = new TextRenderable(renderer, {
-      id: `sidebar-entry-${i}`,
-      content: ` ${truncated}`,
-      fg: colors.fg,
-      height: 1,
-    });
-    entryRenderables.push(text);
-    scrollBox.add(text);
-  }
-
-  // Highlight the cursor entry
-  const updateHighlight = () => {
-    for (let i = 0; i < entryRenderables.length; i++) {
-      entryRenderables[i]!.fg = i === cursorIndex ? colors.link : colors.fg;
-      entryRenderables[i]!.attributes =
-        i === cursorIndex ? TextAttributes.BOLD : TextAttributes.NONE;
-    }
+  // Rebuild list content to reflect new cursor position.
+  // Setting .content dirties the renderable, triggering a repaint.
+  const refreshList = () => {
+    listText.content = buildListContent(entries, cursorIndex);
   };
 
-  // Draw cursor highlight overlay
+  // Draw cursor highlight overlay on the scroll content.
   if (scrollBox.content) {
     scrollBox.content.renderAfter = (buffer) => {
       if (entries.length === 0) return;
-      const y = cursorIndex;
-      if (y >= 0 && y < buffer.height) {
-        buffer.fillRect(0, y, buffer.width, 1, cursorRGBA);
-      }
+
+      const baseY = listText.y;
+      const y = baseY + cursorIndex;
+
+      // Clip to visible area
+      if (y < 0 || y >= buffer.height) return;
+      buffer.fillRect(0, y, buffer.width, 1, cursorRGBA);
     };
   }
 
-  updateHighlight();
+  const scrollToCursor = () => {
+    if (entries.length === 0) return;
+
+    // Each entry = 1 terminal row. Use lineCount from the text buffer
+    // to get the actual content height; fall back to entry count.
+    const totalLines = listText.lineCount > 0 ? listText.lineCount : entries.length;
+    const scrollHeight = scrollBox.scrollHeight;
+    if (scrollHeight <= 0) return;
+
+    const lineHeight = scrollHeight / totalLines;
+    const cursorY = cursorIndex * lineHeight;
+    const viewportHeight = scrollBox.viewport?.height || scrollHeight;
+    const margin = lineHeight * 2;
+
+    if (cursorY < scrollBox.scrollTop + margin) {
+      scrollBox.scrollTo(Math.max(0, cursorY - margin));
+    } else if (cursorY + lineHeight > scrollBox.scrollTop + viewportHeight - margin) {
+      scrollBox.scrollTo(Math.max(0, cursorY + lineHeight + margin - viewportHeight));
+    }
+  };
 
   const moveCursor = (delta: number) => {
     const newIndex = Math.max(0, Math.min(cursorIndex + delta, entries.length - 1));
     if (newIndex === cursorIndex) return;
     cursorIndex = newIndex;
-    updateHighlight();
-
-    // Scroll to keep cursor visible
-    if (scrollBox.scrollHeight > 0 && entries.length > 0) {
-      const lineHeight = scrollBox.scrollHeight / entries.length;
-      const cursorY = cursorIndex * lineHeight;
-      const viewportHeight = scrollBox.viewport?.height || scrollBox.scrollHeight;
-      const margin = lineHeight * 2;
-
-      if (cursorY < scrollBox.scrollTop + margin) {
-        scrollBox.scrollTo(Math.max(0, cursorY - margin));
-      } else if (cursorY + lineHeight > scrollBox.scrollTop + viewportHeight - margin) {
-        scrollBox.scrollTo(Math.max(0, cursorY + lineHeight + margin - viewportHeight));
-      }
-    }
+    refreshList();
+    scrollToCursor();
   };
 
   const handleKey = (event: KeyEvent): boolean => {
+    const height = renderer.height;
+
     switch (event.name) {
       case "j":
       case "down":
@@ -152,21 +165,58 @@ export function createSidebar(
         return true;
       case "G":
         cursorIndex = entries.length - 1;
-        updateHighlight();
-        if (scrollBox.scrollHeight > 0) {
-          scrollBox.scrollTo(scrollBox.scrollHeight);
-        }
+        refreshList();
+        scrollToCursor();
         return true;
       case "g":
         if (!event.ctrl && !event.shift) {
-          // Single g press — we'd need double-g tracking, keep simple for now
-          // Just go to top on g
           cursorIndex = 0;
-          updateHighlight();
+          refreshList();
           scrollBox.scrollTo(0);
           return true;
         }
         return false;
+      case "d":
+        if (event.ctrl) {
+          moveCursor(Math.floor(height / 2));
+          return true;
+        }
+        return false;
+      case "u":
+        if (event.ctrl) {
+          moveCursor(-Math.floor(height / 2));
+          return true;
+        }
+        return false;
+      case "f":
+        if (event.ctrl) {
+          moveCursor(height - 2);
+          return true;
+        }
+        return false;
+      case "b":
+        if (event.ctrl) {
+          moveCursor(-(height - 2));
+          return true;
+        }
+        return false;
+      case "pagedown":
+      case "space":
+        moveCursor(height - 2);
+        return true;
+      case "pageup":
+        moveCursor(-(height - 2));
+        return true;
+      case "home":
+        cursorIndex = 0;
+        refreshList();
+        scrollBox.scrollTo(0);
+        return true;
+      case "end":
+        cursorIndex = entries.length - 1;
+        refreshList();
+        scrollToCursor();
+        return true;
       default:
         return false;
     }
@@ -183,9 +233,14 @@ export function createSidebar(
     const idx = entries.findIndex((e) => e.path === filePath);
     if (idx >= 0) {
       cursorIndex = idx;
-      updateHighlight();
+      refreshList();
     }
   };
 
-  return { sidebarBox, handleKey, setVisible, highlightEntry };
+  const toggleVisible = (): boolean => {
+    setVisible(!visible);
+    return visible;
+  };
+
+  return { sidebarBox, handleKey, setVisible, toggleVisible, highlightEntry };
 }

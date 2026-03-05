@@ -15,6 +15,7 @@ export interface CliArgs {
   listThemes: boolean;
   debug: boolean;
   noMouse: boolean;
+  exclude: string[];
 }
 
 /**
@@ -27,6 +28,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       theme: { type: "string", short: "t", default: "github-dark" },
       "list-themes": { type: "boolean", short: "T" },
       "no-mouse": { type: "boolean" },
+      exclude: { type: "string", short: "e", multiple: true },
       debug: { type: "boolean" },
       version: { type: "boolean", short: "v" },
       help: { type: "boolean", short: "h" },
@@ -42,6 +44,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     listThemes: values["list-themes"] ?? false,
     debug: values.debug ?? false,
     noMouse: values["no-mouse"] ?? false,
+    exclude: (values.exclude as string[] | undefined) ?? [],
   };
 }
 
@@ -55,14 +58,19 @@ export function showHelp(): void {
   console.log("  -t, --theme <name>   Set syntax highlighting theme (default: github-dark)");
   console.log("  -T, --list-themes    List available themes");
   console.log("      --no-mouse       Disable mouse input");
+  console.log("  -e, --exclude <dir>  Exclude directory from scan (repeatable)");
   console.log("      --debug          Enable debug logging");
   console.log("  -v, --version        Show version");
   console.log("  -h, --help           Show this help");
   console.log("\nDirectory mode:");
   console.log("  Pass a directory to browse all markdown files with a sidebar.");
+  console.log("  Scans recursively from the given directory downward.");
+  console.log("  Auto-excludes: node_modules, .git, vendor, dist, build, ...");
+  console.log("");
   console.log("  Tab/Ctrl-h/Ctrl-l   Switch panes");
   console.log("  \\                    Toggle sidebar");
   console.log("  j/k, Enter           Navigate and open files");
+  console.log("  Ctrl-d/u, Ctrl-f/b  Scroll half/full page (both panes)");
 }
 
 /**

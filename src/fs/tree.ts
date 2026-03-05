@@ -16,8 +16,28 @@ export interface FileTree {
   entries: FileEntry[];
 }
 
-export async function scanDirectory(dirPath: string): Promise<FileTree> {
+const DEFAULT_EXCLUDES = [
+  "node_modules",
+  ".git",
+  ".hg",
+  ".svn",
+  "vendor",
+  "dist",
+  "build",
+  ".next",
+  ".nuxt",
+  "__pycache__",
+  ".venv",
+  "target",
+];
+
+export interface ScanOptions {
+  exclude?: string[];
+}
+
+export async function scanDirectory(dirPath: string, options?: ScanOptions): Promise<FileTree> {
   const rootDir = resolve(dirPath);
+  const excludeSet = new Set([...DEFAULT_EXCLUDES, ...(options?.exclude ?? [])]);
 
   const dirEntries = await readdir(rootDir, { withFileTypes: true, recursive: true });
 
@@ -29,10 +49,14 @@ export async function scanDirectory(dirPath: string): Promise<FileTree> {
     const fullPath = resolve(parentPath, entry.name);
     const relPath = relative(rootDir, fullPath);
 
+    // Check if any path segment matches an excluded directory
+    const segments = relPath.split(sep);
+    if (segments.some((s) => excludeSet.has(s))) continue;
+
     entries.push({
       path: fullPath,
       relativePath: relPath,
-      depth: relPath.split(sep).length - 1,
+      depth: segments.length - 1,
     });
   }
 

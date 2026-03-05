@@ -78,7 +78,7 @@ try {
     }
 
     if (isDirectory) {
-      fileTree = await scanDirectory(args.filePath);
+      fileTree = await scanDirectory(args.filePath, { exclude: args.exclude });
       if (fileTree.entries.length === 0) {
         console.error(`No markdown files found in directory: ${args.filePath}`);
         process.exit(1);
