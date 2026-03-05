@@ -20,6 +20,8 @@ export interface StatusBarSetup {
   ) => void;
   setFileName: (name: string) => void;
   setTotalLines: (total: number) => void;
+  showSearchInput: (buffer: string) => void;
+  hideSearchInput: () => void;
 }
 
 /**
@@ -105,8 +107,8 @@ export function createStatusBar(
     const percent = totalLines > 0 ? Math.round((lineNum / totalLines) * 100) : 0;
     positionText.content = `  L${lineNum}/${totalLines} (${percent}%)`;
 
-    // Don't update help text if notification is active
-    if (isNotificationActive) return;
+    // Don't update help text if notification or search input is active
+    if (isNotificationActive || isSearchInputActive) return;
 
     if (mode === "visual") {
       const lines = selectionEnd - selectionStart + 1;
@@ -115,7 +117,7 @@ export function createStatusBar(
       helpText.content = `  -- VISUAL -- L${start}-${end} (${lines} line${lines > 1 ? "s" : ""}) | y yank | Esc cancel`;
       helpText.fg = colors.yellow;
     } else {
-      helpText.content = "  j/k gg/G | V visual | yy yank | q quit";
+      helpText.content = "  j/k gg/G | / search | V visual | yy yank | q quit";
       helpText.fg = colors.gray;
     }
   }
@@ -128,6 +130,20 @@ export function createStatusBar(
     totalLines = total;
   }
 
+  let isSearchInputActive = false;
+
+  function showSearchInput(buffer: string) {
+    isSearchInputActive = true;
+    helpText.content = `  /${buffer}_`;
+    helpText.fg = colors.fg;
+  }
+
+  function hideSearchInput() {
+    isSearchInputActive = false;
+    helpText.fg = colors.gray;
+    // Will be updated by next cursor movement
+  }
+
   return {
     statusBar,
     helpText,
@@ -135,5 +151,7 @@ export function createStatusBar(
     updateStatusBar,
     setFileName,
     setTotalLines,
+    showSearchInput,
+    hideSearchInput,
   };
 }

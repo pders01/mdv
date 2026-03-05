@@ -26,6 +26,7 @@ import { createMainContainer } from "./ui/container.js";
 import { createStatusBar } from "./ui/statusbar.js";
 import { createCursorManager, scrollToCursor } from "./input/cursor.js";
 import { setupKeyboardHandler } from "./input/keyboard.js";
+import { SearchManager } from "./input/search.js";
 import { setupMouseHandler, mouseYToLine } from "./input/mouse.js";
 import { scanDirectory } from "./fs/tree.js";
 import { createSidebar } from "./ui/sidebar.js";
@@ -193,6 +194,9 @@ let currentContentLines = contentLines;
 let statusBarUpdate: () => void = () => {};
 const cursor = createCursorManager(currentContentLines.length, () => statusBarUpdate());
 
+// Create search manager
+const search = new SearchManager();
+
 // =============================================================================
 // UI Components
 // =============================================================================
@@ -224,10 +228,12 @@ let getLinePosition = setupHighlighting(
     cursorLine: cursor.cursorLine,
     selectionStart: cursor.selectionStart,
     selectionEnd: cursor.selectionEnd,
+    searchMatches: search.matches,
   }),
   themeColors.cyan, // Cursor color (subtle)
   themeColors.yellow, // Selection color
   themeColors.codeBg, // Code block background
+  themeColors.orange, // Search highlight color
   markdown, // For actual rendered positions
 );
 
@@ -237,8 +243,25 @@ const initialFileName = isDirectory
   : isStdin
     ? "stdin"
     : basename(args.filePath!);
-const { statusBar, showNotification, updateStatusBar, setFileName, setTotalLines } =
-  createStatusBar(renderer, initialFileName, themeColors, currentContentLines.length);
+const {
+  statusBar,
+  showNotification,
+  updateStatusBar,
+  setFileName,
+  setTotalLines,
+  showSearchInput,
+  hideSearchInput,
+} = createStatusBar(renderer, initialFileName, themeColors, currentContentLines.length);
+
+// Search UI callback: update status bar when search input changes
+const onSearchUpdate = () => {
+  if (search.isInputActive) {
+    showSearchInput(search.inputBuffer);
+  } else {
+    hideSearchInput();
+    statusBarUpdate();
+  }
+};
 
 // Connect cursor to status bar
 statusBarUpdate = () =>
@@ -279,8 +302,9 @@ if (isDirectory && fileTree) {
 
       getLinePosition = reloadMarkdown(newMarkdown, currentContentLines);
 
-      // Reset cursor for new content
+      // Reset cursor and search for new content
       cursor.reset(currentContentLines.length);
+      search.clear();
 
       // Update status bar
       setFileName(basename(filePath));
@@ -323,6 +347,7 @@ if (isDirectory && fileTree) {
     renderer,
     focusManager,
     sidebar,
+    sidebarSearch: sidebar.search,
     contentOptions: {
       renderer,
       scrollBox,
@@ -330,6 +355,8 @@ if (isDirectory && fileTree) {
       content: currentContent,
       contentLines: currentContentLines,
       showNotification,
+      search,
+      onSearchUpdate,
     },
   });
 } else {
@@ -343,6 +370,8 @@ if (isDirectory && fileTree) {
     content: currentContent,
     contentLines: currentContentLines,
     showNotification,
+    search,
+    onSearchUpdate,
   });
 }
 

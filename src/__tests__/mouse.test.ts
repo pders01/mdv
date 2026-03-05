@@ -33,7 +33,7 @@ function makeGetLinePos(positions: (LinePosition | null)[]): GetLinePosition {
  * This simulates a simple document (e.g. a single code block).
  */
 function uniformPositions(totalLines: number, startY: number = 0): LinePosition[] {
-  return Array.from({ length: totalLines }, (_, i) => ({ y: startY + i, height: 1 }));
+  return Array.from({ length: totalLines }, (_, i) => ({ x: 0, y: startY + i, height: 1 }));
 }
 
 /**
@@ -54,14 +54,14 @@ function realisticPositions(
       case "header":
         // Header line takes 1 row, then 1 row margin
         for (let i = 0; i < block.lines; i++) {
-          positions.push({ y, height: 1 });
+          positions.push({ x: 0, y, height: 1 });
           y += 1;
         }
         y += 1; // margin after header
         break;
       case "paragraph":
         for (let i = 0; i < block.lines; i++) {
-          positions.push({ y, height: 1 });
+          positions.push({ x: 0, y, height: 1 });
           y += 1;
         }
         y += 1; // margin after paragraph
@@ -69,7 +69,7 @@ function realisticPositions(
       case "code":
         y += 1; // padding top
         for (let i = 0; i < block.lines; i++) {
-          positions.push({ y, height: 1 });
+          positions.push({ x: 0, y, height: 1 });
           y += 1;
         }
         y += 1; // padding bottom
@@ -204,16 +204,16 @@ describe("mouseYToLine with getLinePosition", () => {
     // Total 10 lines, scrollHeight = 30 → uniform lineHeight = 3.0
     // Lines 5-8 are in a code block with 1-row-per-line at y=16,17,18,19
     const positions: (LinePosition | null)[] = [
-      { y: 0, height: 1 }, // line 0 - header
-      { y: 3, height: 1 }, // line 1 - paragraph
-      { y: 4, height: 1 }, // line 2 - paragraph
-      { y: 7, height: 1 }, // line 3 - paragraph
-      { y: 10, height: 1 }, // line 4 - paragraph
-      { y: 16, height: 1 }, // line 5 - code (after padding)
-      { y: 17, height: 1 }, // line 6 - code
-      { y: 18, height: 1 }, // line 7 - code
-      { y: 19, height: 1 }, // line 8 - code
-      { y: 23, height: 1 }, // line 9 - paragraph
+      { x: 0, y: 0, height: 1 }, // line 0 - header
+      { x: 0, y: 3, height: 1 }, // line 1 - paragraph
+      { x: 0, y: 4, height: 1 }, // line 2 - paragraph
+      { x: 0, y: 7, height: 1 }, // line 3 - paragraph
+      { x: 0, y: 10, height: 1 }, // line 4 - paragraph
+      { x: 0, y: 16, height: 1 }, // line 5 - code (after padding)
+      { x: 0, y: 17, height: 1 }, // line 6 - code
+      { x: 0, y: 18, height: 1 }, // line 7 - code
+      { x: 0, y: 19, height: 1 }, // line 8 - code
+      { x: 0, y: 23, height: 1 }, // line 9 - paragraph
     ];
     const totalLines = 10;
     const scrollHeight = 30;
@@ -239,10 +239,10 @@ describe("mouseYToLine with getLinePosition", () => {
   test("click in gap between blocks finds closest line", () => {
     // Gap at y=5 (between header margin and paragraph)
     const positions: (LinePosition | null)[] = [
-      { y: 0, height: 1 }, // line 0 - header at y=0
+      { x: 0, y: 0, height: 1 }, // line 0 - header at y=0
       // gap at y=1 (header margin)
-      { y: 2, height: 1 }, // line 1 - paragraph at y=2
-      { y: 3, height: 1 }, // line 2 - paragraph at y=3
+      { x: 0, y: 2, height: 1 }, // line 1 - paragraph at y=2
+      { x: 0, y: 3, height: 1 }, // line 2 - paragraph at y=3
     ];
     const getLinePos = makeGetLinePos(positions);
 
@@ -254,9 +254,9 @@ describe("mouseYToLine with getLinePosition", () => {
 
   test("click in gap closer to next block finds next line", () => {
     const positions: (LinePosition | null)[] = [
-      { y: 0, height: 1 }, // line 0
+      { x: 0, y: 0, height: 1 }, // line 0
       // gap at y=1, y=2
-      { y: 3, height: 1 }, // line 1
+      { x: 0, y: 3, height: 1 }, // line 1
     ];
     const getLinePos = makeGetLinePos(positions);
 
@@ -275,6 +275,7 @@ describe("mouseYToLine with getLinePosition", () => {
     // Line 10 → y = 10 - 10 + 5 = 5 (top of visible area)
     // Line 0 → y = 0 - 10 + 5 = -5 (above viewport)
     const positions: LinePosition[] = Array.from({ length: 20 }, (_, i) => ({
+      x: 0,
       y: i - scrollTop + viewportTop,
       height: 1,
     }));

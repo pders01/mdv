@@ -16,6 +16,7 @@ import {
 } from "@opentui/core";
 import type { FileTree, FileEntry } from "../fs/tree.js";
 import type { ThemeColors } from "../types.js";
+import { SearchManager } from "../input/search.js";
 
 export interface SidebarSetup {
   sidebarBox: BoxRenderable;
@@ -23,6 +24,9 @@ export interface SidebarSetup {
   setVisible: (visible: boolean) => void;
   toggleVisible: () => boolean;
   highlightEntry: (filePath: string) => void;
+  showSearchInput: (buffer: string) => void;
+  hideSearchInput: () => void;
+  readonly search: SearchManager;
 }
 
 const SIDEBAR_WIDTH = 30;
@@ -55,6 +59,10 @@ export function createSidebar(
   let cursorIndex = 0;
   let visible = true;
 
+  // Sidebar search state
+  const sidebarSearch = new SearchManager();
+  const entryLabels = entries.map((e) => e.relativePath);
+
   const cursorRGBA = RGBA.fromHex(colors.blue);
   cursorRGBA.a = 0.3;
 
@@ -77,6 +85,16 @@ export function createSidebar(
     paddingLeft: 1,
   });
   sidebarBox.add(header);
+
+  // Search input line (hidden by default)
+  const searchText = new TextRenderable(renderer, {
+    id: "sidebar-search",
+    content: "",
+    fg: colors.fg,
+    height: 0,
+    paddingLeft: 1,
+  });
+  sidebarBox.add(searchText);
 
   // Scrollable file list
   const scrollBox = new ScrollBoxRenderable(renderer, {
@@ -148,6 +166,72 @@ export function createSidebar(
 
   const handleKey = (event: KeyEvent): boolean => {
     const height = renderer.height;
+
+    // Search input mode
+    if (sidebarSearch.isInputActive) {
+      if (event.name === "escape") {
+        sidebarSearch.cancelInput();
+        hideSearchInput();
+        return true;
+      }
+      if (event.name === "return" || event.name === "enter") {
+        const found = sidebarSearch.confirm(entryLabels);
+        if (found) {
+          const line = sidebarSearch.firstMatchFrom(cursorIndex);
+          if (line >= 0) {
+            cursorIndex = line;
+            refreshList();
+            scrollToCursor();
+          }
+        }
+        hideSearchInput();
+        return true;
+      }
+      if (event.name === "backspace" || event.name === "delete") {
+        sidebarSearch.deleteChar();
+        showSearchInput(sidebarSearch.inputBuffer);
+        return true;
+      }
+      if (event.sequence && event.sequence.length === 1 && !event.ctrl && !event.meta) {
+        sidebarSearch.appendChar(event.sequence);
+        showSearchInput(sidebarSearch.inputBuffer);
+        return true;
+      }
+      return true;
+    }
+
+    // / - start search
+    if (event.name === "/" || (event.sequence === "/" && !event.ctrl)) {
+      sidebarSearch.startInput();
+      showSearchInput("");
+      return true;
+    }
+
+    // n - next search match
+    if (event.name === "n" && !event.ctrl && !event.shift) {
+      if (sidebarSearch.pattern) {
+        const line = sidebarSearch.nextMatch(cursorIndex);
+        if (line >= 0) {
+          cursorIndex = line;
+          refreshList();
+          scrollToCursor();
+        }
+      }
+      return true;
+    }
+
+    // N - previous search match
+    if (event.name === "N" || (event.name === "n" && event.shift)) {
+      if (sidebarSearch.pattern) {
+        const line = sidebarSearch.prevMatch(cursorIndex);
+        if (line >= 0) {
+          cursorIndex = line;
+          refreshList();
+          scrollToCursor();
+        }
+      }
+      return true;
+    }
 
     switch (event.name) {
       case "j":
@@ -252,5 +336,24 @@ export function createSidebar(
     return visible;
   };
 
-  return { sidebarBox, handleKey, setVisible, toggleVisible, highlightEntry };
+  const showSearchInput = (buffer: string) => {
+    searchText.content = `/${buffer}_`;
+    searchText.height = 1;
+  };
+
+  const hideSearchInput = () => {
+    searchText.content = "";
+    searchText.height = 0;
+  };
+
+  return {
+    sidebarBox,
+    handleKey,
+    setVisible,
+    toggleVisible,
+    highlightEntry,
+    showSearchInput,
+    hideSearchInput,
+    search: sidebarSearch,
+  };
 }

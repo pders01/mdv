@@ -6,6 +6,7 @@ import type { ScrollBoxRenderable, CliRenderer, KeyEvent } from "@opentui/core";
 import type { CursorManager } from "./cursor.js";
 import { scrollToCursor } from "./cursor.js";
 import { copyToClipboard } from "./clipboard.js";
+import type { SearchManager } from "./search.js";
 
 /**
  * Maximum time between key presses for double-key shortcuts (gg, yy)
@@ -22,6 +23,8 @@ export interface KeyboardHandlerOptions {
   content: string;
   contentLines: string[];
   showNotification: (message: string, durationMs?: number) => void;
+  search: SearchManager;
+  onSearchUpdate: () => void;
 }
 
 /**
@@ -40,7 +43,16 @@ export function handleContentKey(
   options: KeyboardHandlerOptions,
   state: KeyboardState,
 ): boolean {
-  const { renderer, scrollBox, cursor, content, contentLines, showNotification } = options;
+  const {
+    renderer,
+    scrollBox,
+    cursor,
+    content,
+    contentLines,
+    showNotification,
+    search,
+    onSearchUpdate,
+  } = options;
 
   const now = Date.now();
   const height = renderer.height;
@@ -60,10 +72,50 @@ export function handleContentKey(
     scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
   };
 
-  // Handle Escape - exit visual mode and clear native selection
+  // --- Search input mode ---
+  if (search.isInputActive) {
+    if (event.name === "escape") {
+      search.cancelInput();
+      onSearchUpdate();
+      return true;
+    }
+    if (event.name === "return" || event.name === "enter") {
+      const found = search.confirm(contentLines);
+      if (found) {
+        const line = search.firstMatchFrom(cursor.cursorLine);
+        if (line >= 0) {
+          cursor.setCursor(line);
+          scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+        }
+        showNotification(`${search.matchCount} match${search.matchCount !== 1 ? "es" : ""}`);
+      } else if (search.pattern) {
+        showNotification("Pattern not found");
+      }
+      onSearchUpdate();
+      return true;
+    }
+    if (event.name === "backspace" || event.name === "delete") {
+      search.deleteChar();
+      onSearchUpdate();
+      return true;
+    }
+    // Printable character
+    if (event.sequence && event.sequence.length === 1 && !event.ctrl && !event.meta) {
+      search.appendChar(event.sequence);
+      onSearchUpdate();
+      return true;
+    }
+    return true; // Consume all keys while in search input
+  }
+
+  // Handle Escape - exit visual mode, clear search highlight, clear native selection
   if (event.name === "escape") {
     if (cursor.mode === "visual") {
       cursor.exitVisual();
+    }
+    if (search.pattern) {
+      search.clear();
+      onSearchUpdate();
     }
     renderer.clearSelection();
     state.lastKey = "";
@@ -147,6 +199,41 @@ export function handleContentKey(
 
   state.lastKey = "";
 
+  // / - start search
+  if (event.name === "/" || (event.sequence === "/" && !event.ctrl)) {
+    search.startInput();
+    onSearchUpdate();
+    return true;
+  }
+
+  // n - next search match
+  if (event.name === "n" && !event.ctrl && !event.shift && cursor.mode === "normal") {
+    if (search.pattern) {
+      const line = search.nextMatch(cursor.cursorLine);
+      if (line >= 0) {
+        cursor.setCursor(line);
+        scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+        const idx = search.currentIndex + 1;
+        showNotification(`Match ${idx}/${search.matchCount}`);
+      }
+    }
+    return true;
+  }
+
+  // N - previous search match
+  if (event.name === "N" || (event.name === "n" && event.shift)) {
+    if (search.pattern) {
+      const line = search.prevMatch(cursor.cursorLine);
+      if (line >= 0) {
+        cursor.setCursor(line);
+        scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+        const idx = search.currentIndex + 1;
+        showNotification(`Match ${idx}/${search.matchCount}`);
+      }
+    }
+    return true;
+  }
+
   switch (event.name) {
     case "q":
       renderer.destroy();
@@ -229,3 +316,5 @@ export function setupKeyboardHandler(options: KeyboardHandlerOptions): void {
     handleContentKey(event, options, state);
   });
 }
+
+export { SearchManager } from "./search.js";

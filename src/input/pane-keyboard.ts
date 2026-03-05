@@ -8,6 +8,7 @@
 import type { CliRenderer, KeyEvent } from "@opentui/core";
 import type { FocusManager } from "./focus.js";
 import type { SidebarSetup } from "../ui/sidebar.js";
+import type { SearchManager } from "./search.js";
 import { handleContentKey, type KeyboardHandlerOptions, type KeyboardState } from "./keyboard.js";
 
 export interface PaneKeyboardOptions {
@@ -15,13 +16,26 @@ export interface PaneKeyboardOptions {
   focusManager: FocusManager;
   sidebar: SidebarSetup;
   contentOptions: KeyboardHandlerOptions;
+  sidebarSearch: SearchManager;
 }
 
 export function setupPaneKeyboardHandler(options: PaneKeyboardOptions): void {
-  const { renderer, focusManager, sidebar, contentOptions } = options;
+  const { renderer, focusManager, sidebar, contentOptions, sidebarSearch } = options;
   const state: KeyboardState = { lastKey: "", lastKeyTime: 0 };
 
   renderer.keyInput.on("keypress", (event: KeyEvent) => {
+    const contentSearch = contentOptions.search;
+
+    // When search input is active in either pane, route directly to that pane
+    if (contentSearch.isInputActive || sidebarSearch.isInputActive) {
+      if (focusManager.activePane === "sidebar") {
+        sidebar.handleKey(event);
+      } else {
+        handleContentKey(event, contentOptions, state);
+      }
+      return;
+    }
+
     // Global: q and Ctrl-c always quit
     if (event.name === "q" || (event.name === "c" && event.ctrl)) {
       renderer.destroy();

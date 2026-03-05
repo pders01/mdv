@@ -10,6 +10,7 @@ import {
   type CliRenderer,
 } from "@opentui/core";
 import type { Mode } from "../types.js";
+import type { SearchMatch } from "../input/search.js";
 
 /**
  * BlockState from OpenTUI's MarkdownRenderable internal state
@@ -28,12 +29,14 @@ export interface CursorRenderState {
   cursorLine: number;
   selectionStart: number;
   selectionEnd: number;
+  searchMatches: ReadonlyArray<SearchMatch>;
 }
 
 /**
  * Line position info (absolute Y, not scroll-adjusted)
  */
 export interface LinePosition {
+  x: number;
   y: number;
   height: number;
 }
@@ -54,6 +57,7 @@ export interface ContainerSetup {
     cursorColor: string,
     selectionColor: string,
     codeBgColor: string,
+    searchHighlightColor: string,
     markdown: MarkdownRenderable,
   ) => GetLinePosition;
   reloadMarkdown: (newMarkdown: MarkdownRenderable, newContentLines: string[]) => GetLinePosition;
@@ -89,9 +93,11 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     cursorColor: string;
     selectionColor: string;
     codeBgColor: string;
+    searchHighlightColor: string;
     cursorRGBA: InstanceType<typeof RGBA>;
     selectionRGBA: InstanceType<typeof RGBA>;
     codeBgRGBA: InstanceType<typeof RGBA>;
+    searchRGBA: InstanceType<typeof RGBA>;
   } | null = null;
 
   // Line mapping caches (rebuilt on reload)
@@ -163,14 +169,14 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const lineWithinBlock = line - blockStartLine;
     const lineY = r.y + lineWithinBlock;
 
-    return { y: lineY, height: 1 };
+    return { x: r.x, y: lineY, height: 1 };
   };
 
   const setupRenderHooks = () => {
     const content = scrollBox.content;
     if (!content || !highlightState) return;
 
-    const { getCursorState, cursorRGBA, selectionRGBA, codeBgRGBA } = highlightState;
+    const { getCursorState, cursorRGBA, selectionRGBA, codeBgRGBA, searchRGBA } = highlightState;
 
     content.renderBefore = (buffer) => {
       if (currentContentLines.length === 0) return;
@@ -217,6 +223,23 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
         }
       };
 
+      // Draw search match highlights (before cursor so cursor overlays)
+      if (state.searchMatches.length > 0) {
+        for (const match of state.searchMatches) {
+          const pos = getLinePosition(match.line);
+          if (!pos) continue;
+
+          let y = Math.floor(pos.y);
+          if (y < 0) continue;
+
+          const x = pos.x + match.col;
+          const width = match.length;
+          if (x < buffer.width && width > 0) {
+            buffer.fillRect(x, y, Math.min(width, buffer.width - x), 1, searchRGBA);
+          }
+        }
+      }
+
       if (state.mode === "visual") {
         for (let line = state.selectionStart; line <= state.selectionEnd; line++) {
           drawLineHighlight(line, selectionRGBA);
@@ -232,6 +255,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     cursorColor: string,
     selectionColor: string,
     codeBgColor: string,
+    searchHighlightColor: string,
     markdown: MarkdownRenderable,
   ): GetLinePosition {
     currentMarkdown = markdown;
@@ -241,15 +265,19 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const selectionRGBA = RGBA.fromHex(selectionColor);
     selectionRGBA.a = 0.35;
     const codeBgRGBA = RGBA.fromHex(codeBgColor);
+    const searchRGBA = RGBA.fromHex(searchHighlightColor);
+    searchRGBA.a = 0.25;
 
     highlightState = {
       getCursorState,
       cursorColor,
       selectionColor,
       codeBgColor,
+      searchHighlightColor,
       cursorRGBA,
       selectionRGBA,
       codeBgRGBA,
+      searchRGBA,
     };
 
     setupRenderHooks();
