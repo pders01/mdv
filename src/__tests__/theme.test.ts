@@ -2,7 +2,7 @@
  * Theme module tests
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, beforeAll } from "bun:test";
 import { createHighlighter, type Highlighter } from "shiki";
 import { extractThemeColors } from "../theme/colors.js";
 
@@ -68,6 +68,3 @@ describe("extractThemeColors", () => {
     expect(bgNum).toBeLessThan(0x808080);
   });
 });
-
-// Import afterAll just for the hook
-import { beforeAll } from "bun:test";
