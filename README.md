@@ -124,12 +124,12 @@ All navigation keys (j/k, Ctrl-d/u, etc.) work in both panes.
 
 ### Search
 
-| Key   | Action                          |
-| ----- | ------------------------------- |
-| `/`   | Start search                    |
-| `n`   | Next match                      |
-| `N`   | Previous match                  |
-| `Esc` | Clear search / cancel input     |
+| Key   | Action                      |
+| ----- | --------------------------- |
+| `/`   | Start search                |
+| `n`   | Next match                  |
+| `N`   | Previous match              |
+| `Esc` | Clear search / cancel input |
 
 Search works in both the reader pane and the sidebar file list. Matches are highlighted inline with exact position awareness (accounts for markdown conceal).
 

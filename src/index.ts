@@ -419,61 +419,73 @@ if (!args.noMouse) {
 if (args.watch && !isStdin && !isDirectory && args.filePath) {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   const DEBOUNCE_MS = 150;
+  const watchPath = args.filePath;
 
-  watch(args.filePath, async (eventType) => {
-    if (eventType !== "change") return;
+  const reloadFile = async () => {
+    try {
+      showNotification("Reloading...", 500);
 
-    // Debounce rapid filesystem events (editors often fire multiple)
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(async () => {
-      try {
-        showNotification("Reloading...", 500);
+      // Brief delay so the "Reloading..." notification is visible
+      await new Promise((r) => setTimeout(r, 80));
 
-        // Brief delay so the "Reloading..." notification is visible
-        await new Promise((r) => setTimeout(r, 80));
+      const newContent = await readContent(watchPath);
 
-        const newContent = await readContent(args.filePath!);
+      // Skip reload if content hasn't actually changed
+      if (newContent === currentContent) return;
 
-        // Skip reload if content hasn't actually changed
-        if (newContent === currentContent) return;
+      currentContent = newContent;
+      currentContentLines = newContent.split("\n");
 
-        currentContent = newContent;
-        currentContentLines = newContent.split("\n");
+      const newMarkdown = new MarkdownRenderable(renderer, {
+        id: "markdown-content",
+        content: currentContent,
+        syntaxStyle,
+        conceal: true,
+        renderNode,
+      });
+      markdown = newMarkdown;
 
-        const newMarkdown = new MarkdownRenderable(renderer, {
-          id: "markdown-content",
-          content: currentContent,
-          syntaxStyle,
-          conceal: true,
-          renderNode,
+      getLinePosition = reloadMarkdown(newMarkdown, currentContentLines);
+
+      // Clamp cursor to new content bounds (don't reset to top)
+      cursor.reset(
+        currentContentLines.length,
+        Math.min(cursor.cursorLine, currentContentLines.length - 1),
+      );
+      search.clear();
+      setTotalLines(currentContentLines.length);
+
+      if (!args.noMouse) {
+        setupMouseHandler({
+          scrollBox,
+          cursor,
+          contentLines: currentContentLines,
+          showNotification,
+          getLinePosition,
         });
-        markdown = newMarkdown;
-
-        getLinePosition = reloadMarkdown(newMarkdown, currentContentLines);
-
-        // Clamp cursor to new content bounds (don't reset to top)
-        cursor.reset(currentContentLines.length, Math.min(cursor.cursorLine, currentContentLines.length - 1));
-        search.clear();
-        setTotalLines(currentContentLines.length);
-
-        if (!args.noMouse) {
-          setupMouseHandler({
-            scrollBox,
-            cursor,
-            contentLines: currentContentLines,
-            showNotification,
-            getLinePosition,
-          });
-        }
-
-        statusBarUpdate();
-        showNotification("File reloaded", 1500);
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        showNotification(`Reload error: ${msg}`);
       }
-    }, DEBOUNCE_MS);
-  });
+
+      statusBarUpdate();
+      showNotification("File reloaded", 1500);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      showNotification(`Reload error: ${msg}`);
+    }
+  };
+
+  const startWatcher = () => {
+    const watcher = watch(watchPath, () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(reloadFile, DEBOUNCE_MS);
+    });
+
+    // Re-establish watcher if it closes (happens on macOS rename-based saves)
+    watcher.on("close", () => {
+      setTimeout(startWatcher, 100);
+    });
+  };
+
+  startWatcher();
 }
 
 // Initialize cursor position and scroll
