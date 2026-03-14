@@ -26,6 +26,7 @@ export function createRenderNode(
   renderer: CliRenderer,
   colors: ThemeColors,
   highlighterInstance: HighlighterInstance,
+  contentWidth?: number,
 ): RenderNodeCallback {
   return (token: Token, _context: { depth: number }): BoxRenderable | null => {
     // Handle code blocks with shiki highlighting
@@ -55,7 +56,7 @@ export function createRenderNode(
 
     // Handle tables
     if (token.type === "table") {
-      return renderTable(renderer, colors, token as TableToken);
+      return renderTable(renderer, colors, token as TableToken, contentWidth);
     }
 
     // Handle paragraphs with inline HTML or escape sequences

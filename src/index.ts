@@ -208,7 +208,10 @@ const { container, scrollBox, setupHighlighting, reloadMarkdown } = createMainCo
 );
 
 // Create render node callback
-const renderNode = createRenderNode(renderer, themeColors, highlighterInstance);
+// In directory mode, subtract sidebar width (30) from available content width
+// Scrollbox padding (1 on each side) is accounted for internally
+const contentWidth = isDirectory ? renderer.width - 30 - 2 : renderer.width - 2;
+const renderNode = createRenderNode(renderer, themeColors, highlighterInstance, contentWidth);
 
 // Create markdown renderable
 let markdown = new MarkdownRenderable(renderer, {
@@ -433,6 +436,9 @@ if (isDirectory && fileTree) {
       showNotification,
       search,
       onSearchUpdate,
+      get getLinePosition() {
+        return getLinePosition;
+      },
     },
   });
 } else {
@@ -448,6 +454,7 @@ if (isDirectory && fileTree) {
     showNotification,
     search,
     onSearchUpdate,
+    getLinePosition,
   });
 }
 
@@ -565,4 +572,4 @@ if (args.watch && !isStdin && !isDirectory && args.filePath) {
 }
 
 // Initialize cursor position and scroll
-scrollToCursor(scrollBox, cursor.cursorLine, currentContentLines.length, true);
+scrollToCursor(scrollBox, cursor.cursorLine, currentContentLines.length, true, getLinePosition);
