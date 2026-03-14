@@ -24,6 +24,8 @@ export interface SidebarSetup {
   setVisible: (visible: boolean) => void;
   toggleVisible: () => boolean;
   highlightEntry: (filePath: string) => void;
+  markChanged: (filePath: string) => void;
+  clearChanged: (filePath: string) => void;
   showSearchInput: (buffer: string) => void;
   hideSearchInput: () => void;
   readonly search: SearchManager;
@@ -40,11 +42,16 @@ function formatEntryLabel(entry: FileEntry): string {
   return "..." + relPath.slice(relPath.length - MAX_LABEL_LEN + 3);
 }
 
-function buildListContent(entries: FileEntry[], selected: number): string {
+function buildListContent(
+  entries: FileEntry[],
+  selected: number,
+  changedFiles: Set<string>,
+): string {
   return entries
     .map((e, i) => {
       const prefix = i === selected ? ">" : " ";
-      return prefix + formatEntryLabel(e);
+      const marker = changedFiles.has(e.path) ? " \u25CF" : "";
+      return prefix + formatEntryLabel(e) + marker;
     })
     .join("\n");
 }
@@ -58,6 +65,7 @@ export function createSidebar(
   const entries = fileTree.entries;
   let cursorIndex = 0;
   let visible = true;
+  const changedFiles = new Set<string>();
 
   // Sidebar search state
   const sidebarSearch = new SearchManager();
@@ -108,7 +116,7 @@ export function createSidebar(
   // Single text renderable for the entire file list
   const listText = new TextRenderable(renderer, {
     id: "sidebar-list",
-    content: buildListContent(entries, cursorIndex),
+    content: buildListContent(entries, cursorIndex, changedFiles),
     fg: colors.fg,
     wrapMode: "none",
     truncate: true,
@@ -118,7 +126,7 @@ export function createSidebar(
   // Rebuild list content to reflect new cursor position.
   // Setting .content dirties the renderable, triggering a repaint.
   const refreshList = () => {
-    listText.content = buildListContent(entries, cursorIndex);
+    listText.content = buildListContent(entries, cursorIndex, changedFiles);
   };
 
   // Draw cursor highlight overlay on the scroll content.
@@ -331,6 +339,16 @@ export function createSidebar(
     }
   };
 
+  const markChanged = (filePath: string) => {
+    changedFiles.add(filePath);
+    refreshList();
+  };
+
+  const clearChanged = (filePath: string) => {
+    changedFiles.delete(filePath);
+    refreshList();
+  };
+
   const toggleVisible = (): boolean => {
     setVisible(!visible);
     return visible;
@@ -352,6 +370,8 @@ export function createSidebar(
     setVisible,
     toggleVisible,
     highlightEntry,
+    markChanged,
+    clearChanged,
     showSearchInput,
     hideSearchInput,
     search: sidebarSearch,

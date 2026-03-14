@@ -3,7 +3,7 @@
  * Uses OpenTUI's MarkdownRenderable with vim keybindings
  */
 
-import { basename } from "path";
+import { basename, resolve } from "path";
 import { openSync, statSync, watch } from "fs";
 import { ReadStream } from "tty";
 import { createCliRenderer, MarkdownRenderable, BoxRenderable } from "@opentui/core";
@@ -283,12 +283,16 @@ if (isDirectory && fileTree) {
 
   const focusManager = createFocusManager("content");
 
+  // Track the currently viewed file for watch-mode reloads
+  let currentFilePath = fileTree.entries[0]!.path;
+
   // Reload content when a file is opened from the sidebar
   const onOpenFile = async (filePath: string) => {
     try {
       const newContent = await readContent(filePath);
       currentContent = newContent;
       currentContentLines = newContent.split("\n");
+      currentFilePath = filePath;
 
       // Recreate markdown renderable
       const newMarkdown = new MarkdownRenderable(renderer, {
@@ -328,8 +332,80 @@ if (isDirectory && fileTree) {
     }
   };
 
-  const sidebar = createSidebar(renderer, fileTree, themeColors, onOpenFile);
+  const sidebar = createSidebar(renderer, fileTree, themeColors, async (filePath: string) => {
+    sidebar.clearChanged(filePath);
+    await onOpenFile(filePath);
+  });
   sidebar.highlightEntry(fileTree.entries[0]!.path);
+
+  // Watch directory for file changes
+  if (args.watch) {
+    const knownPaths = new Set(fileTree.entries.map((e) => e.path));
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const DEBOUNCE_MS = 150;
+
+    watch(fileTree.rootDir, { recursive: true }, (_eventType, filename) => {
+      if (!filename || !filename.endsWith(".md")) return;
+
+      const fullPath = resolve(fileTree.rootDir, filename);
+      if (!knownPaths.has(fullPath)) return;
+
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        // Mark file as changed in sidebar
+        if (fullPath !== currentFilePath) {
+          sidebar.markChanged(fullPath);
+          return;
+        }
+
+        // Reload the currently viewed file
+        try {
+          showNotification("Reloading...", 500);
+          await new Promise((r) => setTimeout(r, 80));
+
+          const newContent = await readContent(fullPath);
+          if (newContent === currentContent) return;
+
+          currentContent = newContent;
+          currentContentLines = newContent.split("\n");
+
+          const newMarkdown = new MarkdownRenderable(renderer, {
+            id: "markdown-content",
+            content: currentContent,
+            syntaxStyle,
+            conceal: true,
+            renderNode,
+          });
+          markdown = newMarkdown;
+
+          getLinePosition = reloadMarkdown(newMarkdown, currentContentLines);
+
+          cursor.reset(
+            currentContentLines.length,
+            Math.min(cursor.cursorLine, currentContentLines.length - 1),
+          );
+          search.clear();
+          setTotalLines(currentContentLines.length);
+
+          if (!args.noMouse) {
+            setupMouseHandler({
+              scrollBox,
+              cursor,
+              contentLines: currentContentLines,
+              showNotification,
+              getLinePosition,
+            });
+          }
+
+          statusBarUpdate();
+          showNotification("File reloaded", 1500);
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          showNotification(`Reload error: ${msg}`);
+        }
+      }, DEBOUNCE_MS);
+    });
+  }
 
   appRow.add(sidebar.sidebarBox);
   appRow.add(container);
