@@ -2,10 +2,11 @@
  * List rendering with nesting support
  */
 
-import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
+import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
 import type {
   ThemeColors,
+  TextChunk,
   ListToken,
   ParagraphToken,
   StyledSegment,
@@ -99,34 +100,33 @@ export function listToBlocks(
 }
 
 /**
+ * Convert styled segments to TextChunks for use with StyledText
+ */
+function segmentsToChunks(segments: StyledSegment[]): TextChunk[] {
+  return segments.map((seg) => ({
+    __isChunk: true,
+    text: seg.text,
+    fg: seg.fg ? RGBA.fromHex(seg.fg) : undefined,
+    bold: seg.bold || undefined,
+    italic: seg.italic || undefined,
+  }));
+}
+
+/**
  * Render inline tokens (for list items, etc.)
  */
 export function renderInlineTokens(
   renderer: CliRenderer,
   colors: ThemeColors,
   tokens: Token[],
-): BoxRenderable {
-  const row = new BoxRenderable(renderer, {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  });
-
+): TextRenderable {
   const segments = inlineTokensToSegments(colors, tokens);
-  for (const seg of segments) {
-    let attrs = 0;
-    if (seg.bold) attrs |= TextAttributes.BOLD;
-    if (seg.italic) attrs |= TextAttributes.ITALIC;
+  const chunks = segmentsToChunks(segments);
+  const styledText = new StyledText(chunks as any);
 
-    row.add(
-      new TextRenderable(renderer, {
-        content: seg.text,
-        fg: seg.fg,
-        attributes: attrs || undefined,
-      }),
-    );
-  }
-
-  return row;
+  return new TextRenderable(renderer, {
+    content: styledText,
+  });
 }
 
 /**
@@ -165,42 +165,28 @@ export function renderList(
       }
     }
 
-    // Render the list item line
-    const lineWrapper = new BoxRenderable(renderer, {
-      flexDirection: "row",
-    });
-
+    // Build all chunks for this list item (bullet + content) as a single StyledText
     const bulletText = token.ordered ? `${index + 1}.` : marker;
+    const allChunks: TextChunk[] = [
+      { __isChunk: true, text: indent + bulletText + " ", fg: RGBA.fromHex(colors.cyan) },
+    ];
 
-    lineWrapper.add(
-      new TextRenderable(renderer, {
-        content: indent + bulletText + " ",
-        fg: colors.cyan,
-      }),
-    );
-
-    // Render inline content with proper token handling
     let hasContent = false;
     for (const pt of paragraphTokens) {
       const paraTokens = (pt as ParagraphToken)?.tokens;
       if (paraTokens) {
-        const inlineContent = renderInlineTokens(renderer, colors, paraTokens);
-        lineWrapper.add(inlineContent);
+        const segments = inlineTokensToSegments(colors, paraTokens);
+        allChunks.push(...segmentsToChunks(segments));
         hasContent = true;
       }
     }
     if (!hasContent) {
-      // Fallback to plain text
       const itemText = item.text?.split("\n")[0] || "";
-      lineWrapper.add(
-        new TextRenderable(renderer, {
-          content: itemText,
-          fg: colors.fg,
-        }),
-      );
+      allChunks.push({ __isChunk: true, text: itemText, fg: RGBA.fromHex(colors.fg) });
     }
 
-    itemWrapper.add(lineWrapper);
+    const styledText = new StyledText(allChunks as any);
+    itemWrapper.add(new TextRenderable(renderer, { content: styledText }));
 
     // Render nested list if present
     if (nestedList) {

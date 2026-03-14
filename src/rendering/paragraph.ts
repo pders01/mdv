@@ -2,9 +2,10 @@
  * Paragraph rendering with inline HTML support
  */
 
-import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
+import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
 import type {
   ThemeColors,
+  TextChunk,
   ParagraphToken,
   InlineHtmlState,
   StyledSegment,
@@ -213,26 +214,15 @@ export function renderParagraph(
     marginBottom: 1,
   });
 
-  // Render each segment as a separate TextRenderable
-  const textRow = new BoxRenderable(renderer, {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  });
+  const chunks: TextChunk[] = segments.map((seg) => ({
+    __isChunk: true,
+    text: seg.text,
+    fg: seg.fg ? RGBA.fromHex(seg.fg) : undefined,
+    bold: seg.bold || undefined,
+    italic: seg.italic || undefined,
+  }));
 
-  for (const seg of segments) {
-    let attrs = 0;
-    if (seg.bold) attrs |= TextAttributes.BOLD;
-    if (seg.italic) attrs |= TextAttributes.ITALIC;
-
-    textRow.add(
-      new TextRenderable(renderer, {
-        content: seg.text,
-        fg: seg.fg,
-        attributes: attrs || undefined,
-      }),
-    );
-  }
-
-  wrapper.add(textRow);
+  const styledText = new StyledText(chunks as any);
+  wrapper.add(new TextRenderable(renderer, { content: styledText }));
   return wrapper;
 }
