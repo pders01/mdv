@@ -7,6 +7,7 @@
 
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { Mode } from "../types.js";
+import type { GetContentLineY } from "../ui/container.js";
 
 /**
  * Cursor/selection state
@@ -220,13 +221,18 @@ export function scrollToCursor(
   cursorLine: number,
   totalLines: number,
   center: boolean = false,
+  getContentLineY?: GetContentLineY,
 ): void {
   if (totalLines === 0 || scrollBox.scrollHeight <= 0) return;
 
   updateScrollCache(scrollBox, totalLines);
 
-  const { lineHeight, viewportHeight } = scrollCache;
-  const cursorY = cursorLine * lineHeight;
+  const { lineHeight: uniformLineHeight, viewportHeight } = scrollCache;
+
+  // Use actual content-space Y when available (scroll-independent).
+  // Falls back to uniform estimate before first render or for unmapped lines.
+  const contentY = getContentLineY?.(cursorLine);
+  const cursorY = contentY ?? cursorLine * uniformLineHeight;
 
   if (center) {
     // Center cursor in viewport
@@ -234,16 +240,16 @@ export function scrollToCursor(
     scrollBox.scrollTo(Math.max(0, cursorY - centerOffset));
   } else {
     // Keep cursor visible with margin
-    const margin = Math.floor(lineHeight * 3); // 3-line margin
+    const margin = Math.floor(uniformLineHeight * 3); // 3-line margin
     const currentTop = scrollBox.scrollTop;
     const currentBottom = currentTop + viewportHeight;
 
     if (cursorY < currentTop + margin) {
       // Cursor above visible area
       scrollBox.scrollTo(Math.max(0, cursorY - margin));
-    } else if (cursorY + lineHeight > currentBottom - margin) {
+    } else if (cursorY + uniformLineHeight > currentBottom - margin) {
       // Cursor below visible area
-      scrollBox.scrollTo(Math.max(0, cursorY + lineHeight + margin - viewportHeight));
+      scrollBox.scrollTo(Math.max(0, cursorY + uniformLineHeight + margin - viewportHeight));
     }
   }
 }

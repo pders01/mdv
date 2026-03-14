@@ -7,6 +7,7 @@ import type { CursorManager } from "./cursor.js";
 import { scrollToCursor } from "./cursor.js";
 import { copyToClipboard } from "./clipboard.js";
 import type { SearchManager } from "./search.js";
+import type { GetContentLineY } from "../ui/container.js";
 
 /**
  * Maximum time between key presses for double-key shortcuts (gg, yy)
@@ -25,6 +26,7 @@ export interface KeyboardHandlerOptions {
   showNotification: (message: string, durationMs?: number) => void;
   search: SearchManager;
   onSearchUpdate: () => void;
+  getContentLineY?: GetContentLineY;
 }
 
 /**
@@ -52,6 +54,7 @@ export function handleContentKey(
     showNotification,
     search,
     onSearchUpdate,
+    getContentLineY,
   } = options;
 
   const now = Date.now();
@@ -59,17 +62,17 @@ export function handleContentKey(
 
   const moveCursor = (delta: number, center: boolean = false) => {
     cursor.moveCursor(delta);
-    scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, center);
+    scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, center, getContentLineY);
   };
 
   const goToFirst = () => {
     cursor.moveToFirst();
-    scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+    scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true, getContentLineY);
   };
 
   const goToLast = () => {
     cursor.moveToLast();
-    scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+    scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true, getContentLineY);
   };
 
   // --- Search input mode ---
@@ -85,7 +88,7 @@ export function handleContentKey(
         const line = search.firstMatchFrom(cursor.cursorLine);
         if (line >= 0) {
           cursor.setCursor(line);
-          scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+          scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true, getContentLineY);
         }
         showNotification(`${search.matchCount} match${search.matchCount !== 1 ? "es" : ""}`);
       } else if (search.pattern) {
@@ -212,7 +215,7 @@ export function handleContentKey(
       const line = search.nextMatch();
       if (line >= 0) {
         cursor.setCursor(line);
-        scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+        scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true, getContentLineY);
         const idx = search.currentIndex + 1;
         showNotification(`Match ${idx}/${search.matchCount}`);
       }
@@ -226,7 +229,7 @@ export function handleContentKey(
       const line = search.prevMatch();
       if (line >= 0) {
         cursor.setCursor(line);
-        scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true);
+        scrollToCursor(scrollBox, cursor.cursorLine, contentLines.length, true, getContentLineY);
         const idx = search.currentIndex + 1;
         showNotification(`Match ${idx}/${search.matchCount}`);
       }

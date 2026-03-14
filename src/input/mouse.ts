@@ -12,7 +12,7 @@ import type { ScrollBoxRenderable, MouseEvent } from "@opentui/core";
 import { MouseButton } from "@opentui/core";
 import type { CursorManager } from "./cursor.js";
 import { scrollToCursor } from "./cursor.js";
-import type { GetLinePosition } from "../ui/container.js";
+import type { GetLinePosition, GetContentLineY } from "../ui/container.js";
 
 export interface MouseHandlerOptions {
   scrollBox: ScrollBoxRenderable;
@@ -20,6 +20,7 @@ export interface MouseHandlerOptions {
   contentLines: string[];
   showNotification: (message: string, durationMs?: number) => void;
   getLinePosition: GetLinePosition;
+  getContentLineY?: GetContentLineY;
 }
 
 /**
@@ -122,7 +123,7 @@ export function mouseYToLine(
 }
 
 export function setupMouseHandler(options: MouseHandlerOptions): void {
-  const { scrollBox, cursor, contentLines, getLinePosition } = options;
+  const { scrollBox, cursor, contentLines, getLinePosition, getContentLineY } = options;
   const totalLines = contentLines.length;
 
   if (totalLines === 0) return;
@@ -144,6 +145,6 @@ export function setupMouseHandler(options: MouseHandlerOptions): void {
       cursor.exitVisual();
     }
     cursor.setCursor(line);
-    scrollToCursor(scrollBox, cursor.cursorLine, totalLines);
+    scrollToCursor(scrollBox, cursor.cursorLine, totalLines, false, getContentLineY);
   };
 }

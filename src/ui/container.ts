@@ -47,6 +47,12 @@ export interface LinePosition {
 export type GetLinePosition = (line: number) => LinePosition | null;
 
 /**
+ * Function to get content-space Y for a line (scroll-independent).
+ * Uses relative block positions so the result doesn't depend on scrollTop.
+ */
+export type GetContentLineY = (line: number) => number | null;
+
+/**
  * Container setup result
  */
 export interface ContainerSetup {
@@ -59,8 +65,11 @@ export interface ContainerSetup {
     codeBgColor: string,
     searchHighlightColor: string,
     markdown: MarkdownRenderable,
-  ) => GetLinePosition;
-  reloadMarkdown: (newMarkdown: MarkdownRenderable, newContentLines: string[]) => GetLinePosition;
+  ) => { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY };
+  reloadMarkdown: (
+    newMarkdown: MarkdownRenderable,
+    newContentLines: string[],
+  ) => { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY };
 }
 
 /**
@@ -172,6 +181,57 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     return { x: r.x, y: lineY, height: 1 };
   };
 
+  /**
+   * Content-space Y for scroll calculations.
+   * Uses first block's Y as reference so the result is scroll-independent:
+   *   contentY = (r.y - firstBlock.y) + lineWithinBlock
+   */
+  const contentLineYForBlock = (
+    line: number,
+    blockStates: BlockState[],
+    blockIdx: number,
+  ): number => {
+    const r = blockStates[blockIdx]!.renderable;
+    const firstBlockY = blockStates[0]!.renderable.y;
+    const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
+    const lineWithinBlock = line - blockStartLine;
+    return Math.max(0, r.y - firstBlockY + lineWithinBlock);
+  };
+
+  const getContentLineY: GetContentLineY = (line: number): number | null => {
+    const blockStates = getBlockStates();
+    if (!blockStates || blockStates.length === 0) return null;
+
+    ensureLineMappings(blockStates);
+    if (!cachedLineToBlock) return null;
+
+    const blockIdx = cachedLineToBlock.get(line);
+    if (blockIdx !== undefined) {
+      return contentLineYForBlock(line, blockStates, blockIdx);
+    }
+
+    // Line is unmapped (gap between blocks) — find nearest mapped line and extrapolate
+    const maxSearch = 20;
+    for (let delta = 1; delta <= maxSearch; delta++) {
+      // Search downward first (closer to next block)
+      const below = line + delta;
+      const belowIdx = cachedLineToBlock.get(below);
+      if (belowIdx !== undefined) {
+        return contentLineYForBlock(below, blockStates, belowIdx) - delta;
+      }
+      // Then upward
+      const above = line - delta;
+      if (above >= 0) {
+        const aboveIdx = cachedLineToBlock.get(above);
+        if (aboveIdx !== undefined) {
+          return contentLineYForBlock(above, blockStates, aboveIdx) + delta;
+        }
+      }
+    }
+
+    return null;
+  };
+
   const setupRenderHooks = () => {
     const content = scrollBox.content;
     if (!content || !highlightState) return;
@@ -257,7 +317,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     codeBgColor: string,
     searchHighlightColor: string,
     markdown: MarkdownRenderable,
-  ): GetLinePosition {
+  ): { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY } {
     currentMarkdown = markdown;
 
     const cursorRGBA = RGBA.fromHex(cursorColor);
@@ -281,13 +341,13 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     };
 
     setupRenderHooks();
-    return getLinePosition;
+    return { getLinePosition, getContentLineY };
   }
 
   function reloadMarkdown(
     newMarkdown: MarkdownRenderable,
     newContentLines: string[],
-  ): GetLinePosition {
+  ): { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY } {
     // Remove old markdown by id
     if (currentMarkdown) {
       scrollBox.remove(currentMarkdown.id);
@@ -305,7 +365,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     // Reset scroll
     scrollBox.scrollTo(0);
 
-    return getLinePosition;
+    return { getLinePosition, getContentLineY };
   }
 
   return { container, scrollBox, setupHighlighting, reloadMarkdown };

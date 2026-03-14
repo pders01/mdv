@@ -225,7 +225,7 @@ scrollBox.add(markdown);
 
 // Setup cursor and selection highlighting (AFTER markdown is added to scrollBox)
 // Pass markdown instance to access actual rendered positions via _blockStates
-let getLinePosition = setupHighlighting(
+let { getLinePosition, getContentLineY } = setupHighlighting(
   () => ({
     mode: cursor.mode,
     cursorLine: cursor.cursorLine,
@@ -307,7 +307,7 @@ if (isDirectory && fileTree) {
       });
       markdown = newMarkdown;
 
-      getLinePosition = reloadMarkdown(newMarkdown, currentContentLines);
+      ({ getLinePosition, getContentLineY } = reloadMarkdown(newMarkdown, currentContentLines));
 
       // Reset cursor and search for new content
       cursor.reset(currentContentLines.length);
@@ -325,6 +325,7 @@ if (isDirectory && fileTree) {
           contentLines: currentContentLines,
           showNotification,
           getLinePosition,
+          getContentLineY,
         });
       }
 
@@ -381,7 +382,7 @@ if (isDirectory && fileTree) {
           });
           markdown = newMarkdown;
 
-          getLinePosition = reloadMarkdown(newMarkdown, currentContentLines);
+          ({ getLinePosition, getContentLineY } = reloadMarkdown(newMarkdown, currentContentLines));
 
           cursor.reset(
             currentContentLines.length,
@@ -397,6 +398,7 @@ if (isDirectory && fileTree) {
               contentLines: currentContentLines,
               showNotification,
               getLinePosition,
+              getContentLineY,
             });
           }
 
@@ -436,8 +438,8 @@ if (isDirectory && fileTree) {
       showNotification,
       search,
       onSearchUpdate,
-      get getLinePosition() {
-        return getLinePosition;
+      get getContentLineY() {
+        return getContentLineY;
       },
     },
   });
@@ -454,7 +456,7 @@ if (isDirectory && fileTree) {
     showNotification,
     search,
     onSearchUpdate,
-    getLinePosition,
+    getContentLineY,
   });
 }
 
@@ -472,6 +474,7 @@ if (!args.noMouse) {
     contentLines: currentContentLines,
     showNotification,
     getLinePosition,
+    getContentLineY,
   });
 
   // =============================================================================
@@ -528,7 +531,7 @@ if (args.watch && !isStdin && !isDirectory && args.filePath) {
       });
       markdown = newMarkdown;
 
-      getLinePosition = reloadMarkdown(newMarkdown, currentContentLines);
+      ({ getLinePosition, getContentLineY } = reloadMarkdown(newMarkdown, currentContentLines));
 
       // Clamp cursor to new content bounds (don't reset to top)
       cursor.reset(
@@ -545,6 +548,7 @@ if (args.watch && !isStdin && !isDirectory && args.filePath) {
           contentLines: currentContentLines,
           showNotification,
           getLinePosition,
+          getContentLineY,
         });
       }
 
@@ -572,4 +576,4 @@ if (args.watch && !isStdin && !isDirectory && args.filePath) {
 }
 
 // Initialize cursor position and scroll
-scrollToCursor(scrollBox, cursor.cursorLine, currentContentLines.length, true, getLinePosition);
+scrollToCursor(scrollBox, cursor.cursorLine, currentContentLines.length, true, getContentLineY);
