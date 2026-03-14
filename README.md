@@ -61,6 +61,12 @@ mdv .
 cat README.md | mdv
 curl -s https://example.com/doc.md | mdv
 
+# Watch a file for live reload
+mdv -w README.md
+
+# Watch a directory (reloads active file, marks changed files in sidebar)
+mdv -w ./docs
+
 # With a specific theme
 mdv -t dracula README.md
 
@@ -144,6 +150,7 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 - Full markdown rendering with proper styling
 - Syntax highlighting for code blocks (50+ languages)
 - Theme support via shiki (github-dark default, 30+ themes available)
+- Live reload with `--watch` (single file and directory mode)
 - Directory browsing with sidebar file tree
 - Pager-style search (`/`, `n`/`N`) with inline match highlighting
 - Vim-style navigation (works in both sidebar and reader panes)
@@ -168,6 +175,7 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 ```
 -t, --theme <name>    Set syntax highlighting theme (default: github-dark)
 -T, --list-themes     List available themes
+-w, --watch           Live reload on file changes
 -e, --exclude <dir>   Exclude directory from scan (repeatable)
     --no-mouse        Disable mouse input
     --debug           Enable debug logging

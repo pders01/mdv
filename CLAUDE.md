@@ -71,7 +71,7 @@ Custom markdown token renderers in `src/rendering/`:
 
 - `src/ui/container.ts` - Main scrollable container, cursor/selection highlighting, code block backgrounds; supports `reloadMarkdown` for directory mode file switching
 - `src/ui/statusbar.ts` - Status bar with mode indicator, notifications, and dynamic filename/line count updates
-- `src/ui/sidebar.ts` - File tree sidebar for directory browsing mode (vim j/k navigation, Enter to open, `/` search)
+- `src/ui/sidebar.ts` - File tree sidebar for directory browsing mode (vim j/k navigation, Enter to open, `/` search, change markers for `--watch`)
 
 ### File System
 
@@ -111,6 +111,12 @@ Custom markdown token renderers in `src/rendering/`:
 - Decoupled from render state - uses `scrollHeight / totalLines` for uniform line height
 - Cursor follows vim-style navigation (j/k moves cursor, scroll follows)
 
+### Inline Content Rendering
+
+- Paragraphs and list items with mixed-style inline tokens (bold, code, links) use `StyledText` + `TextChunk[]` to render as a single `TextRenderable`
+- This ensures word-wrapping happens naturally across style boundaries rather than at flex item boundaries
+- Same pattern used by `renderCodeBlock` for syntax-highlighted code
+
 ### Directory Browsing Mode
 
 - Activated when a directory path is passed instead of a file
@@ -120,6 +126,15 @@ Custom markdown token renderers in `src/rendering/`:
 - Pane switching: `Tab`, `Ctrl-h` (sidebar), `Ctrl-l` (content), `Esc` (back to content)
 - `\` toggles sidebar visibility
 - Zero-cost for single-file mode — all sidebar code behind `isDirectory` branch
+
+### Watch Mode (`--watch`)
+
+- Single-file mode: `fs.watch` on the file path, re-established on `close` to survive macOS rename-based saves
+- Directory mode: recursive `fs.watch` on root dir, filtered to known `.md` paths from initial scan
+- Debounced at 150ms to collapse rapid editor write events
+- Content-diffing guard skips reload if file was touched but not changed
+- Currently viewed file: reloads with "Reloading..." / "File reloaded" notification
+- Other files: marked with `●` in sidebar, cleared when opened
 
 ## Key Dependencies
 
