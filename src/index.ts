@@ -4,7 +4,7 @@
  */
 
 import { basename } from "path";
-import { openSync, statSync } from "fs";
+import { openSync, statSync, watch } from "fs";
 import { ReadStream } from "tty";
 import { createCliRenderer, MarkdownRenderable, BoxRenderable } from "@opentui/core";
 import type { BundledTheme } from "shiki";
@@ -409,6 +409,70 @@ if (!args.noMouse) {
     }
     cursor.setCursor(line);
     statusBarUpdate();
+  });
+}
+
+// =============================================================================
+// File Watching (--watch mode)
+// =============================================================================
+
+if (args.watch && !isStdin && !isDirectory && args.filePath) {
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  const DEBOUNCE_MS = 150;
+
+  watch(args.filePath, async (eventType) => {
+    if (eventType !== "change") return;
+
+    // Debounce rapid filesystem events (editors often fire multiple)
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+      try {
+        showNotification("Reloading...", 500);
+
+        // Brief delay so the "Reloading..." notification is visible
+        await new Promise((r) => setTimeout(r, 80));
+
+        const newContent = await readContent(args.filePath!);
+
+        // Skip reload if content hasn't actually changed
+        if (newContent === currentContent) return;
+
+        currentContent = newContent;
+        currentContentLines = newContent.split("\n");
+
+        const newMarkdown = new MarkdownRenderable(renderer, {
+          id: "markdown-content",
+          content: currentContent,
+          syntaxStyle,
+          conceal: true,
+          renderNode,
+        });
+        markdown = newMarkdown;
+
+        getLinePosition = reloadMarkdown(newMarkdown, currentContentLines);
+
+        // Clamp cursor to new content bounds (don't reset to top)
+        cursor.reset(currentContentLines.length, Math.min(cursor.cursorLine, currentContentLines.length - 1));
+        search.clear();
+        setTotalLines(currentContentLines.length);
+
+        if (!args.noMouse) {
+          setupMouseHandler({
+            scrollBox,
+            cursor,
+            contentLines: currentContentLines,
+            showNotification,
+            getLinePosition,
+          });
+        }
+
+        statusBarUpdate();
+        showNotification("File reloaded", 1500);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        showNotification(`Reload error: ${msg}`);
+      }
+    }, DEBOUNCE_MS);
   });
 }
 

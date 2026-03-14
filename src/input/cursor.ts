@@ -145,9 +145,9 @@ export class CursorManager {
   /**
    * Reset cursor for new content (directory mode file switch)
    */
-  reset(newTotalLines: number): void {
+  reset(newTotalLines: number, startLine: number = 0): void {
     this.totalLines = newTotalLines;
-    this._cursorLine = 0;
+    this._cursorLine = Math.max(0, Math.min(startLine, newTotalLines - 1));
     this._anchorLine = 0;
     this._selectionStart = 0;
     this._selectionEnd = 0;

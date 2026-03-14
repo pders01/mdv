@@ -15,6 +15,7 @@ export interface CliArgs {
   listThemes: boolean;
   debug: boolean;
   noMouse: boolean;
+  watch: boolean;
   exclude: string[];
 }
 
@@ -28,6 +29,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       theme: { type: "string", short: "t", default: "github-dark" },
       "list-themes": { type: "boolean", short: "T" },
       "no-mouse": { type: "boolean" },
+      watch: { type: "boolean", short: "w" },
       exclude: { type: "string", short: "e", multiple: true },
       debug: { type: "boolean" },
       version: { type: "boolean", short: "v" },
@@ -44,6 +46,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     listThemes: values["list-themes"] ?? false,
     debug: values.debug ?? false,
     noMouse: values["no-mouse"] ?? false,
+    watch: values.watch ?? false,
     exclude: (values.exclude as string[] | undefined) ?? [],
   };
 }
@@ -58,6 +61,7 @@ export function showHelp(): void {
   console.log("  -t, --theme <name>   Set syntax highlighting theme (default: github-dark)");
   console.log("  -T, --list-themes    List available themes");
   console.log("      --no-mouse       Disable mouse input");
+  console.log("  -w, --watch          Live reload on file changes");
   console.log("  -e, --exclude <dir>  Exclude directory from scan (repeatable)");
   console.log("      --debug          Enable debug logging");
   console.log("  -v, --version        Show version");

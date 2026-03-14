@@ -84,6 +84,22 @@ describe("parseCliArgs", () => {
     expect(args.noMouse).toBe(false);
   });
 
+  test("parses watch flag short form", () => {
+    const args = parseCliArgs(["node", "mdv", "-w", "file.md"]);
+    expect(args.watch).toBe(true);
+    expect(args.filePath).toBe("file.md");
+  });
+
+  test("parses watch flag long form", () => {
+    const args = parseCliArgs(["node", "mdv", "--watch", "file.md"]);
+    expect(args.watch).toBe(true);
+  });
+
+  test("defaults watch to false", () => {
+    const args = parseCliArgs(["node", "mdv", "file.md"]);
+    expect(args.watch).toBe(false);
+  });
+
   test("parses version flag short form", () => {
     const args = parseCliArgs(["node", "mdv", "-v"]);
     expect(args.showVersion).toBe(true);
