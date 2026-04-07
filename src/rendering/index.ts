@@ -3,9 +3,14 @@
  * Combines all rendering modules into a single callback
  */
 
-import { BoxRenderable, type CliRenderer } from "@opentui/core";
+import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
 import type { ThemeColors, ListToken, TableToken, ParagraphToken, HtmlToken } from "../types.js";
+
+interface HeadingToken extends Token {
+  depth: number;
+  text: string;
+}
 import type { HighlighterInstance } from "../highlighting/shiki.js";
 import { renderCodeBlock } from "./code.js";
 import { renderHorizontalRule, renderHtmlBlock } from "./html.js";
@@ -28,7 +33,37 @@ export function createRenderNode(
   highlighterInstance: HighlighterInstance,
   contentWidth?: number,
 ): RenderNodeCallback {
+  // Heading colors by depth (h1 = most prominent, h6 = subtlest)
+  const headingColors = [
+    colors.red,    // h1
+    colors.orange, // h2
+    colors.yellow, // h3
+    colors.green,  // h4
+    colors.cyan,   // h5
+    colors.blue,   // h6
+  ];
+
   return (token: Token, _context: { depth: number }): BoxRenderable | null => {
+    // Handle headings (OpenTUI 0.1.86+ no longer renders these by default
+    // when a renderNode callback is provided)
+    if (token.type === "heading") {
+      const heading = token as HeadingToken;
+      const wrapper = new BoxRenderable(renderer, {
+        marginTop: heading.depth <= 2 ? 2 : 1,
+        marginBottom: 1,
+      });
+      const color = headingColors[Math.min(heading.depth - 1, headingColors.length - 1)];
+      const prefix = heading.depth <= 2 ? "" : "#".repeat(heading.depth) + " ";
+      wrapper.add(
+        new TextRenderable(renderer, {
+          content: prefix + heading.text,
+          fg: color,
+          attributes: TextAttributes.BOLD,
+        }),
+      );
+      return wrapper;
+    }
+
     // Handle code blocks with shiki highlighting
     if (token.type === "code") {
       return renderCodeBlock(
