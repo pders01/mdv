@@ -186,7 +186,7 @@ const NORMAL_LAYOUT: TableLayout = {
   rightBorder: " |",
   sepLeft: "|",
   sepRight: "|",
-  sepCross: "+",
+  sepCross: "|",
   sepHorizontal: "-",
 };
 

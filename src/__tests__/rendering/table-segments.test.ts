@@ -46,9 +46,8 @@ describe("tableToBlock", () => {
 
     const separatorLine = block.lines[1];
     const sepText = separatorLine.map((s) => s.text).join("");
-    expect(sepText).toContain("|"); // left/right border
+    expect(sepText).toContain("|"); // borders and column separators
     expect(sepText).toContain("-"); // horizontal fill
-    expect(sepText).toContain("+"); // cross
   });
 
   test("data cells use fg color", () => {
