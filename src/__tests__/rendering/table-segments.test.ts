@@ -39,16 +39,16 @@ describe("tableToBlock", () => {
     }
   });
 
-  test("separator line contains box-drawing characters", () => {
+  test("separator line contains border characters", () => {
     const markdown = "| A | B |\n| --- | --- |\n| 1 | 2 |";
     const token = getTableToken(markdown);
     const block = tableToBlock(TEST_COLORS, token);
 
     const separatorLine = block.lines[1];
     const sepText = separatorLine.map((s) => s.text).join("");
-    expect(sepText).toContain("\u251C"); // ├
-    expect(sepText).toContain("\u2500"); // ─
-    expect(sepText).toContain("\u2524"); // ┤
+    expect(sepText).toContain("|"); // left/right border
+    expect(sepText).toContain("-"); // horizontal fill
+    expect(sepText).toContain("+"); // cross
   });
 
   test("data cells use fg color", () => {
@@ -67,7 +67,7 @@ describe("tableToBlock", () => {
     const block = tableToBlock(TEST_COLORS, token);
 
     const headerLine = block.lines[0];
-    const pipes = headerLine.filter((s) => s.text.includes("\u2502") && s.fg === TEST_COLORS.gray);
+    const pipes = headerLine.filter((s) => s.text.includes("|") && s.fg === TEST_COLORS.gray);
     expect(pipes.length).toBeGreaterThan(0);
   });
 
