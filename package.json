@@ -22,15 +22,15 @@
     "format": "oxfmt"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.75",
-    "@shikijs/cli": "^3.21.0",
+    "@opentui/core": "0.1.97",
+    "@shikijs/cli": "^3.23.0",
     "marked": "^15.0.0",
-    "shiki": "^3.21.0"
+    "shiki": "^3.23.0"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "^1.3.11",
     "oxfmt": "^0.32.0",
-    "oxlint": "^1.42.0"
+    "oxlint": "^1.59.0"
   },
   "peerDependencies": {
     "typescript": "^5"
