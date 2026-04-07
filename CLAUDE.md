@@ -87,7 +87,7 @@ Custom markdown token renderers in `src/rendering/`:
 
 - Uses OpenTUI's `_blockStates` (private API) to get rendered block positions
 - Line mapping: searches for `tokenRaw` in content to find source line numbers
-- Fixed 1-row line height for cursor highlights (prevents multi-line issues in lists)
+- Line height per block: `r.height / linesInBlock` for accurate cursor highlights and scroll positions
 - Viewport clipping prevents drift when blocks scroll above viewport
 
 ### Selection Model
@@ -110,12 +110,29 @@ Custom markdown token renderers in `src/rendering/`:
 
 - Decoupled from render state - uses `scrollHeight / totalLines` for uniform line height
 - Cursor follows vim-style navigation (j/k moves cursor, scroll follows)
+- Mouse clicks set cursor without scrolling — clicked position is already visible, and `scrollToCursor` would fight the viewport due to coordinate space differences
 
 ### Inline Content Rendering
 
 - Paragraphs and list items with mixed-style inline tokens (bold, code, links) use `StyledText` + `TextChunk[]` to render as a single `TextRenderable`
 - This ensures word-wrapping happens naturally across style boundaries rather than at flex item boundaries
 - Same pattern used by `renderCodeBlock` for syntax-highlighted code
+- Table rows also use this pattern — each row is a single `StyledText` `TextRenderable` to avoid Yoga flex layout adding extra space between cells
+
+### Table Rendering
+
+- Adaptive layout: normal mode (`| ` padded borders) when content fits, compact mode (`|` tight borders) when it doesn't
+- Layout decision based on actual shrunk column widths, not natural widths — tries normal first, falls back to compact only if it truly overflows
+- Multi-pass column width algorithm: locks small columns (≤10 chars) at natural width, proportionally shrinks large columns, corrects floor-rounding overshoot
+- ASCII borders (`|`, `-`) instead of Unicode box-drawing to avoid terminal-dependent width measurement issues
+- Separator uses `|` for cross characters so yanked tables are valid markdown
+- Table utilities in `src/rendering/table-utils.ts`: `calculateColumnWidths`, `chooseLayout`, `buildSeparatorLine`, `padCell`, `truncateCell`
+
+### Heading Rendering
+
+- Headings are rendered explicitly in `renderNode` (required since OpenTUI 0.1.86+ no longer renders them by default when a `renderNode` callback is provided)
+- Depth-based coloring: h1 red, h2 orange, h3 yellow, h4 green, h5 cyan, h6 blue — all bold
+- h1/h2 show clean text, h3+ show `###` prefix markers
 
 ### Directory Browsing Mode
 
