@@ -25,11 +25,7 @@ export function tableToBlock(
   const allRows = [headerCells, ...dataCells];
   const colCount = token.header.length;
 
-  // Compute natural widths first (no constraint) to get accurate content width
-  const naturalWidths = calculateColumnWidths(allRows);
-  const naturalContentWidth = naturalWidths.reduce((s, w) => s + w, 0);
-  const layout = chooseLayout(colCount, naturalContentWidth, availableWidth);
-
+  const layout = chooseLayout(allRows, availableWidth);
   const colWidths = calculateColumnWidths(allRows, availableWidth, layout);
   const paddedWidths = colWidths.map((w) => w + layout.cellPadding);
 
@@ -126,11 +122,7 @@ export function renderTable(
 
   // Calculate column widths, constrained to available content width
   const availableWidth = Math.max(20, contentWidth ?? renderer.width - 2);
-  // Compute natural widths first (no constraint) to get accurate content width
-  const naturalWidths = calculateColumnWidths(allRows);
-  const naturalContentWidth = naturalWidths.reduce((s, w) => s + w, 0);
-  const layout = chooseLayout(colCount, naturalContentWidth, availableWidth);
-
+  const layout = chooseLayout(allRows, availableWidth);
   const colWidths = calculateColumnWidths(allRows, availableWidth, layout);
   const paddedWidths = colWidths.map((w) => w + layout.cellPadding);
 

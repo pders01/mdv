@@ -215,16 +215,21 @@ export function layoutOverhead(colCount: number, layout: TableLayout): number {
 
 /**
  * Choose the best layout for the given column count and available width.
- * Prefers normal layout; falls back to compact when overhead is too high.
+ * Tries normal layout with column shrinking first; only falls back to compact
+ * if the shrunk normal layout still overflows.
  */
-export function chooseLayout(colCount: number, naturalContentWidth: number, availableWidth?: number): TableLayout {
+export function chooseLayout(rows: string[][], availableWidth?: number): TableLayout {
   if (availableWidth === undefined) return NORMAL_LAYOUT;
 
-  const normalTotal = naturalContentWidth + layoutOverhead(colCount, NORMAL_LAYOUT);
+  const colCount = Math.max(...rows.map((r) => r.length));
+  if (colCount <= 0) return NORMAL_LAYOUT;
+
+  // Try normal layout: compute shrunk widths and check if they fit
+  const normalWidths = calculateColumnWidths(rows, availableWidth, NORMAL_LAYOUT);
+  const normalTotal = normalWidths.reduce((s, w) => s + w, 0) + layoutOverhead(colCount, NORMAL_LAYOUT);
+
   if (normalTotal <= availableWidth) return NORMAL_LAYOUT;
 
-  // Compact overhead is always smaller than normal for any column count,
-  // so always prefer compact when normal doesn't fit
   return COMPACT_LAYOUT;
 }
 
