@@ -325,7 +325,6 @@ if (isDirectory && fileTree) {
           contentLines: currentContentLines,
           showNotification,
           getLinePosition,
-          getContentLineY,
         });
       }
 
@@ -398,7 +397,6 @@ if (isDirectory && fileTree) {
               contentLines: currentContentLines,
               showNotification,
               getLinePosition,
-              getContentLineY,
             });
           }
 
@@ -474,7 +472,6 @@ if (!args.noMouse) {
     contentLines: currentContentLines,
     showNotification,
     getLinePosition,
-    getContentLineY,
   });
 
   // =============================================================================
@@ -548,7 +545,6 @@ if (args.watch && !isStdin && !isDirectory && args.filePath) {
           contentLines: currentContentLines,
           showNotification,
           getLinePosition,
-          getContentLineY,
         });
       }
 

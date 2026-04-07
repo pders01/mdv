@@ -112,6 +112,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
   // Line mapping caches (rebuilt on reload)
   let cachedLineToBlock: Map<number, number> | null = null;
   let cachedBlockStartLines: Map<number, number> | null = null;
+  let cachedBlockLineCount: Map<number, number> | null = null;
 
   const getBlockStates = (): BlockState[] | null => {
     if (!currentMarkdown) return null;
@@ -123,6 +124,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
   const invalidateLineMappings = () => {
     cachedLineToBlock = null;
     cachedBlockStartLines = null;
+    cachedBlockLineCount = null;
   };
 
   const ensureLineMappings = (blockStates: BlockState[]): void => {
@@ -130,6 +132,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
     cachedLineToBlock = new Map<number, number>();
     cachedBlockStartLines = new Map<number, number>();
+    cachedBlockLineCount = new Map<number, number>();
 
     const fullContent = currentContentLines.join("\n");
     let searchStart = 0;
@@ -151,6 +154,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       const endLine = startLine + linesInToken - 1;
 
       cachedBlockStartLines.set(blockIdx, startLine);
+      cachedBlockLineCount.set(blockIdx, linesInToken);
 
       for (let line = startLine; line <= endLine && line < currentContentLines.length; line++) {
         cachedLineToBlock.set(line, blockIdx);
@@ -175,10 +179,14 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
     const r = blockState.renderable;
     const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
+    const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
     const lineWithinBlock = line - blockStartLine;
-    const lineY = r.y + lineWithinBlock;
 
-    return { x: r.x, y: lineY, height: 1 };
+    // Use actual rendered height per line instead of assuming 1
+    const lineHeight = linesInBlock > 0 ? r.height / linesInBlock : 1;
+    const lineY = r.y + lineWithinBlock * lineHeight;
+
+    return { x: r.x, y: lineY, height: lineHeight };
   };
 
   /**
@@ -194,8 +202,11 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const r = blockStates[blockIdx]!.renderable;
     const firstBlockY = blockStates[0]!.renderable.y;
     const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
+    const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
     const lineWithinBlock = line - blockStartLine;
-    return Math.max(0, r.y - firstBlockY + lineWithinBlock);
+
+    const lineHeight = linesInBlock > 0 ? r.height / linesInBlock : 1;
+    return Math.max(0, r.y - firstBlockY + lineWithinBlock * lineHeight);
   };
 
   const getContentLineY: GetContentLineY = (line: number): number | null => {
