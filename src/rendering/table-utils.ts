@@ -20,7 +20,11 @@ const SMALL_COL_THRESHOLD = 10;
  * algorithm that protects small columns from unnecessary truncation.
  * Uses the provided layout's padding for overhead calculations.
  */
-export function calculateColumnWidths(rows: string[][], availableWidth?: number, layout?: TableLayout): number[] {
+export function calculateColumnWidths(
+  rows: string[][],
+  availableWidth?: number,
+  layout?: TableLayout,
+): number[] {
   if (rows.length === 0) {
     return [];
   }
@@ -51,10 +55,7 @@ export function calculateColumnWidths(rows: string[][], availableWidth?: number,
     return natural.slice();
   }
 
-  const contentBudget = Math.max(
-    colCount * MIN_COL_WIDTH,
-    availableWidth - overhead,
-  );
+  const contentBudget = Math.max(colCount * MIN_COL_WIDTH, availableWidth - overhead);
 
   // Multi-pass: lock small columns at natural width, then distribute remainder
   const result: number[] = Array(colCount).fill(0);
@@ -139,7 +140,10 @@ export function padCell(text: string, width: number, align: string | null = "lef
 /**
  * Build separator line for table. In compact mode, uses tighter spacing.
  */
-export function buildSeparatorLine(paddedWidths: number[], layout: TableLayout = NORMAL_LAYOUT): string {
+export function buildSeparatorLine(
+  paddedWidths: number[],
+  layout: TableLayout = NORMAL_LAYOUT,
+): string {
   const parts: string[] = [layout.sepLeft];
   // In normal mode, each separator segment needs 1 extra char to match the trailing
   // space in "│ " separators. In compact mode, no extra needed.
@@ -227,7 +231,8 @@ export function chooseLayout(rows: string[][], availableWidth?: number): TableLa
 
   // Try normal layout: compute shrunk widths and check if they fit
   const normalWidths = calculateColumnWidths(rows, availableWidth, NORMAL_LAYOUT);
-  const normalTotal = normalWidths.reduce((s, w) => s + w, 0) + layoutOverhead(colCount, NORMAL_LAYOUT);
+  const normalTotal =
+    normalWidths.reduce((s, w) => s + w, 0) + layoutOverhead(colCount, NORMAL_LAYOUT);
 
   if (normalTotal <= availableWidth) return NORMAL_LAYOUT;
 

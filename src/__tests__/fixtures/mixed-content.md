@@ -18,13 +18,13 @@ Make sure you have Node.js v18 or later installed.
 
 The configuration file supports the following options:
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| port | number | 3000 | Server port |
-| host | string | localhost | Bind address |
-| debug | boolean | false | Enable debug logging |
-| timeout | number | 30000 | Request timeout in ms |
-| maxRetries | number | 3 | Maximum retry attempts |
+| Option     | Type    | Default   | Description            |
+| ---------- | ------- | --------- | ---------------------- |
+| port       | number  | 3000      | Server port            |
+| host       | string  | localhost | Bind address           |
+| debug      | boolean | false     | Enable debug logging   |
+| timeout    | number  | 30000     | Request timeout in ms  |
+| maxRetries | number  | 3         | Maximum retry attempts |
 
 ## Authentication
 
@@ -44,11 +44,10 @@ interface AuthConfig {
 }
 
 function createToken(user: User, config: AuthConfig): string {
-  return jwt.sign(
-    { sub: user.id, role: user.role },
-    config.secret,
-    { expiresIn: config.expiresIn, issuer: config.issuer }
-  );
+  return jwt.sign({ sub: user.id, role: user.role }, config.secret, {
+    expiresIn: config.expiresIn,
+    issuer: config.issuer,
+  });
 }
 ```
 
@@ -58,12 +57,12 @@ function createToken(user: User, config: AuthConfig): string {
 
 The database uses PostgreSQL with the following core tables:
 
-| Table | Columns | Indexes | Description |
-| --- | --- | --- | --- |
-| users | id, email, name, role, created_at | email (unique), role | User accounts |
-| sessions | id, user_id, token, expires_at | user_id, token, expires_at | Active sessions |
-| audit_log | id, user_id, action, metadata, ts | user_id, ts | Audit trail |
-| settings | id, key, value, updated_at | key (unique) | App configuration |
+| Table     | Columns                           | Indexes                    | Description       |
+| --------- | --------------------------------- | -------------------------- | ----------------- |
+| users     | id, email, name, role, created_at | email (unique), role       | User accounts     |
+| sessions  | id, user_id, token, expires_at    | user_id, token, expires_at | Active sessions   |
+| audit_log | id, user_id, action, metadata, ts | user_id, ts                | Audit trail       |
+| settings  | id, key, value, updated_at        | key (unique)               | App configuration |
 
 ### Migrations
 
@@ -104,15 +103,15 @@ INSERT INTO settings (key, value) VALUES
 - `DELETE /api/auth/logout` — Destroy session
 
 ```typescript
-app.get('/api/users', authMiddleware('admin'), async (req, res) => {
+app.get("/api/users", authMiddleware("admin"), async (req, res) => {
   const users = await db.user.findMany({
     select: { id: true, email: true, name: true, role: true },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
   res.json({ data: users });
 });
 
-app.post('/api/users', authMiddleware('admin'), async (req, res) => {
+app.post("/api/users", authMiddleware("admin"), async (req, res) => {
   const { email, name, role } = req.body;
   const user = await db.user.create({
     data: { email, name, role },
@@ -130,24 +129,22 @@ All errors follow a consistent format:
   "error": {
     "code": "VALIDATION_ERROR",
     "message": "Invalid email format",
-    "details": [
-      { "field": "email", "constraint": "isEmail" }
-    ]
+    "details": [{ "field": "email", "constraint": "isEmail" }]
   }
 }
 ```
 
 Error codes:
 
-| Code | HTTP Status | Description |
-| --- | --- | --- |
-| VALIDATION_ERROR | 400 | Request validation failed |
-| UNAUTHORIZED | 401 | Missing or invalid token |
-| FORBIDDEN | 403 | Insufficient permissions |
-| NOT_FOUND | 404 | Resource not found |
-| CONFLICT | 409 | Duplicate resource |
-| RATE_LIMITED | 429 | Too many requests |
-| INTERNAL_ERROR | 500 | Unexpected server error |
+| Code             | HTTP Status | Description               |
+| ---------------- | ----------- | ------------------------- |
+| VALIDATION_ERROR | 400         | Request validation failed |
+| UNAUTHORIZED     | 401         | Missing or invalid token  |
+| FORBIDDEN        | 403         | Insufficient permissions  |
+| NOT_FOUND        | 404         | Resource not found        |
+| CONFLICT         | 409         | Duplicate resource        |
+| RATE_LIMITED     | 429         | Too many requests         |
+| INTERNAL_ERROR   | 500         | Unexpected server error   |
 
 ## Deployment
 
@@ -165,13 +162,13 @@ CMD ["node", "dist/index.js"]
 
 ### Environment Variables
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| DATABASE_URL | Yes | PostgreSQL connection string |
-| JWT_SECRET | Yes | Token signing secret |
-| PORT | No | Server port (default: 3000) |
-| LOG_LEVEL | No | Logging verbosity |
-| REDIS_URL | No | Cache connection string |
+| Variable     | Required | Description                  |
+| ------------ | -------- | ---------------------------- |
+| DATABASE_URL | Yes      | PostgreSQL connection string |
+| JWT_SECRET   | Yes      | Token signing secret         |
+| PORT         | No       | Server port (default: 3000)  |
+| LOG_LEVEL    | No       | Logging verbosity            |
+| REDIS_URL    | No       | Cache connection string      |
 
 ## Monitoring
 
@@ -185,10 +182,10 @@ The application exposes Prometheus metrics at `/metrics`:
 ```yaml
 # prometheus.yml
 scrape_configs:
-  - job_name: 'myapp'
+  - job_name: "myapp"
     scrape_interval: 15s
     static_configs:
-      - targets: ['localhost:3000']
+      - targets: ["localhost:3000"]
 ```
 
 ## Testing
@@ -207,13 +204,13 @@ npm run test:integration
 
 ### Coverage
 
-| Module | Statements | Branches | Functions | Lines |
-| --- | --- | --- | --- | --- |
-| auth | 95% | 88% | 100% | 94% |
-| users | 91% | 82% | 95% | 90% |
-| sessions | 87% | 79% | 90% | 86% |
-| settings | 98% | 95% | 100% | 97% |
-| middleware | 85% | 75% | 88% | 84% |
+| Module     | Statements | Branches | Functions | Lines |
+| ---------- | ---------- | -------- | --------- | ----- |
+| auth       | 95%        | 88%      | 100%      | 94%   |
+| users      | 91%        | 82%      | 95%       | 90%   |
+| sessions   | 87%        | 79%      | 90%       | 86%   |
+| settings   | 98%        | 95%      | 100%      | 97%   |
+| middleware | 85%        | 75%      | 88%       | 84%   |
 
 ## Changelog
 

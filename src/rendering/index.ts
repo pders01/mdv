@@ -55,12 +55,12 @@ export function createRenderNode(
 ): RenderNodeCallback {
   // Heading colors by depth (h1 = most prominent, h6 = subtlest)
   const headingColors = [
-    colors.red,    // h1
+    colors.red, // h1
     colors.orange, // h2
     colors.yellow, // h3
-    colors.green,  // h4
-    colors.cyan,   // h5
-    colors.blue,   // h6
+    colors.green, // h4
+    colors.cyan, // h5
+    colors.blue, // h6
   ];
 
   return (token: Token, _context: RenderNodeContext): BoxRenderable | null => {

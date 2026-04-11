@@ -136,7 +136,7 @@ export function paragraphToSegments(colors: ThemeColors, token: ParagraphToken):
             if (!isClosing) {
               // Opening tag - extract href
               const hrefMatch = html.match(/href=["']([^"']*)["']/);
-              state.linkHref = hrefMatch ? hrefMatch[1] ?? null : null;
+              state.linkHref = hrefMatch ? (hrefMatch[1] ?? null) : null;
               state.link = true;
             } else {
               // Closing tag - append URL in parentheses if we have one

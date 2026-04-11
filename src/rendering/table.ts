@@ -145,9 +145,7 @@ export function renderTable(
   }
   headerSegs.push({ text: layout.rightBorder, fg: colors.gray, bold: false, italic: false });
 
-  wrapper.add(
-    new TextRenderable(renderer, { content: segmentsToStyledText(headerSegs) }),
-  );
+  wrapper.add(new TextRenderable(renderer, { content: segmentsToStyledText(headerSegs) }));
 
   // Render separator row
   wrapper.add(
@@ -173,9 +171,7 @@ export function renderTable(
     }
     dataSegs.push({ text: layout.rightBorder, fg: colors.gray, bold: false, italic: false });
 
-    wrapper.add(
-      new TextRenderable(renderer, { content: segmentsToStyledText(dataSegs) }),
-    );
+    wrapper.add(new TextRenderable(renderer, { content: segmentsToStyledText(dataSegs) }));
   }
 
   return wrapper;
