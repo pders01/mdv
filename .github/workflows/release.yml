@@ -43,6 +43,10 @@ jobs:
       - name: Build binary
         run: bun build src/index.ts --compile --target=${{ matrix.target }} --outfile ${{ matrix.artifact }}
 
+      - name: Ad-hoc sign binary (macOS)
+        if: runner.os == 'macOS'
+        run: codesign --sign - --force ${{ matrix.artifact }}
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
