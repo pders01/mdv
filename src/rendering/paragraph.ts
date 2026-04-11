@@ -3,6 +3,7 @@
  */
 
 import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
+import type { Token } from "marked";
 import type {
   ThemeColors,
   TextChunk,
@@ -170,18 +171,79 @@ export function paragraphToSegments(colors: ThemeColors, token: ParagraphToken):
       const textToken = t as TextToken | EscapeToken;
       addSegment(textToken.text || "");
     } else {
-      // Use shared inline token converter for other token types
-      const result = convertInlineToken(t, colors);
-      if (result) {
-        segments.push(result.segment);
-        if (result.urlSegment) {
-          segments.push(result.urlSegment);
-        }
-      }
+      // Recursively walk inline tokens so nested styling (e.g. a codespan
+      // inside a strong block) is preserved. convertInlineToken only looks
+      // at t.text for strong/em/del, which would leak raw markdown markers
+      // for any inline children; the walker below delegates leaf conversion
+      // to convertInlineToken and merges parent styles into each segment.
+      emitInline(t, { bold: false, italic: false, strike: false }, segments, colors);
     }
   }
 
   return segments;
+}
+
+/**
+ * Recursive inline-token walker. For parent tokens with nested children
+ * (strong → {text, codespan, text}), descends and propagates the parent's
+ * visual style into each leaf. For leaf tokens, defers to convertInlineToken.
+ *
+ * `strike` propagates gray color into plain-text leaves. Leaves that already
+ * carry a meaningful color (codespan → cyan, link → link color) keep theirs,
+ * so `~~\`code\`~~` still renders as code rather than losing the styling.
+ */
+interface ParentStyle {
+  bold: boolean;
+  italic: boolean;
+  strike: boolean;
+}
+
+function emitInline(
+  t: Token,
+  parentStyle: ParentStyle,
+  segments: StyledSegment[],
+  colors: ThemeColors,
+): void {
+  const children = (t as Token & { tokens?: Token[] }).tokens;
+
+  if (t.type === "strong" && children && children.length > 0) {
+    for (const child of children) {
+      emitInline(child, { ...parentStyle, bold: true }, segments, colors);
+    }
+    return;
+  }
+  if (t.type === "em" && children && children.length > 0) {
+    for (const child of children) {
+      emitInline(child, { ...parentStyle, italic: true }, segments, colors);
+    }
+    return;
+  }
+  if (t.type === "del" && children && children.length > 0) {
+    for (const child of children) {
+      emitInline(child, { ...parentStyle, strike: true }, segments, colors);
+    }
+    return;
+  }
+
+  // Leaf case (or strong/em/del with no nested tokens — fall back to .text)
+  const result = convertInlineToken(t, colors);
+  if (!result) return;
+
+  // Default-colored text inside a strikethrough block becomes gray.
+  // Codespans and links retain their own color — content semantics win
+  // over decoration semantics, matching the documented priority order.
+  const fg =
+    parentStyle.strike && result.segment.fg === colors.fg ? colors.gray : result.segment.fg;
+
+  segments.push({
+    ...result.segment,
+    fg,
+    bold: result.segment.bold || parentStyle.bold,
+    italic: result.segment.italic || parentStyle.italic,
+  });
+  if (result.urlSegment) {
+    segments.push(result.urlSegment);
+  }
 }
 
 /**

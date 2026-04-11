@@ -66,6 +66,33 @@ describe("paragraphToSegments", () => {
     expectSegment(segments, "deleted", { fg: TEST_COLORS.gray });
   });
 
+  test("renders codespan inside strong as bold cyan", () => {
+    // Regression: the outer strong token in marked carries a .text field
+    // containing raw backticks ("no `foo` in v1"), so the old conversion
+    // leaked the markdown markers. The recursive walker should descend into
+    // strong.tokens and style the inner codespan as bold + cyan.
+    const token = getParagraphToken("**no `foo` in v1**");
+    const segments = paragraphToSegments(TEST_COLORS, token);
+    const text = segments.map((s) => s.text).join("");
+    expect(text).not.toContain("`");
+    expectSegment(segments, "foo", { bold: true, fg: TEST_COLORS.cyan });
+    expectSegment(segments, "no ", { bold: true });
+  });
+
+  test("renders strong inside em as bold italic", () => {
+    const token = getParagraphToken("*very **strong** emphasis*");
+    const segments = paragraphToSegments(TEST_COLORS, token);
+    expectSegment(segments, "strong", { bold: true, italic: true });
+  });
+
+  test("preserves codespan color inside strikethrough", () => {
+    // Content semantics (code) win over decoration semantics (strike).
+    const token = getParagraphToken("~~deprecated `oldFunc` call~~");
+    const segments = paragraphToSegments(TEST_COLORS, token);
+    expectSegment(segments, "oldFunc", { fg: TEST_COLORS.cyan });
+    expectSegment(segments, "deprecated ", { fg: TEST_COLORS.gray });
+  });
+
   test("handles escape sequences", () => {
     const token = getParagraphToken("test \\* escaped");
     const segments = paragraphToSegments(TEST_COLORS, token);

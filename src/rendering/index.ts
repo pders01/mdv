@@ -12,7 +12,7 @@ import {
   type RenderNodeContext,
 } from "@opentui/core";
 import type { Token } from "marked";
-import type { ThemeColors, ListToken, TableToken, ParagraphToken, HtmlToken } from "../types.js";
+import type { ThemeColors, ListToken, TableToken, ParagraphToken } from "../types.js";
 
 interface HeadingToken {
   type: "heading";
@@ -128,14 +128,16 @@ export function createRenderNode(
       return renderTable(renderer, colors, token as TableToken, contentWidth);
     }
 
-    // Handle paragraphs with inline HTML or escape sequences
+    // Handle paragraphs explicitly. OpenTUI's fallback path doesn't apply
+    // concealment for inline markers when a renderNode callback is provided
+    // (same phenomenon as headings in 0.1.86+), so if we leave this to the
+    // default, `**bold**` and `` `code` `` show up with their markers intact.
+    // Taking over via renderParagraph → paragraphToSegments → convertInlineToken
+    // applies the correct styling for strong/em/codespan/link/del and hides
+    // the surrounding syntax characters.
     if (token.type === "paragraph") {
       const para = token as ParagraphToken;
-      // Check if paragraph contains inline HTML, escape tokens, or links
-      const hasInlineHtml = para.tokens?.some((t) => t.type === "html" && !(t as HtmlToken).block);
-      const hasEscapes = para.tokens?.some((t) => t.type === "escape");
-      const hasLinks = para.tokens?.some((t) => t.type === "link");
-      if (hasInlineHtml || hasEscapes || hasLinks) {
+      if (para.tokens && para.tokens.length > 0) {
         const rendered = renderParagraph(renderer, colors, para);
         if (rendered) return rendered;
       }
