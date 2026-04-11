@@ -25,13 +25,20 @@ import { renderParagraph } from "./paragraph.js";
 export type RenderNodeCallback = (token: Token, context: { depth: number }) => BoxRenderable | null;
 
 /**
- * Create a renderNode callback with all rendering capabilities
+ * Create a renderNode callback with all rendering capabilities.
+ *
+ * `mermaidRenders` is a map from raw mermaid source text to pre-rendered ASCII
+ * output (produced by `prerenderMermaid` before the render pass). When a
+ * mermaid code block is encountered and has an entry in the map, the ASCII is
+ * substituted; otherwise the raw source falls through to the normal code-block
+ * path (rendered unhighlighted since "mermaid" isn't a known Shiki language).
  */
 export function createRenderNode(
   renderer: CliRenderer,
   colors: ThemeColors,
   highlighterInstance: HighlighterInstance,
   contentWidth?: number,
+  mermaidRenders?: Map<string, string>,
 ): RenderNodeCallback {
   // Heading colors by depth (h1 = most prominent, h6 = subtlest)
   const headingColors = [
@@ -66,12 +73,18 @@ export function createRenderNode(
 
     // Handle code blocks with shiki highlighting
     if (token.type === "code") {
-      return renderCodeBlock(
-        renderer,
-        colors,
-        highlighterInstance,
-        token as Token & { text: string; lang?: string },
-      );
+      const codeToken = token as Token & { text: string; lang?: string };
+      // Mermaid interception: substitute pre-rendered ASCII when available.
+      // Strip the lang so the replacement renders as plain text rather than
+      // attempting (and failing) to highlight ASCII art as source code.
+      if (codeToken.lang === "mermaid" && mermaidRenders?.has(codeToken.text)) {
+        return renderCodeBlock(renderer, colors, highlighterInstance, {
+          ...codeToken,
+          text: mermaidRenders.get(codeToken.text)!,
+          lang: "",
+        });
+      }
+      return renderCodeBlock(renderer, colors, highlighterInstance, codeToken);
     }
 
     // Handle horizontal rules

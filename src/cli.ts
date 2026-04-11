@@ -17,6 +17,7 @@ export interface CliArgs {
   noMouse: boolean;
   watch: boolean;
   exclude: string[];
+  noMermaid: boolean;
 }
 
 /**
@@ -29,6 +30,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       theme: { type: "string", short: "t", default: "github-dark" },
       "list-themes": { type: "boolean", short: "T" },
       "no-mouse": { type: "boolean" },
+      "no-mermaid": { type: "boolean" },
       watch: { type: "boolean", short: "w" },
       exclude: { type: "string", short: "e", multiple: true },
       debug: { type: "boolean" },
@@ -48,6 +50,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     noMouse: values["no-mouse"] ?? false,
     watch: values.watch ?? false,
     exclude: (values.exclude as string[] | undefined) ?? [],
+    noMermaid: values["no-mermaid"] ?? false,
   };
 }
 
@@ -61,6 +64,7 @@ export function showHelp(): void {
   console.log("  -t, --theme <name>   Set syntax highlighting theme (default: github-dark)");
   console.log("  -T, --list-themes    List available themes");
   console.log("      --no-mouse       Disable mouse input");
+  console.log("      --no-mermaid     Disable mermaid diagram rendering");
   console.log("  -w, --watch          Live reload on file changes");
   console.log("  -e, --exclude <dir>  Exclude directory from scan (repeatable)");
   console.log("      --debug          Enable debug logging");

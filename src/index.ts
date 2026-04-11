@@ -22,6 +22,7 @@ import {
 import { extractThemeColors, createSyntaxStyle } from "./theme/index.js";
 import { createHighlighterInstance } from "./highlighting/shiki.js";
 import { createRenderNode } from "./rendering/index.js";
+import { prerenderMermaid } from "./rendering/mermaid.js";
 import { createMainContainer } from "./ui/container.js";
 import { createStatusBar } from "./ui/statusbar.js";
 import { createCursorManager, scrollToCursor } from "./input/cursor.js";
@@ -211,7 +212,25 @@ const { container, scrollBox, setupHighlighting, reloadMarkdown } = createMainCo
 // In directory mode, subtract sidebar width (30) from available content width
 // Scrollbox padding (1 on each side) is accounted for internally
 const contentWidth = isDirectory ? renderer.width - 30 - 2 : renderer.width - 2;
-const renderNode = createRenderNode(renderer, themeColors, highlighterInstance, contentWidth);
+
+// Mermaid pre-pass: render all mermaid code blocks to ASCII before the first
+// paint. The map is mutated in place on reloads (directory switch, watch
+// reload) so the renderNode closure always sees current state.
+const mermaidRenders = new Map<string, string>();
+let mermaidToolWasMissing = false;
+{
+  const result = await prerenderMermaid(currentContent, { disabled: args.noMermaid });
+  for (const [k, v] of result.renders) mermaidRenders.set(k, v);
+  mermaidToolWasMissing = result.toolMissing;
+}
+
+const renderNode = createRenderNode(
+  renderer,
+  themeColors,
+  highlighterInstance,
+  contentWidth,
+  mermaidRenders,
+);
 
 // Create markdown renderable
 let markdown = new MarkdownRenderable(renderer, {
@@ -270,6 +289,22 @@ const onSearchUpdate = () => {
 statusBarUpdate = () =>
   updateStatusBar(cursor.mode, cursor.cursorLine, cursor.selectionStart, cursor.selectionEnd);
 
+// Refresh mermaidRenders for a new content buffer. Mutates the shared map
+// in place so the renderNode closure stays valid across reloads.
+const refreshMermaidRenders = async (text: string): Promise<void> => {
+  const result = await prerenderMermaid(text, { disabled: args.noMermaid });
+  mermaidRenders.clear();
+  for (const [k, v] of result.renders) mermaidRenders.set(k, v);
+  if (result.toolMissing && result.hadBlocks) {
+    showNotification("mermaid-ascii not installed — showing source", 3000);
+  }
+};
+
+// Initial notification if the first file had mermaid blocks but no tool.
+if (mermaidToolWasMissing) {
+  showNotification("mermaid-ascii not installed — showing source", 3000);
+}
+
 // =============================================================================
 // UI Assembly
 // =============================================================================
@@ -296,6 +331,9 @@ if (isDirectory && fileTree) {
       currentContent = newContent;
       currentContentLines = newContent.split("\n");
       currentFilePath = filePath;
+
+      // Refresh mermaid pre-pass for the newly opened file.
+      await refreshMermaidRenders(newContent);
 
       // Recreate markdown renderable
       const newMarkdown = new MarkdownRenderable(renderer, {
@@ -371,6 +409,9 @@ if (isDirectory && fileTree) {
 
           currentContent = newContent;
           currentContentLines = newContent.split("\n");
+
+          // Refresh mermaid pre-pass for the reloaded file.
+          await refreshMermaidRenders(newContent);
 
           const newMarkdown = new MarkdownRenderable(renderer, {
             id: "markdown-content",
@@ -518,6 +559,9 @@ if (args.watch && !isStdin && !isDirectory && args.filePath) {
 
       currentContent = newContent;
       currentContentLines = newContent.split("\n");
+
+      // Refresh mermaid pre-pass for the reloaded file.
+      await refreshMermaidRenders(newContent);
 
       const newMarkdown = new MarkdownRenderable(renderer, {
         id: "markdown-content",
