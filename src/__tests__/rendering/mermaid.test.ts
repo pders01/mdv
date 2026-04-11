@@ -8,10 +8,17 @@
  */
 
 import { describe, test, expect, beforeEach, afterAll } from "bun:test";
-import { writeFileSync, chmodSync, unlinkSync, existsSync } from "fs";
+import { writeFileSync, chmodSync, unlinkSync, existsSync, mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { prerenderMermaid, detectMermaidBin, _resetMermaidState } from "../../rendering/mermaid.js";
+
+// A hermetic disk cache per test case — avoids polluting `~/.cache/mdv/mermaid`
+// and, more importantly, prevents cache collisions between test cases that
+// use different fake binaries on identical source inputs. A fresh dir is
+// created in beforeEach and torn down in afterAll.
+let testCacheDir = "";
+const createdCacheDirs: string[] = [];
 
 // A fake binary that echoes its stdin verbatim with a marker prefix. Proves
 // the spawn path is taken and confirms stdin is piped through correctly.
@@ -19,6 +26,24 @@ const FAKE_BIN = join(tmpdir(), "mdv-fake-mermaid");
 const FAKE_SCRIPT = `#!/bin/sh
 printf 'FAKE_RENDER\\n'
 cat
+`;
+
+// A fake binary whose output width depends on which padding flags were
+// passed. Default emits a 100-col line, -x 1 -y 1 emits 60 cols, and the
+// ultra-compact flags emit 30 cols. This lets us drive the width-fit
+// logic deterministically in tests.
+const VARIANT_BIN = join(tmpdir(), "mdv-variant-mermaid");
+const VARIANT_SCRIPT = `#!/bin/sh
+# Detect which variant flags were passed and emit a correspondingly-sized line.
+width=100
+for arg in "$@"; do
+  if [ "$arg" = "1" ]; then width=60; fi
+  if [ "$arg" = "0" ]; then width=30; fi
+done
+# Drain stdin so the child doesn't block.
+cat > /dev/null
+# Emit a single line exactly $width chars wide.
+printf '%*s\\n' "$width" '' | tr ' ' X
 `;
 
 const SIMPLE_MERMAID = `# doc
@@ -59,14 +84,35 @@ function removeFakeBin(): void {
   if (existsSync(FAKE_BIN)) unlinkSync(FAKE_BIN);
 }
 
+function installVariantBin(): void {
+  writeFileSync(VARIANT_BIN, VARIANT_SCRIPT);
+  chmodSync(VARIANT_BIN, 0o755);
+}
+
+function removeVariantBin(): void {
+  if (existsSync(VARIANT_BIN)) unlinkSync(VARIANT_BIN);
+}
+
 beforeEach(() => {
   _resetMermaidState();
   delete process.env.MDV_MERMAID_BIN;
+  testCacheDir = mkdtempSync(join(tmpdir(), "mdv-mermaid-test-"));
+  createdCacheDirs.push(testCacheDir);
+  process.env.MDV_MERMAID_CACHE = testCacheDir;
 });
 
 afterAll(() => {
   removeFakeBin();
+  removeVariantBin();
   delete process.env.MDV_MERMAID_BIN;
+  delete process.env.MDV_MERMAID_CACHE;
+  for (const dir of createdCacheDirs) {
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // best-effort cleanup
+    }
+  }
   _resetMermaidState();
 });
 
@@ -76,6 +122,7 @@ describe("prerenderMermaid — disabled path", () => {
     expect(result.renders.size).toBe(0);
     expect(result.hadBlocks).toBe(true);
     expect(result.toolMissing).toBe(false);
+    expect(result.overflowed).toBe(0);
   });
 
   test("does not probe the binary when disabled", async () => {
@@ -141,6 +188,59 @@ describe("prerenderMermaid — happy path with fake binary", () => {
     // Fake binary prefixes output with "FAKE_RENDER" and echoes stdin.
     expect(rendered).toContain("FAKE_RENDER");
     expect(rendered).toContain("flowchart TD");
+  });
+
+  test("picks the default variant when it fits the width budget", async () => {
+    installVariantBin();
+    process.env.MDV_MERMAID_BIN = VARIANT_BIN;
+    _resetMermaidState();
+
+    // Default variant emits 100-col lines; budget is 120.
+    const result = await prerenderMermaid(SIMPLE_MERMAID, { availableWidth: 120 });
+    expect(result.renders.size).toBe(1);
+    expect(result.overflowed).toBe(0);
+    const ascii = [...result.renders.values()][0]!;
+    // 100-col default variant output (X-filled line).
+    expect(ascii.length).toBe(100);
+  });
+
+  test("falls back to compact variant when default overflows", async () => {
+    installVariantBin();
+    process.env.MDV_MERMAID_BIN = VARIANT_BIN;
+    _resetMermaidState();
+
+    // Default 100 > 80, compact 60 <= 80, should pick compact.
+    const result = await prerenderMermaid(SIMPLE_MERMAID, { availableWidth: 80 });
+    expect(result.renders.size).toBe(1);
+    expect(result.overflowed).toBe(0);
+    const ascii = [...result.renders.values()][0]!;
+    expect(ascii.length).toBe(60);
+  });
+
+  test("falls back to ultra-compact variant when compact overflows", async () => {
+    installVariantBin();
+    process.env.MDV_MERMAID_BIN = VARIANT_BIN;
+    _resetMermaidState();
+
+    // Default 100, compact 60, ultra 30; budget 40 → ultra.
+    const result = await prerenderMermaid(SIMPLE_MERMAID, { availableWidth: 40 });
+    expect(result.renders.size).toBe(1);
+    expect(result.overflowed).toBe(0);
+    const ascii = [...result.renders.values()][0]!;
+    expect(ascii.length).toBe(30);
+  });
+
+  test("omits diagram from renders and reports overflow when no variant fits", async () => {
+    installVariantBin();
+    process.env.MDV_MERMAID_BIN = VARIANT_BIN;
+    _resetMermaidState();
+
+    // All three variants produce lines wider than 20.
+    const result = await prerenderMermaid(SIMPLE_MERMAID, { availableWidth: 20 });
+    expect(result.renders.size).toBe(0);
+    expect(result.overflowed).toBe(1);
+    expect(result.hadBlocks).toBe(true);
+    expect(result.toolMissing).toBe(false);
   });
 
   test("preprocesses <br/> variants before spawning", async () => {

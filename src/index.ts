@@ -216,12 +216,19 @@ const contentWidth = isDirectory ? renderer.width - 30 - 2 : renderer.width - 2;
 // Mermaid pre-pass: render all mermaid code blocks to ASCII before the first
 // paint. The map is mutated in place on reloads (directory switch, watch
 // reload) so the renderNode closure always sees current state.
+// availableWidth is contentWidth minus the code-block padding the wrapper adds.
+const mermaidWidth = Math.max(20, contentWidth - 2);
 const mermaidRenders = new Map<string, string>();
 let mermaidToolWasMissing = false;
+let mermaidInitialOverflow = 0;
 {
-  const result = await prerenderMermaid(currentContent, { disabled: args.noMermaid });
+  const result = await prerenderMermaid(currentContent, {
+    disabled: args.noMermaid,
+    availableWidth: mermaidWidth,
+  });
   for (const [k, v] of result.renders) mermaidRenders.set(k, v);
   mermaidToolWasMissing = result.toolMissing;
+  mermaidInitialOverflow = result.overflowed;
 }
 
 const renderNode = createRenderNode(
@@ -292,17 +299,26 @@ statusBarUpdate = () =>
 // Refresh mermaidRenders for a new content buffer. Mutates the shared map
 // in place so the renderNode closure stays valid across reloads.
 const refreshMermaidRenders = async (text: string): Promise<void> => {
-  const result = await prerenderMermaid(text, { disabled: args.noMermaid });
+  const result = await prerenderMermaid(text, {
+    disabled: args.noMermaid,
+    availableWidth: mermaidWidth,
+  });
   mermaidRenders.clear();
   for (const [k, v] of result.renders) mermaidRenders.set(k, v);
   if (result.toolMissing && result.hadBlocks) {
     showNotification("mermaid-ascii not installed — showing source", 3000);
+  } else if (result.overflowed > 0) {
+    const n = result.overflowed;
+    showNotification(`${n} mermaid diagram${n > 1 ? "s" : ""} too wide — showing source`, 3000);
   }
 };
 
-// Initial notification if the first file had mermaid blocks but no tool.
+// Initial notifications: tool missing or oversized diagrams.
 if (mermaidToolWasMissing) {
   showNotification("mermaid-ascii not installed — showing source", 3000);
+} else if (mermaidInitialOverflow > 0) {
+  const n = mermaidInitialOverflow;
+  showNotification(`${n} mermaid diagram${n > 1 ? "s" : ""} too wide — showing source`, 3000);
 }
 
 // =============================================================================
