@@ -45,7 +45,9 @@ jobs:
 
       - name: Ad-hoc sign binary (macOS)
         if: runner.os == 'macOS'
-        run: codesign --sign - --force ${{ matrix.artifact }}
+        run: |
+          codesign --remove-signature ${{ matrix.artifact }} 2>/dev/null || true
+          codesign --sign - --force ${{ matrix.artifact }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
