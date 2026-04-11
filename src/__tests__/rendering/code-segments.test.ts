@@ -5,12 +5,12 @@
 
 import { describe, test, expect } from "bun:test";
 import { lexer } from "marked";
-import type { Token } from "marked";
 import { codeToBlock } from "../../rendering/code.js";
 import type { HighlighterInstance } from "../../highlighting/shiki.js";
 import { TEST_COLORS, renderToBlocks, flattenToText } from "../helpers/render-harness.js";
 
-interface CodeToken extends Token {
+interface CodeToken {
+  type: "code";
   text: string;
   lang?: string;
 }

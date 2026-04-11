@@ -6,14 +6,14 @@
  */
 
 import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
-import type { Token } from "marked";
 import type { ThemeColors, TextChunk, StyledSegment, RenderBlock } from "../types.js";
 import { shikiToChunks, resolveLanguage, type HighlighterInstance } from "../highlighting/shiki.js";
 
 /**
  * Code token type
  */
-interface CodeToken extends Token {
+interface CodeToken {
+  type: "code";
   text: string;
   lang?: string;
 }

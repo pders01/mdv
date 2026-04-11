@@ -3,13 +3,12 @@
  */
 
 import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
-import type { Token } from "marked";
 import type { ThemeColors, RenderBlock } from "../types.js";
 
 /**
  * Token with optional text content (for recursive extraction)
  */
-interface ContentToken extends Token {
+interface ContentToken {
   tokens?: ContentToken[];
   text?: string;
   raw?: string;

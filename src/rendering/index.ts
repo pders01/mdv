@@ -7,7 +7,8 @@ import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from 
 import type { Token } from "marked";
 import type { ThemeColors, ListToken, TableToken, ParagraphToken, HtmlToken } from "../types.js";
 
-interface HeadingToken extends Token {
+interface HeadingToken {
+  type: "heading";
   depth: number;
   text: string;
 }

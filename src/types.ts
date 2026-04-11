@@ -27,7 +27,7 @@ export interface TextChunk {
 /**
  * Inline text token
  */
-export interface TextToken extends Token {
+export interface TextToken {
   type: "text";
   text: string;
 }
@@ -35,7 +35,7 @@ export interface TextToken extends Token {
 /**
  * Escape sequence token
  */
-export interface EscapeToken extends Token {
+export interface EscapeToken {
   type: "escape";
   text: string;
 }
@@ -43,7 +43,7 @@ export interface EscapeToken extends Token {
 /**
  * Strong (bold) token
  */
-export interface StrongToken extends Token {
+export interface StrongToken {
   type: "strong";
   text: string;
 }
@@ -51,7 +51,7 @@ export interface StrongToken extends Token {
 /**
  * Emphasis (italic) token
  */
-export interface EmToken extends Token {
+export interface EmToken {
   type: "em";
   text: string;
 }
@@ -59,7 +59,7 @@ export interface EmToken extends Token {
 /**
  * Code span token
  */
-export interface CodespanToken extends Token {
+export interface CodespanToken {
   type: "codespan";
   text: string;
 }
@@ -67,7 +67,7 @@ export interface CodespanToken extends Token {
 /**
  * Link token
  */
-export interface LinkToken extends Token {
+export interface LinkToken {
   type: "link";
   text: string;
   href: string;
@@ -77,7 +77,7 @@ export interface LinkToken extends Token {
 /**
  * Deleted text token
  */
-export interface DelToken extends Token {
+export interface DelToken {
   type: "del";
   text: string;
 }
@@ -85,7 +85,7 @@ export interface DelToken extends Token {
 /**
  * HTML token (inline or block)
  */
-export interface HtmlToken extends Token {
+export interface HtmlToken {
   type: "html";
   raw: string;
   text: string;
@@ -117,7 +117,7 @@ export interface ListItem {
 /**
  * List token with items
  */
-export interface ListToken extends Token {
+export interface ListToken {
   ordered: boolean;
   start?: number | string;
   items: ListItem[];
@@ -126,7 +126,7 @@ export interface ListToken extends Token {
 /**
  * Paragraph token with inline tokens
  */
-export interface ParagraphToken extends Token {
+export interface ParagraphToken {
   text: string;
   tokens?: Token[];
 }
@@ -134,7 +134,7 @@ export interface ParagraphToken extends Token {
 /**
  * Table token with header and rows
  */
-export interface TableToken extends Token {
+export interface TableToken {
   header: Array<{ text: string; tokens?: Token[] }>;
   rows: Array<Array<{ text: string; tokens?: Token[] }>>;
   align?: Array<"left" | "center" | "right" | null>;
