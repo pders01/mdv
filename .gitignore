@@ -48,3 +48,6 @@ docs/
 /mdv-darwin-x64
 /mdv-linux-x64
 /mdv-linux-arm64
+
+# Release archives
+/mdv-*.tar.gz
