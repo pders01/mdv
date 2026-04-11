@@ -143,6 +143,37 @@ describe("prerenderMermaid — happy path with fake binary", () => {
     expect(rendered).toContain("flowchart TD");
   });
 
+  test("preprocesses <br/> variants before spawning", async () => {
+    installFakeBin();
+    process.env.MDV_MERMAID_BIN = FAKE_BIN;
+    _resetMermaidState();
+
+    const withBrTags = `
+\`\`\`mermaid
+flowchart TD
+  A["Browser<br/>(Lit SPA)"] --> B["Server<br />(Bun)"]
+  B --> C["DB<BR>(SQLite)"]
+\`\`\`
+`;
+    const result = await prerenderMermaid(withBrTags);
+    expect(result.renders.size).toBe(1);
+
+    // The fake binary echoes stdin, so the rendered output contains what
+    // was actually piped — which must not contain any literal <br/> tags.
+    const rendered = [...result.renders.values()][0]!;
+    expect(rendered).not.toContain("<br");
+    expect(rendered).not.toContain("<BR");
+    // Labels should still contain the real text, just with spaces where
+    // the breaks used to be.
+    expect(rendered).toContain("Browser");
+    expect(rendered).toContain("(Lit SPA)");
+
+    // The Map key is still the *original* (un-preprocessed) source so the
+    // dispatcher can look up by token.text at render time.
+    const originalSource = [...result.renders.keys()][0]!;
+    expect(originalSource).toContain("<br/>");
+  });
+
   test("deduplicates identical mermaid sources", async () => {
     installFakeBin();
     process.env.MDV_MERMAID_BIN = FAKE_BIN;

@@ -60,6 +60,22 @@ function hashSource(source: string): string {
   return createHash("sha1").update(source).digest("hex").slice(0, 16);
 }
 
+/**
+ * Normalize HTML-ish constructs inside mermaid source that mermaid-ascii
+ * doesn't understand. Currently:
+ *
+ * - `<br/>`, `<br>`, `<br />` (any case) → single space. The real mermaid
+ *   renderer interprets these as line breaks inside node labels; the Go
+ *   tool emits them verbatim, which wrecks layout width.
+ *
+ * Running this *before* hashing means the cache key changes shape, so any
+ * stale entries on disk from earlier (un-preprocessed) runs become
+ * orphaned instead of returning pre-broken output.
+ */
+function preprocessSource(source: string): string {
+  return source.replace(/<br\s*\/?>/gi, " ");
+}
+
 async function readDiskCache(key: string): Promise<string | null> {
   try {
     return await Bun.file(join(CACHE_DIR, `${key}.txt`)).text();
@@ -82,7 +98,8 @@ async function writeDiskCache(key: string, value: string): Promise<void> {
  * on any failure (timeout, non-zero exit, parse error, spawn failure).
  */
 async function renderOne(bin: string, source: string): Promise<string | null> {
-  const key = hashSource(source);
+  const processed = preprocessSource(source);
+  const key = hashSource(processed);
 
   // In-memory cache hit (including cached failures).
   if (memCache.has(key)) return memCache.get(key) ?? null;
@@ -100,7 +117,7 @@ async function renderOne(bin: string, source: string): Promise<string | null> {
 
   try {
     const proc = Bun.spawn([bin, "-f", "-"], {
-      stdin: new Blob([source]),
+      stdin: new Blob([processed]),
       stdout: "pipe",
       stderr: "pipe",
       signal: controller.signal,

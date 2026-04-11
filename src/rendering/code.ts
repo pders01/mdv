@@ -75,13 +75,20 @@ export function codeToBlock(
 }
 
 /**
- * Render code block with Shiki syntax highlighting
+ * Render code block with Shiki syntax highlighting.
+ *
+ * `wrapMode` controls how the inner text buffer handles lines wider than
+ * the available width. Defaults to the OpenTUI default (word wrap) which
+ * is right for source code. Callers rendering ASCII art (mermaid diagrams,
+ * tables) should pass "none" so horizontal box-drawing characters stay
+ * intact instead of fragmenting across wrap boundaries.
  */
 export function renderCodeBlock(
   renderer: CliRenderer,
   colors: ThemeColors,
   highlighterInstance: HighlighterInstance,
   token: CodeToken,
+  wrapMode?: "none" | "char" | "word",
 ): BoxRenderable {
   const lang = token.lang ? resolveLanguage(token.lang) : "";
 
@@ -94,6 +101,7 @@ export function renderCodeBlock(
 
   const codeText = new TextRenderable(renderer, {
     content: styledText,
+    ...(wrapMode ? { wrapMode } : {}),
   });
 
   // Wrapper provides padding/margins; background is drawn by container.ts

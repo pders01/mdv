@@ -90,12 +90,20 @@ export function createRenderNode(
       // Mermaid interception: substitute pre-rendered ASCII when available.
       // Strip the lang so the replacement renders as plain text rather than
       // attempting (and failing) to highlight ASCII art as source code.
+      // wrapMode "none" keeps box-drawing characters intact — overflowing
+      // diagrams clip at the right edge instead of fragmenting line-by-line.
       if (codeToken.lang === "mermaid" && mermaidRenders?.has(codeToken.text)) {
-        return renderCodeBlock(renderer, colors, highlighterInstance, {
-          ...codeToken,
-          text: mermaidRenders.get(codeToken.text)!,
-          lang: "",
-        });
+        return renderCodeBlock(
+          renderer,
+          colors,
+          highlighterInstance,
+          {
+            ...codeToken,
+            text: mermaidRenders.get(codeToken.text)!,
+            lang: "",
+          },
+          "none",
+        );
       }
       return renderCodeBlock(renderer, colors, highlighterInstance, codeToken);
     }
