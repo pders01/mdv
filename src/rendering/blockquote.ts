@@ -6,9 +6,11 @@ import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from 
 import type { ThemeColors, RenderBlock } from "../types.js";
 
 /**
- * Token with optional text content (for recursive extraction)
+ * Token with optional text content (for recursive extraction).
+ * Structural shape — deliberately not extending marked's Token union.
  */
 interface ContentToken {
+  type?: string;
   tokens?: ContentToken[];
   text?: string;
   raw?: string;

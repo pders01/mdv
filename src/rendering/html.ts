@@ -25,8 +25,9 @@ export function parseHtmlContent(html: string): {
   const tagMatch = html.match(/^<(\/?)([\w-]+)([^>]*)>/);
   if (!tagMatch) return { text: html };
 
-  const [, isClosing, tagName] = tagMatch;
-  const tag = tagName.toLowerCase();
+  // Regex has 3 capture groups; on match, all three are strings.
+  const isClosing = tagMatch[1]!;
+  const tag = tagMatch[2]!.toLowerCase();
 
   // Extract href for links
   const hrefMatch = html.match(/href=["']([^"']+)["']/);
@@ -38,7 +39,7 @@ export function parseHtmlContent(html: string): {
   if (tag === "code") return { text: "", code: !isClosing };
   if (tag === "a") return { text: "", link: isClosing ? undefined : href };
   if (tag.match(/^h[1-6]$/)) {
-    const level = parseInt(tag[1]);
+    const level = parseInt(tag[1]!);
     return { text: "", heading: isClosing ? undefined : level };
   }
 
@@ -75,13 +76,13 @@ export function renderHtmlTable(
   const rowMatches = html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
 
   for (const rowMatch of rowMatches) {
-    const rowHtml = rowMatch[1];
+    const rowHtml = rowMatch[1]!;
     const cells: string[] = [];
 
     // Extract th and td cells
     const cellMatches = rowHtml.matchAll(/<(th|td)[^>]*>([\s\S]*?)<\/\1>/gi);
     for (const cellMatch of cellMatches) {
-      cells.push(extractHtmlBlockContent(cellMatch[2]));
+      cells.push(extractHtmlBlockContent(cellMatch[2]!));
     }
 
     if (cells.length > 0) {
@@ -102,8 +103,10 @@ export function renderHtmlTable(
   const headerRow = new BoxRenderable(renderer, { flexDirection: "row" });
   headerRow.add(new TextRenderable(renderer, { content: "\u2502 ", fg: colors.gray }));
 
+  // rows[0] and paddedWidths[i] are defined: rows.length >= 1 at this point
+  // (checked above) and i < colCount === paddedWidths.length.
   for (let i = 0; i < colCount; i++) {
-    const cellText = padCell(rows[0][i] || "", paddedWidths[i]);
+    const cellText = padCell(rows[0]![i] || "", paddedWidths[i]!);
     headerRow.add(
       new TextRenderable(renderer, {
         content: cellText,
@@ -132,7 +135,7 @@ export function renderHtmlTable(
     dataRow.add(new TextRenderable(renderer, { content: "\u2502 ", fg: colors.gray }));
 
     for (let i = 0; i < colCount; i++) {
-      const cellText = padCell(rows[r][i] || "", paddedWidths[i]);
+      const cellText = padCell(rows[r]![i] || "", paddedWidths[i]!);
       dataRow.add(new TextRenderable(renderer, { content: cellText, fg: colors.fg }));
       if (i < colCount - 1) {
         dataRow.add(new TextRenderable(renderer, { content: "\u2502 ", fg: colors.gray }));
@@ -168,7 +171,7 @@ export function renderHtmlList(
 
   let index = 1;
   for (const match of itemMatches) {
-    const itemContent = extractHtmlBlockContent(match[1]);
+    const itemContent = extractHtmlBlockContent(match[1]!);
     const marker = isOrdered ? `${index}.` : "\u2022";
 
     const itemRow = new BoxRenderable(renderer, { flexDirection: "row" });
@@ -257,11 +260,11 @@ export function htmlTableToBlock(colors: ThemeColors, html: string): RenderBlock
   const rowMatches = html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
 
   for (const rowMatch of rowMatches) {
-    const rowHtml = rowMatch[1];
+    const rowHtml = rowMatch[1]!;
     const cells: string[] = [];
     const cellMatches = rowHtml.matchAll(/<(th|td)[^>]*>([\s\S]*?)<\/\1>/gi);
     for (const cellMatch of cellMatches) {
-      cells.push(extractHtmlBlockContent(cellMatch[2]));
+      cells.push(extractHtmlBlockContent(cellMatch[2]!));
     }
     if (cells.length > 0) {
       rows.push(cells);
@@ -284,7 +287,7 @@ export function htmlTableToBlock(colors: ThemeColors, html: string): RenderBlock
   ];
   for (let i = 0; i < colCount; i++) {
     headerLine.push({
-      text: padCell(rows[0][i] || "", paddedWidths[i]),
+      text: padCell(rows[0]![i] || "", paddedWidths[i]!),
       fg: colors.cyan,
       bold: true,
       italic: false,
@@ -308,7 +311,7 @@ export function htmlTableToBlock(colors: ThemeColors, html: string): RenderBlock
     ];
     for (let i = 0; i < colCount; i++) {
       dataLine.push({
-        text: padCell(rows[r][i] || "", paddedWidths[i]),
+        text: padCell(rows[r]![i] || "", paddedWidths[i]!),
         fg: colors.fg,
         bold: false,
         italic: false,
@@ -334,7 +337,7 @@ export function htmlListToBlocks(colors: ThemeColors, html: string): RenderBlock
 
   let index = 1;
   for (const match of itemMatches) {
-    const itemContent = extractHtmlBlockContent(match[1]);
+    const itemContent = extractHtmlBlockContent(match[1]!);
     const marker = isOrdered ? `${index}.` : "\u2022";
     blocks.push({
       type: "list",
@@ -353,7 +356,7 @@ export function htmlListToBlocks(colors: ThemeColors, html: string): RenderBlock
 
   // Set marginBottom on last block
   if (blocks.length > 0) {
-    blocks[blocks.length - 1].marginBottom = 1;
+    blocks[blocks.length - 1]!.marginBottom = 1;
   }
 
   return blocks;
@@ -397,7 +400,7 @@ export function htmlBlockToBlocks(colors: ThemeColors, html: string): RenderBloc
 
   const headingMatch = html.match(/<h([1-6])[^>]*>/i);
   if (headingMatch) {
-    const block = htmlHeadingToBlock(colors, html, parseInt(headingMatch[1]));
+    const block = htmlHeadingToBlock(colors, html, parseInt(headingMatch[1]!));
     return block ? [block] : [];
   }
 
@@ -457,7 +460,7 @@ export function renderHtmlBlock(
   // Check for headings
   const headingMatch = html.match(/<h([1-6])[^>]*>/i);
   if (headingMatch) {
-    return renderHtmlHeading(renderer, colors, html, parseInt(headingMatch[1]));
+    return renderHtmlHeading(renderer, colors, html, parseInt(headingMatch[1]!));
   }
 
   // For div/p/details etc., extract and render text content

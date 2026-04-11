@@ -34,7 +34,7 @@ export function calculateColumnWidths(rows: string[][], availableWidth?: number,
 
   for (const row of rows) {
     for (let i = 0; i < row.length; i++) {
-      natural[i] = Math.max(natural[i], row[i].length);
+      natural[i] = Math.max(natural[i]!, row[i]!.length);
     }
   }
 
@@ -62,14 +62,15 @@ export function calculateColumnWidths(rows: string[][], availableWidth?: number,
   let lockedBudget = 0;
   let shrinkableTotal = 0;
 
-  // Pass 1: lock columns that are already small (≤ threshold) — guarantee at least MIN_COL_WIDTH
+  // Pass 1: lock columns that are already small (≤ threshold) — guarantee at least MIN_COL_WIDTH.
+  // natural, result, locked are all sized at colCount, so i < colCount guarantees defined access.
   for (let i = 0; i < colCount; i++) {
-    if (natural[i] <= SMALL_COL_THRESHOLD) {
-      result[i] = Math.max(MIN_COL_WIDTH, natural[i]);
+    if (natural[i]! <= SMALL_COL_THRESHOLD) {
+      result[i] = Math.max(MIN_COL_WIDTH, natural[i]!);
       locked[i] = true;
-      lockedBudget += result[i];
+      lockedBudget += result[i]!;
     } else {
-      shrinkableTotal += natural[i];
+      shrinkableTotal += natural[i]!;
     }
   }
 
@@ -90,7 +91,7 @@ export function calculateColumnWidths(rows: string[][], availableWidth?: number,
     if (shrinkableTotal > 0) {
       result[i] = Math.max(
         MIN_COL_WIDTH,
-        Math.floor((natural[i] / shrinkableTotal) * remainingBudget),
+        Math.floor((natural[i]! / shrinkableTotal) * remainingBudget),
       );
     } else {
       result[i] = MIN_COL_WIDTH;
@@ -104,13 +105,13 @@ export function calculateColumnWidths(rows: string[][], availableWidth?: number,
     let maxIdx = -1;
     let maxW = MIN_COL_WIDTH;
     for (let i = 0; i < colCount; i++) {
-      if (result[i] > maxW) {
-        maxW = result[i];
+      if (result[i]! > maxW) {
+        maxW = result[i]!;
         maxIdx = i;
       }
     }
     if (maxIdx === -1) break; // all at minimum, can't shrink further
-    result[maxIdx]--;
+    result[maxIdx]!--;
     total--;
   }
 
@@ -145,7 +146,7 @@ export function buildSeparatorLine(paddedWidths: number[], layout: TableLayout =
   const extraPerCol = layout.innerSep.length > 1 ? 1 : 0;
 
   for (let i = 0; i < paddedWidths.length; i++) {
-    parts.push(layout.sepHorizontal.repeat(paddedWidths[i] + extraPerCol));
+    parts.push(layout.sepHorizontal.repeat(paddedWidths[i]! + extraPerCol));
     if (i < paddedWidths.length - 1) {
       parts.push(layout.sepCross);
     }

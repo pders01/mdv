@@ -10,10 +10,11 @@ import type { ThemeColors, TextChunk, StyledSegment, RenderBlock } from "../type
 import { shikiToChunks, resolveLanguage, type HighlighterInstance } from "../highlighting/shiki.js";
 
 /**
- * Code token type
+ * Code token shape (structural — marked's Token is a union and can't be
+ * used as an interface base). Callers assert onto this after checking
+ * `token.type === "code"` so narrowing is handled at the call site.
  */
 interface CodeToken {
-  type: "code";
   text: string;
   lang?: string;
 }
@@ -52,13 +53,15 @@ export function codeToBlock(
     segments = [{ text: token.text, fg: colors.fg, bold: false, italic: false }];
   }
 
-  // Split segments into lines at \n boundaries
+  // Split segments into lines at \n boundaries.
+  // `lines` is seeded with [[]] and we only ever push, so lines[last] is
+  // always defined — the `!` is safe by construction.
   const lines: StyledSegment[][] = [[]];
   for (const seg of segments) {
     if (seg.text === "\n") {
       lines.push([]);
     } else {
-      lines[lines.length - 1].push(seg);
+      lines[lines.length - 1]!.push(seg);
     }
   }
 

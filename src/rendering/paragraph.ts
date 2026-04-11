@@ -77,11 +77,12 @@ export function paragraphToSegments(colors: ThemeColors, token: ParagraphToken):
       const htmlToken = t as HtmlToken;
       const html = htmlToken.raw || "";
 
-      // Parse HTML tag
+      // Parse HTML tag.
+      // Regex has 3 capture groups so tagMatch[1..3] are all defined on match.
       const tagMatch = html.match(/^<(\/?)([\w-]+)(?:\s[^>]*)?>(.*)$/s);
       if (tagMatch) {
         const isClosing = tagMatch[1] === "/";
-        const tag = tagMatch[2].toLowerCase();
+        const tag = tagMatch[2]!.toLowerCase();
         const content = tagMatch[3] || "";
 
         // Handle self-closing tags
@@ -135,7 +136,7 @@ export function paragraphToSegments(colors: ThemeColors, token: ParagraphToken):
             if (!isClosing) {
               // Opening tag - extract href
               const hrefMatch = html.match(/href=["']([^"']*)["']/);
-              state.linkHref = hrefMatch ? hrefMatch[1] : null;
+              state.linkHref = hrefMatch ? hrefMatch[1] ?? null : null;
               state.link = true;
             } else {
               // Closing tag - append URL in parentheses if we have one

@@ -31,15 +31,16 @@ export function tableToBlock(
 
   const lines: StyledSegment[][] = [];
 
-  // Header row
+  // Header row. i < colCount === token.header.length === colWidths.length,
+  // so indexed access is always defined.
   const headerLine: StyledSegment[] = [
     { text: layout.leftBorder, fg: colors.gray, bold: false, italic: false },
   ];
   for (let i = 0; i < colCount; i++) {
     const align = token.align?.[i] || "left";
     const cellText = padCell(
-      truncateCell(token.header[i].text, colWidths[i]),
-      paddedWidths[i],
+      truncateCell(token.header[i]!.text, colWidths[i]!),
+      paddedWidths[i]!,
       align,
     );
     headerLine.push({ text: cellText, fg: colors.cyan, bold: true, italic: false });
@@ -62,8 +63,8 @@ export function tableToBlock(
     ];
     for (let i = 0; i < colCount; i++) {
       const align = token.align?.[i] || "left";
-      const cellContent = i < row.length ? row[i].text : "";
-      const cellText = padCell(truncateCell(cellContent, colWidths[i]), paddedWidths[i], align);
+      const cellContent = i < row.length ? row[i]!.text : "";
+      const cellText = padCell(truncateCell(cellContent, colWidths[i]!), paddedWidths[i]!, align);
       dataLine.push({ text: cellText, fg: colors.fg, bold: false, italic: false });
       if (i < colCount - 1) {
         dataLine.push({ text: layout.innerSep, fg: colors.gray, bold: false, italic: false });
@@ -126,15 +127,15 @@ export function renderTable(
   const colWidths = calculateColumnWidths(allRows, availableWidth, layout);
   const paddedWidths = colWidths.map((w) => w + layout.cellPadding);
 
-  // Render header row as single StyledText
+  // Render header row as single StyledText. Same bounds guarantees as above.
   const headerSegs: StyledSegment[] = [
     { text: layout.leftBorder, fg: colors.gray, bold: false, italic: false },
   ];
   for (let i = 0; i < colCount; i++) {
     const align = token.align?.[i] || "left";
     const cellText = padCell(
-      truncateCell(token.header[i].text, colWidths[i]),
-      paddedWidths[i],
+      truncateCell(token.header[i]!.text, colWidths[i]!),
+      paddedWidths[i]!,
       align,
     );
     headerSegs.push({ text: cellText, fg: colors.cyan, bold: true, italic: false });
@@ -163,8 +164,8 @@ export function renderTable(
     ];
     for (let i = 0; i < colCount; i++) {
       const align = token.align?.[i] || "left";
-      const cellContent = i < row.length ? row[i].text : "";
-      const cellText = padCell(truncateCell(cellContent, colWidths[i]), paddedWidths[i], align);
+      const cellContent = i < row.length ? row[i]!.text : "";
+      const cellText = padCell(truncateCell(cellContent, colWidths[i]!), paddedWidths[i]!, align);
       dataSegs.push({ text: cellText, fg: colors.fg, bold: false, italic: false });
       if (i < colCount - 1) {
         dataSegs.push({ text: layout.innerSep, fg: colors.gray, bold: false, italic: false });

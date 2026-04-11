@@ -123,7 +123,7 @@ export function shikiToChunks(
 
     const chunks: TextChunk[] = [];
     for (let i = 0; i < result.tokens.length; i++) {
-      const line = result.tokens[i];
+      const line = result.tokens[i]!;
       for (const token of line) {
         const chunk: TextChunk = {
           __isChunk: true,

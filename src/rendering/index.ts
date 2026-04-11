@@ -3,7 +3,14 @@
  * Combines all rendering modules into a single callback
  */
 
-import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
+import {
+  BoxRenderable,
+  TextRenderable,
+  TextAttributes,
+  type CliRenderer,
+  type Renderable,
+  type RenderNodeContext,
+} from "@opentui/core";
 import type { Token } from "marked";
 import type { ThemeColors, ListToken, TableToken, ParagraphToken, HtmlToken } from "../types.js";
 
@@ -21,9 +28,14 @@ import { renderTable } from "./table.js";
 import { renderParagraph } from "./paragraph.js";
 
 /**
- * RenderNode callback type (matches MarkdownRenderable's expected signature)
+ * RenderNode callback type — matches MarkdownRenderable's expected signature.
+ * Returns `Renderable | null | undefined` to stay compatible with OpenTUI
+ * even though this module always returns `BoxRenderable | null` in practice.
  */
-export type RenderNodeCallback = (token: Token, context: { depth: number }) => BoxRenderable | null;
+export type RenderNodeCallback = (
+  token: Token,
+  context: RenderNodeContext,
+) => Renderable | null | undefined;
 
 /**
  * Create a renderNode callback with all rendering capabilities.
@@ -51,7 +63,7 @@ export function createRenderNode(
     colors.blue,   // h6
   ];
 
-  return (token: Token, _context: { depth: number }): BoxRenderable | null => {
+  return (token: Token, _context: RenderNodeContext): BoxRenderable | null => {
     // Handle headings (OpenTUI 0.1.86+ no longer renders these by default
     // when a renderNode callback is provided)
     if (token.type === "heading") {

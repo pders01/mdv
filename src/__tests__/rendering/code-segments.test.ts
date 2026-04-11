@@ -10,7 +10,7 @@ import type { HighlighterInstance } from "../../highlighting/shiki.js";
 import { TEST_COLORS, renderToBlocks, flattenToText } from "../helpers/render-harness.js";
 
 interface CodeToken {
-  type: "code";
+  type?: string;
   text: string;
   lang?: string;
 }
