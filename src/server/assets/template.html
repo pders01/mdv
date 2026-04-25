@@ -9,26 +9,27 @@
   {{headAssets}}
 </head>
 <body class="mdv mdv--{{focus}}" data-active-path="{{activePath}}" data-watch="{{watch}}">
-  <aside id="sidebar" class="mdv-sidebar" aria-label="File navigation" tabindex="0">
+  <aside id="sidebar" class="mdv-sidebar" aria-label="File navigation">
     <div class="mdv-sidebar__header">{{rootName}}</div>
-    <nav class="mdv-sidebar__list">{{sidebar}}</nav>
+    {{sidebar}}
   </aside>
 
-  <main id="content" class="mdv-content" tabindex="0">
+  <main id="content" class="mdv-content" tabindex="0" aria-label="Document content">
     <article class="mdv-prose" id="prose">{{content}}</article>
   </main>
 
-  <div id="search" class="mdv-search" hidden>
-    <span class="mdv-search__sigil">/</span>
-    <input id="search-input" type="text" autocomplete="off" spellcheck="false" />
-    <span id="search-status" class="mdv-search__status"></span>
+  <div id="search" class="mdv-search" hidden role="search">
+    <span class="mdv-search__sigil" aria-hidden="true">/</span>
+    <input id="search-input" type="text" autocomplete="off" spellcheck="false"
+      aria-label="Search current pane" />
+    <span id="search-status" class="mdv-search__status" aria-live="polite"></span>
   </div>
 
-  <footer id="statusbar" class="mdv-statusbar">
-    <span id="status-mode" class="mdv-statusbar__mode">NORMAL</span>
-    <span id="status-file" class="mdv-statusbar__file">{{fileName}}</span>
-    <span id="status-pos" class="mdv-statusbar__pos"></span>
-    <span id="status-notify" class="mdv-statusbar__notify"></span>
+  <footer id="statusbar" class="mdv-statusbar" role="status">
+    <span id="status-mode" class="mdv-statusbar__mode" aria-label="Mode">NORMAL</span>
+    <span id="status-file" class="mdv-statusbar__file" aria-label="File">{{fileName}}</span>
+    <span id="status-pos" class="mdv-statusbar__pos" aria-label="Position"></span>
+    <span id="status-notify" class="mdv-statusbar__notify" aria-live="polite"></span>
   </footer>
 
   <script src="/_static/client.js" defer></script>

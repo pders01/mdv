@@ -2,7 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { scanDirectory } from "../../fs/tree.js";
+import { buildFileTree, scanDirectory, type FileEntry, type TreeDir } from "../../fs/tree.js";
 
 describe("scanDirectory", () => {
   let tempDir: string;
@@ -115,5 +115,66 @@ describe("scanDirectory", () => {
     const tree = await scanDirectory(emptyDir);
     expect(tree.entries).toHaveLength(0);
     rmSync(emptyDir, { recursive: true, force: true });
+  });
+});
+
+describe("buildFileTree", () => {
+  function file(rel: string): FileEntry {
+    return {
+      path: "/abs/" + rel,
+      relativePath: rel,
+      depth: rel.split("/").length - 1,
+    };
+  }
+
+  test("nests files under their parent directories", () => {
+    const out = buildFileTree([
+      file("README.md"),
+      file("docs/guide.md"),
+      file("docs/nested/deep.md"),
+    ]);
+    // Top level: README.md (file), then docs/ (dir)
+    expect(out).toHaveLength(2);
+    expect(out[0]!.type).toBe("file");
+    expect(out[0]!.name).toBe("README.md");
+    expect(out[1]!.type).toBe("dir");
+    expect(out[1]!.name).toBe("docs");
+
+    // docs/: guide.md (file), then nested/ (dir)
+    const docs = out[1] as TreeDir;
+    expect(docs.children).toHaveLength(2);
+    expect(docs.children[0]!.name).toBe("guide.md");
+    expect(docs.children[1]!.name).toBe("nested");
+
+    // docs/nested/: deep.md
+    const nested = docs.children[1] as TreeDir;
+    expect(nested.children).toHaveLength(1);
+    expect(nested.children[0]!.name).toBe("deep.md");
+  });
+
+  test("preserves the input order within each directory", () => {
+    // Input is already in compareTreeOrder (files first, then subdirs).
+    const out = buildFileTree([file("a.md"), file("b.md"), file("z/c.md")]);
+    expect(out.map((n) => n.name)).toEqual(["a.md", "b.md", "z"]);
+  });
+
+  test("handles a single root file", () => {
+    const out = buildFileTree([file("README.md")]);
+    expect(out).toEqual([
+      { type: "file", name: "README.md", entry: file("README.md") },
+    ]);
+  });
+
+  test("handles deeply nested paths without intermediate files", () => {
+    const out = buildFileTree([file("a/b/c/d.md")]);
+    expect(out).toHaveLength(1);
+    let cur = out[0] as TreeDir;
+    expect(cur.name).toBe("a");
+    cur = cur.children[0] as TreeDir;
+    expect(cur.name).toBe("b");
+    cur = cur.children[0] as TreeDir;
+    expect(cur.name).toBe("c");
+    expect(cur.children[0]!.name).toBe("d.md");
+    expect(cur.children[0]!.type).toBe("file");
   });
 });

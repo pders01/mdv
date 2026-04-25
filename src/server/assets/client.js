@@ -23,13 +23,20 @@
   const searchInput = document.getElementById("search-input");
   const searchStatus = document.getElementById("search-status");
 
-  const sidebarEntries = Array.from(sidebar.querySelectorAll(".mdv-sidebar__entry"));
+  // The sidebar is a WAI-ARIA tree: file rows are <li role="treeitem"> with
+  // data-path; directory rows are also treeitems but without data-path so we
+  // skip them when iterating selectable entries. The cursor / search state
+  // lives on the <li> so CSS `parent[data-cursor] > .mdv-sidebar__entry`
+  // selectors apply correctly. The <ul role="tree"> is the focusable element
+  // and holds aria-activedescendant per the ARIA tree pattern.
+  const sidebarTree = sidebar.querySelector(".mdv-sidebar__tree");
+  const sidebarEntries = Array.from(sidebar.querySelectorAll(".mdv-sidebar__node--file"));
 
   // ============================== state ==============================
 
   /** "sidebar" | "content" — mirrors src/input/focus.ts */
   let focus = "content";
-  let cursorIndex = sidebarEntries.findIndex((a) => a.getAttribute("aria-current") === "page");
+  let cursorIndex = sidebarEntries.findIndex((li) => li.getAttribute("aria-current") === "page");
   if (cursorIndex < 0) cursorIndex = 0;
 
   /** "normal" | "search" — visual line mode is intentionally not ported */
@@ -74,10 +81,9 @@
     focus = next;
     body.classList.remove("mdv--sidebar", "mdv--content");
     body.classList.add(`mdv--${next}`);
-    // Both elements have tabindex="0" so focus() reliably lands. Without
-    // that, focus stays put and our document keydown handler can't tell
-    // which pane should receive vim motions.
-    if (next === "sidebar") sidebar.focus();
+    // Sidebar focus lands on the inner <ul role="tree"> (ARIA-correct),
+    // content focus lands on the <main>. Both carry tabindex="0".
+    if (next === "sidebar") sidebarTree?.focus();
     else content.focus();
     paintCursor();
   }
@@ -91,11 +97,16 @@
   }
 
   function paintCursor() {
-    sidebarEntries.forEach((a, i) =>
-      a.toggleAttribute("data-cursor", focus === "sidebar" && i === cursorIndex),
+    sidebarEntries.forEach((li, i) =>
+      li.toggleAttribute("data-cursor", focus === "sidebar" && i === cursorIndex),
     );
-    if (focus === "sidebar" && sidebarEntries[cursorIndex]) {
-      sidebarEntries[cursorIndex].scrollIntoView({ block: "nearest" });
+    const active = sidebarEntries[cursorIndex];
+    if (active) {
+      // aria-activedescendant points the screen reader at the visual cursor
+      // even though we don't move real focus per row. The sidebar container
+      // owns the focus; AT announces the descendant by id.
+      sidebarTree?.setAttribute("aria-activedescendant", active.id);
+      if (focus === "sidebar") active.scrollIntoView({ block: "nearest" });
     }
   }
 
@@ -149,7 +160,9 @@
 
   function openSidebarSelection() {
     const entry = sidebarEntries[cursorIndex];
-    if (entry) window.location.assign(entry.href);
+    if (!entry) return;
+    const link = entry.querySelector("a.mdv-sidebar__entry");
+    if (link) window.location.assign(link.href);
   }
 
   // ============================== sidebar toggle ==============================
@@ -441,27 +454,38 @@
       return true;
     }
 
-    // Focus-specific motions
+    // Focus-specific motions. Vim keys plus arrow / Home / End / PageUp /
+    // PageDown aliases so users who reach for the standard navigation keys
+    // (a colleague's first instinct on the TUI) get the same behavior
+    // without learning the vim subset.
     if (focus === "sidebar") {
-      if (k === "j") return moveSidebar(1), true;
-      if (k === "k") return moveSidebar(-1), true;
-      if (k === "Enter") return openSidebarSelection(), true;
-      if (k === "G" && shift) {
+      if (k === "j" || k === "ArrowDown") return moveSidebar(1), true;
+      if (k === "k" || k === "ArrowUp") return moveSidebar(-1), true;
+      if (k === "Home") {
+        cursorIndex = 0;
+        paintCursor();
+        return true;
+      }
+      if (k === "End" || (k === "G" && shift)) {
         cursorIndex = sidebarEntries.length - 1;
         paintCursor();
         return true;
       }
+      if (k === "Enter") return openSidebarSelection(), true;
       return false;
     }
 
     // content focus
-    if (k === "j") return moveContent(1), true;
-    if (k === "k") return moveContent(-1), true;
-    if (k === "G" && shift) return scrollTo(content.scrollHeight), true;
-    if (ctrl && k === "d") return scrollBy(viewportPx() / 2), true;
-    if (ctrl && k === "u") return scrollBy(-viewportPx() / 2), true;
-    if (ctrl && k === "f") return scrollBy(viewportPx()), true;
-    if (ctrl && k === "b") return scrollBy(-viewportPx()), true;
+    if (k === "j" || k === "ArrowDown") return moveContent(1), true;
+    if (k === "k" || k === "ArrowUp") return moveContent(-1), true;
+    if (k === "Home") return scrollTo(0), true;
+    if (k === "End" || (k === "G" && shift)) return scrollTo(content.scrollHeight), true;
+    if ((ctrl && k === "d") || (k === "PageDown" && shift))
+      return scrollBy(viewportPx() / 2), true;
+    if ((ctrl && k === "u") || (k === "PageUp" && shift))
+      return scrollBy(-viewportPx() / 2), true;
+    if ((ctrl && k === "f") || k === "PageDown") return scrollBy(viewportPx()), true;
+    if ((ctrl && k === "b") || k === "PageUp") return scrollBy(-viewportPx()), true;
 
     return false;
   }
@@ -491,6 +515,16 @@
       cursorIndex = i;
     });
   }
+
+  // Sync internal focus state when focus arrives via Tab or click rather
+  // than our own setFocus() — keeps body class and JS state correct so the
+  // keymap routes to the right pane regardless of how focus moved.
+  sidebarTree?.addEventListener("focus", () => {
+    if (focus !== "sidebar") setFocus("sidebar");
+  });
+  content.addEventListener("focus", () => {
+    if (focus !== "content") setFocus("content");
+  });
 
   // ============================== live reload ==============================
 

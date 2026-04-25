@@ -80,6 +80,54 @@ export async function scanDirectory(dirPath: string, options?: ScanOptions): Pro
   return { rootDir, entries };
 }
 
+// =============================================================================
+// Tree shape (sidebar rendering)
+// =============================================================================
+
+export interface TreeDir {
+  type: "dir";
+  /** Last path segment of this directory (e.g. "opentui.com"). */
+  name: string;
+  children: TreeNode[];
+}
+
+export interface TreeFile {
+  type: "file";
+  /** Last path segment of the file (e.g. "README.md"). */
+  name: string;
+  entry: FileEntry;
+}
+
+export type TreeNode = TreeDir | TreeFile;
+
+/**
+ * Reshape a flat list of FileEntry into a nested tree of directories and
+ * files. The input is assumed pre-sorted by `compareTreeOrder` (which is
+ * what `scanDirectory` returns) — under that ordering, linear iteration
+ * naturally yields children in files-before-subdirs order at each level.
+ *
+ * Used by both the web sidebar and the TUI sidebar, so that the tree
+ * structure of the file listing is identical across modes.
+ */
+export function buildFileTree(entries: FileEntry[]): TreeNode[] {
+  const root: TreeNode[] = [];
+  for (const entry of entries) {
+    const parts = entry.relativePath.split(/[\\/]/);
+    let level = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const segment = parts[i]!;
+      let dir = level.find((n): n is TreeDir => n.type === "dir" && n.name === segment);
+      if (!dir) {
+        dir = { type: "dir", name: segment, children: [] };
+        level.push(dir);
+      }
+      level = dir.children;
+    }
+    level.push({ type: "file", name: parts[parts.length - 1]!, entry });
+  }
+  return root;
+}
+
 /**
  * Comparator that orders paths file-first within each directory level:
  *

@@ -68,26 +68,61 @@ body.mdv.no-sidebar .mdv-sidebar { display: none; }
   border-bottom: 1px solid color-mix(in srgb, var(--mdv-gray) 30%, transparent);
 }
 
-.mdv-sidebar__list { padding: 6px 0 12px; }
+/* WAI-ARIA tree: outer ul, nested groups, treeitem rows. List markers off,
+ * indentation comes from the natural left-padding on each `group`. */
+.mdv-sidebar__tree,
+.mdv-sidebar__group {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mdv-sidebar__tree {
+  padding: 6px 0 12px;
+}
+
+.mdv-sidebar__group {
+  /* Children sit under the parent label; the rail establishes the visual
+   * relationship between a directory and its contents. */
+  padding-left: 14px;
+  border-left: 1px solid color-mix(in srgb, var(--mdv-gray) 22%, transparent);
+  margin-left: 6px;
+}
+
+/* Directory label — not interactive, just a section heading. */
+.mdv-sidebar__dir-label {
+  display: block;
+  padding: 4px 0 2px;
+  color: var(--mdv-fg);
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.mdv-sidebar__node--file {
+  /* Position the per-row state (hover/active/cursor) on the file row only,
+   * not on the parent dir branch, so highlights don't leak up the tree. */
+  position: relative;
+}
 
 .mdv-sidebar__entry {
   display: block;
-  padding: 3px 14px 3px calc(14px + var(--depth, 0) * 12px);
+  padding: 3px 8px;
   color: var(--mdv-fg);
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  border-radius: 3px;
 }
 
 .mdv-sidebar__entry:hover { background: color-mix(in srgb, var(--mdv-cyan) 12%, transparent); }
 
-.mdv-sidebar__entry[aria-current="page"] {
+.mdv-sidebar__node[aria-current="page"] > .mdv-sidebar__entry {
   background: color-mix(in srgb, var(--mdv-cyan) 22%, transparent);
   color: var(--mdv-cyan);
 }
 
-body.mdv--sidebar .mdv-sidebar__entry[data-cursor] {
+body.mdv--sidebar .mdv-sidebar__node[data-cursor] > .mdv-sidebar__entry {
   background: color-mix(in srgb, var(--mdv-cyan) 28%, transparent);
   box-shadow: inset 2px 0 0 var(--mdv-cyan);
 }
@@ -95,23 +130,13 @@ body.mdv--sidebar .mdv-sidebar__entry[data-cursor] {
 /* Sidebar search: subtle tint on every match, prominent rail on the active
  * one (which is also the row holding the cursor). Active styling overrides
  * the default cursor color so the user can tell search mode apart visually. */
-.mdv-sidebar__entry[data-match] {
+.mdv-sidebar__node[data-match] > .mdv-sidebar__entry {
   background: color-mix(in srgb, var(--mdv-orange) 14%, transparent);
 }
 
-body.mdv--sidebar .mdv-sidebar__entry[data-match][data-cursor] {
+body.mdv--sidebar .mdv-sidebar__node[data-match][data-cursor] > .mdv-sidebar__entry {
   background: color-mix(in srgb, var(--mdv-orange) 32%, transparent);
   box-shadow: inset 2px 0 0 var(--mdv-orange);
-}
-
-.mdv-sidebar__entry .changed { color: var(--mdv-orange); margin-right: 4px; }
-
-/* Directory portion of a path-style entry label. Opacity (rather than an
- * explicit color) so the dim treatment composes with whatever color the
- * parent state imposes — fg by default, cyan for the active page, orange
- * for a search match. */
-.mdv-sidebar__entry-dir {
-  opacity: 0.55;
 }
 
 /* ============================== content ============================== */

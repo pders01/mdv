@@ -79,18 +79,40 @@ describe("renderSidebar", () => {
     ],
   };
 
-  test("emits one entry per file", () => {
+  test("emits a tree container with one leaf per file", () => {
     const html = renderSidebar(tree, null);
-    const entries = html.match(/class="mdv-sidebar__entry"/g) ?? [];
-    expect(entries.length).toBe(2);
+    expect(html).toContain('<ul role="tree"');
+    const leaves = html.match(/class="mdv-sidebar__node mdv-sidebar__node--file"/g) ?? [];
+    expect(leaves.length).toBe(2);
   });
 
-  test("marks the active entry", () => {
+  test("nests subdirectory contents under a directory branch", () => {
+    const html = renderSidebar(tree, null);
+    // The directory branch wraps the file leaf in a role="group".
+    expect(html).toMatch(
+      /mdv-sidebar__node--dir[^"]*"[^>]*aria-expanded="true"[^>]*>\s*<span[^>]*>guide<\/span>\s*<ul role="group"/,
+    );
+  });
+
+  test("displays only the basename in the leaf label", () => {
+    const html = renderSidebar(tree, null);
+    // The leaf <a> contains just the filename, not the full path.
+    expect(html).toMatch(/<a class="mdv-sidebar__entry"[^>]*>intro\.md<\/a>/);
+    expect(html).toMatch(/<a class="mdv-sidebar__entry"[^>]*>README\.md<\/a>/);
+  });
+
+  test("marks the active leaf", () => {
     const html = renderSidebar(tree, "guide/intro.md");
     expect(html).toContain('aria-current="page"');
-    // Active mark is on the right entry
     const activeMatch = html.match(/data-path="([^"]+)"[^>]*aria-current="page"/);
     expect(activeMatch?.[1]).toBe("guide/intro.md");
+  });
+
+  test("assigns stable ids to leaves so aria-activedescendant can target them", () => {
+    const html = renderSidebar(tree, null);
+    const ids = [...html.matchAll(/ id="(mdv-entry-\d+)"/g)].map((m) => m[1]);
+    expect(ids.length).toBe(2);
+    expect(new Set(ids).size).toBe(2);
   });
 
   test("encodes path segments in href", () => {
@@ -109,18 +131,6 @@ describe("renderSidebar", () => {
     };
     const html = renderSidebar(t, null);
     expect(html).not.toMatch(/data-path="a"b\.md"/);
-  });
-
-  test("nested entries split label into a dim dir prefix and a plain basename", () => {
-    const html = renderSidebar(tree, null);
-    // Root README has no dir prefix — basename only, no <span>.
-    expect(html).toMatch(
-      /<a class="mdv-sidebar__entry" href="\/README\.md"[^>]*>README\.md<\/a>/,
-    );
-    // Nested entry wraps `guide/` in the dimming span before the basename.
-    expect(html).toContain(
-      '<span class="mdv-sidebar__entry-dir">guide/</span>intro.md',
-    );
   });
 });
 
