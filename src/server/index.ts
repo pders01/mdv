@@ -28,6 +28,11 @@ import { createShikiAdapter } from "./adapters/shiki.js";
 import { createMermaidAdapter } from "./adapters/mermaid.js";
 import { escapeHtml, escapeAttr } from "../util/escape.js";
 import { printBanner, logAccess } from "./log.js";
+import { startWatching } from "./watch.js";
+
+import type { ServerWebSocket } from "bun";
+
+const WS_PATH = "/_ws";
 
 // Page assets are imported as files so Bun embeds them in `--compile`
 // binaries. Resolving via import.meta.dir works in dev but yields empty
@@ -54,6 +59,9 @@ interface ServerContext {
   staticAssets: Record<string, string>;
   quiet: boolean;
   debug: boolean;
+  watch: boolean;
+  /** Connected WebSocket clients for live reload broadcasts. */
+  clients: Set<ServerWebSocket<unknown>>;
 }
 
 export async function startServer(args: CliArgs): Promise<void> {
@@ -109,17 +117,53 @@ export async function startServer(args: CliArgs): Promise<void> {
     staticAssets: registry.collectStaticAssets(),
     quiet: args.quiet,
     debug: args.debug,
+    watch: args.watch,
+    clients: new Set(),
   };
 
   const server = Bun.serve({
     port: args.port,
     hostname: args.host,
-    fetch: (req) => handleAndLog(req, ctx),
+    fetch: (req, srv) => {
+      // Live-reload WebSocket upgrade is the only non-HTTP path. Everything
+      // else funnels through handleAndLog so it shows up in the access log.
+      const url = new URL(req.url);
+      if (url.pathname === WS_PATH) {
+        if (srv.upgrade(req)) return undefined;
+        return new Response("Expected WebSocket upgrade", { status: 400 });
+      }
+      return handleAndLog(req, ctx);
+    },
+    websocket: {
+      open(ws) {
+        ctx.clients.add(ws);
+      },
+      close(ws) {
+        ctx.clients.delete(ws);
+      },
+      message() {
+        // Clients don't send messages today; ignore anything that arrives.
+      },
+    },
     error: (err) => {
       if (args.debug) console.error("[server error]", err);
       return new Response("Internal server error", { status: 500 });
     },
   });
+
+  if (args.watch) {
+    // Directory mode: recursive watch filtered to the known .md files we
+    // already scanned (so noise from sibling directories doesn't trigger
+    // reloads). Single-file mode: watch just that path with the
+    // reconnect-on-close behavior matching tui.ts.
+    if (rootIsDirectory) {
+      const tree = await scanDirectory(rootDir, { exclude: args.exclude }).catch(() => null);
+      const knownPaths = new Set(tree?.entries.map((e) => e.path) ?? []);
+      startWatching(rootDir, { recursive: true, knownPaths }, () => broadcastReload(ctx));
+    } else if (singleFilePath) {
+      startWatching(singleFilePath, { recursive: false }, () => broadcastReload(ctx));
+    }
+  }
 
   if (!args.quiet) {
     const initialFileCount = rootIsDirectory
@@ -137,6 +181,22 @@ export async function startServer(args: CliArgs): Promise<void> {
 
   if (args.open) {
     openUrl(`http://${server.hostname}:${server.port}`).catch(() => {});
+  }
+}
+
+/**
+ * Send a reload message to every connected client. Errors per-client are
+ * swallowed so one dead socket can't block the others — the WebSocket
+ * close handler will purge them from the set on its own.
+ */
+function broadcastReload(ctx: ServerContext): void {
+  const payload = JSON.stringify({ type: "reload" });
+  for (const ws of ctx.clients) {
+    try {
+      ws.send(payload);
+    } catch {
+      // Client is in an unsendable state; close handler will clean it up.
+    }
   }
 }
 
@@ -283,6 +343,7 @@ function renderTemplate(
     sidebar: vars.sidebar,
     content: vars.content,
     bodyAssets: ctx.bodyAssets,
+    watch: ctx.watch ? "on" : "off",
   };
   return ctx.template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) =>
     Object.prototype.hasOwnProperty.call(slots, key) ? slots[key]! : "",

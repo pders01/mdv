@@ -492,6 +492,97 @@
     });
   }
 
+  // ============================== live reload ==============================
+
+  // State preservation across live reloads. Only saved when our own
+  // WebSocket triggers reload — ordinary browser refresh and navigation
+  // get the default top-of-page behavior. Path-scoped so reloading file A
+  // doesn't restore A's scroll position when the user navigates to file B.
+  const RELOAD_STATE_KEY = "mdv:reload-state:" + location.pathname;
+
+  function captureReloadState() {
+    try {
+      sessionStorage.setItem(
+        RELOAD_STATE_KEY,
+        JSON.stringify({
+          scroll: content.scrollTop,
+          cursor: cursorIndex,
+          focus,
+        }),
+      );
+    } catch {
+      // Storage might be disabled or full — fall back to a plain reload.
+    }
+  }
+
+  function restoreReloadState() {
+    let raw;
+    try {
+      raw = sessionStorage.getItem(RELOAD_STATE_KEY);
+      if (raw) sessionStorage.removeItem(RELOAD_STATE_KEY);
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    let state;
+    try {
+      state = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (typeof state.scroll === "number") {
+      // Defer to next frame so layout finishes before we assign — otherwise
+      // the browser may clamp scrollTop against an under-measured scrollHeight.
+      requestAnimationFrame(() => {
+        content.scrollTop = state.scroll;
+      });
+    }
+    if (
+      typeof state.cursor === "number" &&
+      state.cursor >= 0 &&
+      state.cursor < sidebarEntries.length
+    ) {
+      cursorIndex = state.cursor;
+    }
+    if (state.focus === "sidebar" || state.focus === "content") {
+      setFocus(state.focus);
+    }
+  }
+
+  // Connect to /_ws when the server is running with --watch. The server
+  // broadcasts {"type":"reload"} on every debounced fs change; we capture
+  // a small slice of UI state, then location.reload(). The boot phase
+  // restores state when sessionStorage shows we just came from a live
+  // reload. Reconnects with capped exponential backoff so dev-server
+  // restarts heal themselves silently.
+  function startLiveReload() {
+    let attempts = 0;
+    const connect = () => {
+      const proto = location.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(`${proto}//${location.host}/_ws`);
+      ws.addEventListener("open", () => {
+        attempts = 0;
+      });
+      ws.addEventListener("message", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === "reload") {
+            captureReloadState();
+            location.reload();
+          }
+        } catch {
+          // Ignore malformed messages — the server only sends one shape.
+        }
+      });
+      ws.addEventListener("close", () => {
+        attempts += 1;
+        const delay = Math.min(30000, 500 * 2 ** Math.min(attempts, 6));
+        setTimeout(connect, delay);
+      });
+    };
+    connect();
+  }
+
   // ============================== boot ==============================
 
   setFocus("content");
@@ -499,4 +590,10 @@
   paintCursor();
   updatePos();
   notify("j/k scroll · Tab pane · / search · \\ sidebar", 2500);
+
+  // Restore live-reload state before live-reload setup runs so we don't
+  // race with another reload-triggered overwrite of the saved state.
+  restoreReloadState();
+
+  if (body.dataset.watch === "on") startLiveReload();
 })();
