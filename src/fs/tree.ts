@@ -75,9 +75,39 @@ export async function scanDirectory(dirPath: string, options?: ScanOptions): Pro
     });
   }
 
-  entries.sort((a, b) =>
-    a.relativePath.localeCompare(b.relativePath, undefined, { sensitivity: "base" }),
-  );
+  entries.sort((a, b) => compareTreeOrder(a.relativePath, b.relativePath));
 
   return { rootDir, entries };
+}
+
+/**
+ * Comparator that orders paths file-first within each directory level:
+ *
+ *   notes.md           ┐ root files come before
+ *   README.md          ┘ any subdirectory contents
+ *   docs/guide.md      ┐ files inside docs/ come before
+ *   docs/nested/...    ┘ docs/'s subdirectories
+ *   drafts/wip.md
+ *
+ * Within a level, names compare case-insensitively via `localeCompare`.
+ *
+ * The trick: at each shared segment index `i`, if A's i-th segment is its
+ * last (so A is a file at this level) but B's is not (B keeps descending
+ * into a subdirectory), A wins — and vice versa. Otherwise both segments
+ * are the same kind and we just compare names.
+ */
+function compareTreeOrder(a: string, b: string): number {
+  const sa = a.split(sep);
+  const sb = b.split(sep);
+  const shared = Math.min(sa.length, sb.length);
+  for (let i = 0; i < shared; i++) {
+    const aIsFile = i === sa.length - 1;
+    const bIsFile = i === sb.length - 1;
+    if (aIsFile !== bIsFile) return aIsFile ? -1 : 1;
+    const cmp = sa[i]!.localeCompare(sb[i]!, undefined, { sensitivity: "base" });
+    if (cmp !== 0) return cmp;
+  }
+  // One is a strict prefix of the other — shouldn't occur for unique file
+  // paths, but break the tie by length so the comparator is total.
+  return sa.length - sb.length;
 }

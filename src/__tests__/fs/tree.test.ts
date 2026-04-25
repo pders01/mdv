@@ -75,16 +75,30 @@ describe("scanDirectory", () => {
     expect(tree.entries).toHaveLength(4); // README, notes, docs/guide, docs/nested/deep
   });
 
-  test("sorts entries by relative path", async () => {
+  test("orders files before subdirectory contents at each level", async () => {
     const tree = await scanDirectory(tempDir);
     const paths = tree.entries.map((e) => e.relativePath);
+    // Root-level files (notes.md, README.md) come before any subdir content,
+    // then within docs/ the file (guide.md) comes before nested/. Names
+    // within a level are case-insensitive alphabetical.
     expect(paths).toEqual([
+      "notes.md",
+      "README.md",
       "docs/guide.md",
       "docs/nested/deep.md",
       "drafts/wip.md",
-      "notes.md",
-      "README.md",
     ]);
+  });
+
+  test("file-vs-subdir grouping holds at every depth", async () => {
+    const tree = await scanDirectory(tempDir);
+    const idx = (p: string) => tree.entries.findIndex((e) => e.relativePath === p);
+
+    // Root files before root subdirs
+    expect(idx("notes.md")).toBeLessThan(idx("docs/guide.md"));
+    expect(idx("README.md")).toBeLessThan(idx("drafts/wip.md"));
+    // docs/ file before docs/nested/
+    expect(idx("docs/guide.md")).toBeLessThan(idx("docs/nested/deep.md"));
   });
 
   test("sets correct depth", async () => {

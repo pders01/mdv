@@ -59,8 +59,9 @@ describe("server routes", () => {
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain("<h1");
-    // scanDirectory sorts case-insensitively; "guide/intro.md" precedes "README.md"
-    expect(html).toContain("Intro");
+    // scanDirectory orders files-before-subdir-contents at each level, so a
+    // root-level README.md precedes anything under guide/.
+    expect(html).toContain("Hello");
     expect(html).toContain('class="mdv-sidebar__entry"');
   });
 
