@@ -69,7 +69,9 @@ body.mdv.no-sidebar .mdv-sidebar { display: none; }
 }
 
 /* WAI-ARIA tree: outer ul, nested groups, treeitem rows. List markers off,
- * indentation comes from the natural left-padding on each `group`. */
+ * indentation is one tight step per level so deeply nested files don't
+ * drift far right. No per-level rails — they add visual noise that
+ * accumulates with depth without carrying useful information. */
 .mdv-sidebar__tree,
 .mdv-sidebar__group {
   list-style: none;
@@ -78,64 +80,69 @@ body.mdv.no-sidebar .mdv-sidebar { display: none; }
 }
 
 .mdv-sidebar__tree {
-  padding: 6px 0 12px;
+  padding: 4px 0 10px;
+  outline: none;
 }
 
 .mdv-sidebar__group {
-  /* Children sit under the parent label; the rail establishes the visual
-   * relationship between a directory and its contents. */
-  padding-left: 14px;
-  border-left: 1px solid color-mix(in srgb, var(--mdv-gray) 22%, transparent);
-  margin-left: 6px;
+  padding-left: 12px;
 }
 
-/* Directory label — not interactive, just a section heading. */
+/* Directory label — section heading, not interactive. */
 .mdv-sidebar__dir-label {
   display: block;
-  padding: 4px 0 2px;
+  padding: 4px 8px 2px;
   color: var(--mdv-fg);
   font-weight: 600;
-  opacity: 0.85;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  opacity: 0.65;
 }
 
 .mdv-sidebar__node--file {
-  /* Position the per-row state (hover/active/cursor) on the file row only,
-   * not on the parent dir branch, so highlights don't leak up the tree. */
+  /* Position context for the left-edge rails on active/cursor states. */
   position: relative;
 }
 
 .mdv-sidebar__entry {
   display: block;
-  padding: 3px 8px;
+  padding: 2px 8px;
   color: var(--mdv-fg);
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  border-radius: 3px;
 }
 
-.mdv-sidebar__entry:hover { background: color-mix(in srgb, var(--mdv-cyan) 12%, transparent); }
+.mdv-sidebar__entry:hover {
+  background: color-mix(in srgb, var(--mdv-cyan) 10%, transparent);
+}
 
+/* Active page (the URL): subtle tint plus a 2px left rail. Rail is
+ * depth-invariant — looks the same whether the file is at the root or
+ * five levels deep — so highlights read consistently across the tree. */
 .mdv-sidebar__node[aria-current="page"] > .mdv-sidebar__entry {
-  background: color-mix(in srgb, var(--mdv-cyan) 22%, transparent);
+  background: color-mix(in srgb, var(--mdv-cyan) 14%, transparent);
   color: var(--mdv-cyan);
-}
-
-body.mdv--sidebar .mdv-sidebar__node[data-cursor] > .mdv-sidebar__entry {
-  background: color-mix(in srgb, var(--mdv-cyan) 28%, transparent);
   box-shadow: inset 2px 0 0 var(--mdv-cyan);
 }
 
-/* Sidebar search: subtle tint on every match, prominent rail on the active
- * one (which is also the row holding the cursor). Active styling overrides
- * the default cursor color so the user can tell search mode apart visually. */
+/* Keyboard cursor (only when sidebar has focus): same rail, slightly
+ * heavier tint so it reads as "selected" against the active-page row. */
+body.mdv--sidebar .mdv-sidebar__node[data-cursor] > .mdv-sidebar__entry {
+  background: color-mix(in srgb, var(--mdv-cyan) 24%, transparent);
+  box-shadow: inset 2px 0 0 var(--mdv-cyan);
+}
+
+/* Sidebar search: subtle tint on every match; on the active match (which
+ * also holds the cursor), an orange rail replaces the cyan one so users
+ * can tell match-cycle apart from normal cursor movement. */
 .mdv-sidebar__node[data-match] > .mdv-sidebar__entry {
-  background: color-mix(in srgb, var(--mdv-orange) 14%, transparent);
+  background: color-mix(in srgb, var(--mdv-orange) 12%, transparent);
 }
 
 body.mdv--sidebar .mdv-sidebar__node[data-match][data-cursor] > .mdv-sidebar__entry {
-  background: color-mix(in srgb, var(--mdv-orange) 32%, transparent);
+  background: color-mix(in srgb, var(--mdv-orange) 26%, transparent);
   box-shadow: inset 2px 0 0 var(--mdv-orange);
 }
 
