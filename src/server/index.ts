@@ -16,7 +16,7 @@ import { basename, dirname, join, resolve, relative, sep } from "path";
 import type { BundledTheme } from "shiki";
 
 import type { CliArgs } from "../cli.js";
-import { scanDirectory, type FileTree } from "../fs/tree.js";
+import { scanDirectory, makeExclusionFilter, type FileTree } from "../fs/tree.js";
 import { createHighlighterInstance, type HighlighterInstance } from "../highlighting/shiki.js";
 import { extractThemeColors } from "../theme/index.js";
 
@@ -152,14 +152,15 @@ export async function startServer(args: CliArgs): Promise<void> {
   });
 
   if (args.watch) {
-    // Directory mode: recursive watch filtered to the known .md files we
-    // already scanned (so noise from sibling directories doesn't trigger
-    // reloads). Single-file mode: watch just that path with the
-    // reconnect-on-close behavior matching tui.ts.
+    // Directory mode: recursive watch sharing exclude rules with the
+    // scanner so any file that *would* appear in the sidebar (including
+    // newly created ones) triggers a reload. Single-file mode: watch
+    // just that path with the reconnect-on-close behavior matching tui.ts.
     if (rootIsDirectory) {
-      const tree = await scanDirectory(rootDir, { exclude: args.exclude }).catch(() => null);
-      const knownPaths = new Set(tree?.entries.map((e) => e.path) ?? []);
-      startWatching(rootDir, { recursive: true, knownPaths }, () => broadcastReload(ctx));
+      const isExcluded = makeExclusionFilter(args.exclude);
+      startWatching(rootDir, { recursive: true, shouldIgnore: isExcluded }, () =>
+        broadcastReload(ctx),
+      );
     } else if (singleFilePath) {
       startWatching(singleFilePath, { recursive: false }, () => broadcastReload(ctx));
     }

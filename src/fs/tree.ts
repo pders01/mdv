@@ -35,9 +35,21 @@ export interface ScanOptions {
   exclude?: string[];
 }
 
+/**
+ * Build a predicate that returns true when a relative path contains an
+ * excluded directory segment. The exclude set combines DEFAULT_EXCLUDES
+ * with any user-provided ones so the watcher and the scanner can share
+ * a single source of truth — anything filtered out of the sidebar scan
+ * is also filtered out of live-reload events.
+ */
+export function makeExclusionFilter(userExcludes: string[] = []): (relPath: string) => boolean {
+  const excludeSet = new Set([...DEFAULT_EXCLUDES, ...userExcludes]);
+  return (relPath) => relPath.split(sep).some((s) => excludeSet.has(s));
+}
+
 export async function scanDirectory(dirPath: string, options?: ScanOptions): Promise<FileTree> {
   const rootDir = resolve(dirPath);
-  const excludeSet = new Set([...DEFAULT_EXCLUDES, ...(options?.exclude ?? [])]);
+  const isExcluded = makeExclusionFilter(options?.exclude);
 
   const dirEntries = await readdir(rootDir, { withFileTypes: true, recursive: true });
 
@@ -49,14 +61,12 @@ export async function scanDirectory(dirPath: string, options?: ScanOptions): Pro
     const fullPath = resolve(parentPath, entry.name);
     const relPath = relative(rootDir, fullPath);
 
-    // Check if any path segment matches an excluded directory
-    const segments = relPath.split(sep);
-    if (segments.some((s) => excludeSet.has(s))) continue;
+    if (isExcluded(relPath)) continue;
 
     entries.push({
       path: fullPath,
       relativePath: relPath,
-      depth: segments.length - 1,
+      depth: relPath.split(sep).length - 1,
     });
   }
 
