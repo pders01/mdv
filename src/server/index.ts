@@ -28,11 +28,19 @@ import { createShikiAdapter } from "./adapters/shiki.js";
 import { createMermaidAdapter } from "./adapters/mermaid.js";
 import { escapeHtml, escapeAttr } from "../util/escape.js";
 import { printBanner, logAccess } from "./log.js";
-import { startWatching } from "./watch.js";
+import { startWatching, type FileWatcher } from "./watch.js";
 
 import type { ServerWebSocket } from "bun";
 
 const WS_PATH = "/_ws";
+
+/**
+ * Cap on simultaneous live-reload connections. The server is a local dev
+ * tool but `--host 0.0.0.0` exposes it to LAN, so a misbehaving client
+ * (or stuck tabs accumulating during a long session) shouldn't be able
+ * to grow the clients set without bound.
+ */
+const MAX_WS_CLIENTS = 50;
 
 // Page assets are imported as files so Bun embeds them in `--compile`
 // binaries. Resolving via import.meta.dir works in dev but yields empty
@@ -64,7 +72,12 @@ interface ServerContext {
   clients: Set<ServerWebSocket<unknown>>;
 }
 
-export async function startServer(args: CliArgs): Promise<void> {
+export interface ServerHandle {
+  /** Close the HTTP server and stop the file watcher (if any). */
+  stop(): void;
+}
+
+export async function startServer(args: CliArgs): Promise<ServerHandle> {
   if (!args.filePath) {
     console.error("mdv serve: missing path argument");
     console.error("Usage: mdv serve [options] <file-or-directory>");
@@ -129,6 +142,9 @@ export async function startServer(args: CliArgs): Promise<void> {
       // else funnels through handleAndLog so it shows up in the access log.
       const url = new URL(req.url);
       if (url.pathname === WS_PATH) {
+        if (ctx.clients.size >= MAX_WS_CLIENTS) {
+          return new Response("Too many live-reload clients", { status: 503 });
+        }
         if (srv.upgrade(req)) return undefined;
         return new Response("Expected WebSocket upgrade", { status: 400 });
       }
@@ -151,6 +167,7 @@ export async function startServer(args: CliArgs): Promise<void> {
     },
   });
 
+  let watcher: FileWatcher | null = null;
   if (args.watch) {
     // Directory mode: recursive watch sharing exclude rules with the
     // scanner so any file that *would* appear in the sidebar (including
@@ -158,11 +175,11 @@ export async function startServer(args: CliArgs): Promise<void> {
     // just that path with the reconnect-on-close behavior matching tui.ts.
     if (rootIsDirectory) {
       const isExcluded = makeExclusionFilter(args.exclude);
-      startWatching(rootDir, { recursive: true, shouldIgnore: isExcluded }, () =>
+      watcher = startWatching(rootDir, { recursive: true, shouldIgnore: isExcluded }, () =>
         broadcastReload(ctx),
       );
     } else if (singleFilePath) {
-      startWatching(singleFilePath, { recursive: false }, () => broadcastReload(ctx));
+      watcher = startWatching(singleFilePath, { recursive: false }, () => broadcastReload(ctx));
     }
   }
 
@@ -183,12 +200,24 @@ export async function startServer(args: CliArgs): Promise<void> {
   if (args.open) {
     openUrl(`http://${server.hostname}:${server.port}`).catch(() => {});
   }
+
+  return {
+    stop() {
+      watcher?.close();
+      server.stop();
+    },
+  };
 }
 
 /**
  * Send a reload message to every connected client. Errors per-client are
  * swallowed so one dead socket can't block the others — the WebSocket
  * close handler will purge them from the set on its own.
+ *
+ * Safe against mutation-during-iteration because Bun dispatches WebSocket
+ * close callbacks asynchronously on the next event-loop tick: a `ws.send`
+ * that fails synchronously here will only fire `close` later, after this
+ * for-of loop has finished.
  */
 function broadcastReload(ctx: ServerContext): void {
   const payload = JSON.stringify({ type: "reload" });

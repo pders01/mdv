@@ -249,6 +249,13 @@ body.mdv--sidebar .mdv-sidebar__entry[data-match][data-cursor] {
   font-size: 13px;
   z-index: 10;
 }
+
+/* `display: flex` above beats the user-agent rule for `[hidden]`, so the
+ * search bar would otherwise render permanently. Re-hide it explicitly. */
+.mdv-search[hidden] {
+  display: none;
+}
+
 .mdv-search__sigil { color: var(--mdv-orange); }
 .mdv-search input {
   flex: 1;

@@ -515,27 +515,24 @@
     }
   }
 
+  /** True when boot is restoring state from a live reload, false otherwise. */
   function restoreReloadState() {
     let raw;
     try {
       raw = sessionStorage.getItem(RELOAD_STATE_KEY);
       if (raw) sessionStorage.removeItem(RELOAD_STATE_KEY);
     } catch {
-      return;
+      return false;
     }
-    if (!raw) return;
+    if (!raw) return false;
     let state;
     try {
       state = JSON.parse(raw);
     } catch {
-      return;
+      return false;
     }
     if (typeof state.scroll === "number") {
-      // Defer to next frame so layout finishes before we assign — otherwise
-      // the browser may clamp scrollTop against an under-measured scrollHeight.
-      requestAnimationFrame(() => {
-        content.scrollTop = state.scroll;
-      });
+      restoreScrollPosition(state.scroll);
     }
     if (
       typeof state.cursor === "number" &&
@@ -547,6 +544,35 @@
     if (state.focus === "sidebar" || state.focus === "content") {
       setFocus(state.focus);
     }
+    return true;
+  }
+
+  /**
+   * Restore scroll position robustly across two layout phases:
+   *   - double-rAF lands the scroll once initial text layout commits
+   *   - re-assigning after every <img> in the prose finishes loading
+   *     handles image-heavy pages whose final scrollHeight grows past
+   *     what the first attempt could see
+   */
+  function restoreScrollPosition(target) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        content.scrollTop = target;
+      });
+    });
+    const pending = Array.from(prose.querySelectorAll("img")).filter((img) => !img.complete);
+    if (pending.length === 0) return;
+    Promise.all(
+      pending.map(
+        (img) =>
+          new Promise((resolve) => {
+            img.addEventListener("load", resolve, { once: true });
+            img.addEventListener("error", resolve, { once: true });
+          }),
+      ),
+    ).then(() => {
+      content.scrollTop = target;
+    });
   }
 
   // Connect to /_ws when the server is running with --watch. The server
@@ -555,6 +581,13 @@
   // restores state when sessionStorage shows we just came from a live
   // reload. Reconnects with capped exponential backoff so dev-server
   // restarts heal themselves silently.
+  // Cap reconnect attempts so a server that's permanently rejecting the
+  // upgrade (or a stale tab against a long-gone dev server) doesn't loop
+  // forever. With max delay 30s and 20 attempts the page will keep trying
+  // for ~10 minutes total, then give up with a notice. `attempts` resets
+  // on each successful open, so a transient drop doesn't burn the budget.
+  const MAX_RECONNECT_ATTEMPTS = 20;
+
   function startLiveReload() {
     let attempts = 0;
     const connect = () => {
@@ -576,6 +609,10 @@
       });
       ws.addEventListener("close", () => {
         attempts += 1;
+        if (attempts > MAX_RECONNECT_ATTEMPTS) {
+          notify("Live reload disconnected — refresh manually", 5000);
+          return;
+        }
         const delay = Math.min(30000, 500 * 2 ** Math.min(attempts, 6));
         setTimeout(connect, delay);
       });
@@ -589,11 +626,15 @@
   setMode("normal");
   paintCursor();
   updatePos();
-  notify("j/k scroll · Tab pane · / search · \\ sidebar", 2500);
 
   // Restore live-reload state before live-reload setup runs so we don't
   // race with another reload-triggered overwrite of the saved state.
-  restoreReloadState();
+  // Skip the help notification when we just came from a reload — the user
+  // already knows the keys; flashing it on every save is noise.
+  const restoredFromReload = restoreReloadState();
+  if (!restoredFromReload) {
+    notify("j/k scroll · Tab pane · / search · \\ sidebar", 2500);
+  }
 
   if (body.dataset.watch === "on") startLiveReload();
 })();

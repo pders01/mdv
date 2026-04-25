@@ -41,10 +41,15 @@ export interface ScanOptions {
  * with any user-provided ones so the watcher and the scanner can share
  * a single source of truth — anything filtered out of the sidebar scan
  * is also filtered out of live-reload events.
+ *
+ * Splits on both separators so callers can pass paths sourced from APIs
+ * that disagree with `path.sep` (e.g. fs.watch on Windows under WSL,
+ * git porcelain output) without silently letting an excluded segment
+ * through.
  */
 export function makeExclusionFilter(userExcludes: string[] = []): (relPath: string) => boolean {
   const excludeSet = new Set([...DEFAULT_EXCLUDES, ...userExcludes]);
-  return (relPath) => relPath.split(sep).some((s) => excludeSet.has(s));
+  return (relPath) => relPath.split(/[\\/]/).some((s) => excludeSet.has(s));
 }
 
 export async function scanDirectory(dirPath: string, options?: ScanOptions): Promise<FileTree> {
