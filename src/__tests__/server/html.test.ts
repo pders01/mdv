@@ -110,6 +110,18 @@ describe("renderSidebar", () => {
     const html = renderSidebar(t, null);
     expect(html).not.toMatch(/data-path="a"b\.md"/);
   });
+
+  test("nested entries split label into a dim dir prefix and a plain basename", () => {
+    const html = renderSidebar(tree, null);
+    // Root README has no dir prefix — basename only, no <span>.
+    expect(html).toMatch(
+      /<a class="mdv-sidebar__entry" href="\/README\.md"[^>]*>README\.md<\/a>/,
+    );
+    // Nested entry wraps `guide/` in the dimming span before the basename.
+    expect(html).toContain(
+      '<span class="mdv-sidebar__entry-dir">guide/</span>intro.md',
+    );
+  });
 });
 
 describe("themeColorsToCss", () => {

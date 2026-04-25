@@ -106,6 +106,14 @@ body.mdv--sidebar .mdv-sidebar__entry[data-match][data-cursor] {
 
 .mdv-sidebar__entry .changed { color: var(--mdv-orange); margin-right: 4px; }
 
+/* Directory portion of a path-style entry label. Opacity (rather than an
+ * explicit color) so the dim treatment composes with whatever color the
+ * parent state imposes — fg by default, cyan for the active page, orange
+ * for a search match. */
+.mdv-sidebar__entry-dir {
+  opacity: 0.55;
+}
+
 /* ============================== content ============================== */
 
 .mdv-content {
