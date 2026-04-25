@@ -1,0 +1,291 @@
+/*
+ * mdv web styles. All colors come from CSS custom properties emitted by the
+ * server from the active Shiki theme. Replace one stylesheet, keep parity
+ * with the TUI.
+ */
+
+:root {
+  --mdv-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mdv-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --mdv-sidebar-width: 280px;
+  --mdv-statusbar-height: 28px;
+  --mdv-content-max: 880px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--mdv-bg);
+  color: var(--mdv-fg);
+  font-family: var(--mdv-font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+body.mdv {
+  display: grid;
+  grid-template-columns: var(--mdv-sidebar-width) 1fr;
+  grid-template-rows: 1fr var(--mdv-statusbar-height);
+  grid-template-areas:
+    "sidebar content"
+    "statusbar statusbar";
+}
+
+body.mdv.no-sidebar {
+  grid-template-columns: 0 1fr;
+}
+
+body.mdv.no-sidebar .mdv-sidebar { display: none; }
+
+/* ============================== sidebar ============================== */
+
+.mdv-sidebar {
+  grid-area: sidebar;
+  border-right: 1px solid var(--mdv-gray);
+  background: var(--mdv-bg);
+  overflow-y: auto;
+  font-family: var(--mdv-font-mono);
+  font-size: 13px;
+  outline: none;
+}
+
+.mdv-sidebar:focus-visible {
+  outline: none;
+}
+
+.mdv-sidebar__header {
+  padding: 12px 14px 8px;
+  color: var(--mdv-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+  position: sticky;
+  top: 0;
+  background: var(--mdv-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--mdv-gray) 30%, transparent);
+}
+
+.mdv-sidebar__list { padding: 6px 0 12px; }
+
+.mdv-sidebar__entry {
+  display: block;
+  padding: 3px 14px 3px calc(14px + var(--depth, 0) * 12px);
+  color: var(--mdv-fg);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdv-sidebar__entry:hover { background: color-mix(in srgb, var(--mdv-cyan) 12%, transparent); }
+
+.mdv-sidebar__entry[aria-current="page"] {
+  background: color-mix(in srgb, var(--mdv-cyan) 22%, transparent);
+  color: var(--mdv-cyan);
+}
+
+body.mdv--sidebar .mdv-sidebar__entry[data-cursor] {
+  background: color-mix(in srgb, var(--mdv-cyan) 28%, transparent);
+  box-shadow: inset 2px 0 0 var(--mdv-cyan);
+}
+
+/* Sidebar search: subtle tint on every match, prominent rail on the active
+ * one (which is also the row holding the cursor). Active styling overrides
+ * the default cursor color so the user can tell search mode apart visually. */
+.mdv-sidebar__entry[data-match] {
+  background: color-mix(in srgb, var(--mdv-orange) 14%, transparent);
+}
+
+body.mdv--sidebar .mdv-sidebar__entry[data-match][data-cursor] {
+  background: color-mix(in srgb, var(--mdv-orange) 32%, transparent);
+  box-shadow: inset 2px 0 0 var(--mdv-orange);
+}
+
+.mdv-sidebar__entry .changed { color: var(--mdv-orange); margin-right: 4px; }
+
+/* ============================== content ============================== */
+
+.mdv-content {
+  grid-area: content;
+  overflow-y: auto;
+  padding: 32px 40px 96px;
+  outline: none;
+}
+
+.mdv-content:focus-visible { outline: none; }
+
+.mdv-prose {
+  max-width: var(--mdv-content-max);
+  margin: 0 auto;
+}
+
+.mdv-prose > :first-child { margin-top: 0; }
+.mdv-prose > :last-child { margin-bottom: 0; }
+
+.mdv-prose h1,
+.mdv-prose h2,
+.mdv-prose h3,
+.mdv-prose h4,
+.mdv-prose h5,
+.mdv-prose h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.6em 0 0.6em;
+}
+
+.mdv-prose h1 { color: var(--mdv-red);    font-size: 2em;    border-bottom: 1px solid color-mix(in srgb, var(--mdv-gray) 40%, transparent); padding-bottom: 0.3em; }
+.mdv-prose h2 { color: var(--mdv-orange); font-size: 1.55em; border-bottom: 1px solid color-mix(in srgb, var(--mdv-gray) 30%, transparent); padding-bottom: 0.25em; }
+.mdv-prose h3 { color: var(--mdv-yellow); font-size: 1.3em; }
+.mdv-prose h4 { color: var(--mdv-green);  font-size: 1.15em; }
+.mdv-prose h5 { color: var(--mdv-cyan);   font-size: 1em; }
+.mdv-prose h6 { color: var(--mdv-blue);   font-size: 0.95em; }
+
+.mdv-prose p { margin: 0.9em 0; }
+
+.mdv-prose a {
+  color: var(--mdv-link);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--mdv-link) 40%, transparent);
+}
+.mdv-prose a:hover { border-bottom-color: var(--mdv-link); }
+
+.mdv-prose strong { color: var(--mdv-fg); font-weight: 700; }
+.mdv-prose em { color: var(--mdv-fg); font-style: italic; }
+.mdv-prose del { color: var(--mdv-gray); }
+
+.mdv-prose code {
+  font-family: var(--mdv-font-mono);
+  font-size: 0.92em;
+  background: var(--mdv-code-bg);
+  color: var(--mdv-purple);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+}
+
+/* shiki output is already styled; reset our inline-code rule for code-in-pre */
+.mdv-prose pre {
+  margin: 1em 0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  background: var(--mdv-code-bg);
+  font-family: var(--mdv-font-mono);
+  font-size: 0.92em;
+  line-height: 1.55;
+}
+.mdv-prose pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  border-radius: 0;
+}
+
+.mdv-prose blockquote {
+  margin: 1em 0;
+  padding: 0.4em 1em;
+  border-left: 3px solid var(--mdv-purple);
+  color: color-mix(in srgb, var(--mdv-fg) 80%, var(--mdv-bg));
+  background: color-mix(in srgb, var(--mdv-purple) 6%, transparent);
+}
+
+.mdv-prose ul, .mdv-prose ol { margin: 0.8em 0; padding-left: 1.6em; }
+.mdv-prose li { margin: 0.25em 0; }
+.mdv-prose ul > li::marker { color: var(--mdv-cyan); }
+.mdv-prose ol > li::marker { color: var(--mdv-cyan); }
+
+.mdv-prose hr {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--mdv-gray) 50%, transparent);
+  margin: 2em 0;
+}
+
+.mdv-prose table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: 100%;
+}
+.mdv-prose th, .mdv-prose td {
+  border: 1px solid color-mix(in srgb, var(--mdv-gray) 40%, transparent);
+  padding: 6px 10px;
+  text-align: left;
+}
+.mdv-prose th {
+  background: color-mix(in srgb, var(--mdv-gray) 15%, transparent);
+  color: var(--mdv-fg);
+  font-weight: 600;
+}
+
+.mdv-prose img { max-width: 100%; height: auto; border-radius: 6px; }
+
+/* search highlight injected by client.js */
+.mdv-prose mark.mdv-hit {
+  background: color-mix(in srgb, var(--mdv-orange) 50%, transparent);
+  color: var(--mdv-fg);
+  padding: 0 1px;
+  border-radius: 2px;
+}
+.mdv-prose mark.mdv-hit--active {
+  background: var(--mdv-orange);
+  color: var(--mdv-bg);
+}
+
+/* ============================== search bar ============================== */
+
+.mdv-search {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--mdv-statusbar-height);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--mdv-code-bg);
+  border-top: 1px solid var(--mdv-gray);
+  font-family: var(--mdv-font-mono);
+  font-size: 13px;
+  z-index: 10;
+}
+.mdv-search__sigil { color: var(--mdv-orange); }
+.mdv-search input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--mdv-fg);
+  font: inherit;
+}
+.mdv-search__status { color: var(--mdv-gray); }
+
+/* ============================== status bar ============================== */
+
+.mdv-statusbar {
+  grid-area: statusbar;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 12px;
+  background: var(--mdv-code-bg);
+  border-top: 1px solid color-mix(in srgb, var(--mdv-gray) 30%, transparent);
+  font-family: var(--mdv-font-mono);
+  font-size: 12px;
+  color: var(--mdv-gray);
+}
+
+.mdv-statusbar__mode {
+  background: var(--mdv-cyan);
+  color: var(--mdv-bg);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.mdv-statusbar.mode-search .mdv-statusbar__mode { background: var(--mdv-orange); }
+.mdv-statusbar.mode-visual .mdv-statusbar__mode { background: var(--mdv-yellow); color: var(--mdv-bg); }
+
+.mdv-statusbar__file { color: var(--mdv-fg); }
+.mdv-statusbar__pos { margin-left: auto; }
+.mdv-statusbar__notify { color: var(--mdv-orange); }

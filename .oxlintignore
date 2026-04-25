@@ -1,0 +1,7 @@
+node_modules/
+dist/
+out/
+src/server/assets/vendor/
+*.bundle.mjs
+*.min.js
+*.min.mjs

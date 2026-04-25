@@ -16,15 +16,17 @@
     "build:linux-x64": "bun build src/index.ts --compile --target=bun-linux-x64 --outfile mdv-linux-x64",
     "build:all": "bun run build:darwin-arm64 && bun run build:darwin-x64 && bun run build:linux-x64",
     "install-global": "bun run build && sudo mv mdv /usr/local/bin/",
+    "bundle:mermaid": "bun run scripts/bundle-mermaid.ts",
     "test": "bun test",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
+    "lint": "oxlint --ignore-path .oxlintignore",
+    "lint:fix": "oxlint --ignore-path .oxlintignore --fix",
     "format": "oxfmt"
   },
   "dependencies": {
     "@opentui/core": "0.1.97",
     "@shikijs/cli": "^3.23.0",
     "marked": "^15.0.0",
+    "mermaid": "^11.14.0",
     "shiki": "^3.23.0"
   },
   "devDependencies": {

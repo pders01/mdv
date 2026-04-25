@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="/_static/app.css">
+  <style id="mdv-theme">{{themeVars}}</style>
+  {{headAssets}}
+</head>
+<body class="mdv mdv--{{focus}}" data-active-path="{{activePath}}">
+  <aside id="sidebar" class="mdv-sidebar" aria-label="File navigation" tabindex="0">
+    <div class="mdv-sidebar__header">{{rootName}}</div>
+    <nav class="mdv-sidebar__list">{{sidebar}}</nav>
+  </aside>
+
+  <main id="content" class="mdv-content" tabindex="0">
+    <article class="mdv-prose" id="prose">{{content}}</article>
+  </main>
+
+  <div id="search" class="mdv-search" hidden>
+    <span class="mdv-search__sigil">/</span>
+    <input id="search-input" type="text" autocomplete="off" spellcheck="false" />
+    <span id="search-status" class="mdv-search__status"></span>
+  </div>
+
+  <footer id="statusbar" class="mdv-statusbar">
+    <span id="status-mode" class="mdv-statusbar__mode">NORMAL</span>
+    <span id="status-file" class="mdv-statusbar__file">{{fileName}}</span>
+    <span id="status-pos" class="mdv-statusbar__pos"></span>
+    <span id="status-notify" class="mdv-statusbar__notify"></span>
+  </footer>
+
+  <script src="/_static/client.js" defer></script>
+  {{bodyAssets}}
+</body>
+</html>
