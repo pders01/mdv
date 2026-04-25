@@ -64,8 +64,24 @@ body.mdv.no-sidebar .mdv-sidebar { display: none; }
   font-size: 11px;
   position: sticky;
   top: 0;
+  /* sticky alone doesn't promote z-index; without this, sibling treeitem
+   * rows (position: relative) paint over the sticky header's background. */
+  z-index: 1;
   background: var(--mdv-bg);
-  border-bottom: 1px solid color-mix(in srgb, var(--mdv-gray) 30%, transparent);
+}
+
+/* Soft fade just below the sticky header so scrolling content meets the
+ * solid bg through a short gradient instead of a hard edge. ::after sits
+ * outside the header's box but stays attached to it via top: 100%. */
+.mdv-sidebar__header::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: linear-gradient(to bottom, var(--mdv-bg), transparent);
+  pointer-events: none;
 }
 
 /* WAI-ARIA tree: outer ul, nested groups, treeitem rows. List markers off,
@@ -322,13 +338,23 @@ body.mdv--sidebar .mdv-sidebar__node[data-match][data-cursor] > .mdv-sidebar__en
   color: var(--mdv-gray);
 }
 
+/* Mode pill: a compact, fixed-height badge with crisp typography. Using
+ * inline-flex + a fixed height aligns the pill cleanly against the
+ * status bar's vertical center regardless of font metrics, and the
+ * tighter font-size + heavier weight + extra letter-spacing reads as
+ * "label" rather than "word." */
 .mdv-statusbar__mode {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
   background: var(--mdv-cyan);
   color: var(--mdv-bg);
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  border-radius: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .mdv-statusbar.mode-search .mdv-statusbar__mode { background: var(--mdv-orange); }
 .mdv-statusbar.mode-visual .mdv-statusbar__mode { background: var(--mdv-yellow); color: var(--mdv-bg); }
