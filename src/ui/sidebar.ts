@@ -1,8 +1,17 @@
 /**
- * Sidebar file tree component for directory browsing mode
+ * Sidebar file tree component for directory browsing mode.
  *
- * Uses a single TextRenderable for the file list to avoid per-child
- * layout issues in ScrollBox. Cursor highlight is drawn via renderAfter.
+ * Renders the file list as a nested tree (directory headers + indented
+ * basenames) using the shared `buildFileTree` from src/fs/tree.ts, so the
+ * structural shape of the listing stays in sync with the web sidebar.
+ *
+ * One TextRenderable holds the whole list (necessary to keep ScrollBox
+ * happy; per-row renderables produce layout artifacts). The cursor still
+ * tracks an index into the flat file-leaf list — that keeps every
+ * existing consumer (search, open, highlight, change markers) working
+ * with no math changes — while the rendering layer translates that leaf
+ * index to a display-row index when drawing the cursor overlay or
+ * computing the scroll target.
  */
 
 import {
@@ -14,7 +23,7 @@ import {
   type CliRenderer,
   type KeyEvent,
 } from "@opentui/core";
-import type { FileTree, FileEntry } from "../fs/tree.js";
+import { buildFileTree, type FileEntry, type FileTree, type TreeNode } from "../fs/tree.js";
 import type { ThemeColors } from "../types.js";
 import { SearchManager } from "../input/search.js";
 
@@ -32,26 +41,38 @@ export interface SidebarSetup {
 }
 
 const SIDEBAR_WIDTH = 30;
-const MAX_LABEL_LEN = SIDEBAR_WIDTH - 3;
+const INDENT = "  ";
 
-function formatEntryLabel(entry: FileEntry): string {
-  // Show relative path to distinguish files in different directories
-  const relPath = entry.relativePath;
-  if (relPath.length <= MAX_LABEL_LEN) return relPath;
-  // Truncate from the left, keeping the filename visible
-  return "..." + relPath.slice(relPath.length - MAX_LABEL_LEN + 3);
+type DisplayRow =
+  | { kind: "dir"; text: string }
+  | { kind: "file"; text: string; entry: FileEntry };
+
+/**
+ * Walk the tree depth-first, emitting one DisplayRow per node. Directories
+ * become labeled headers with a trailing `/`; files become indented
+ * basenames. The leaf order matches the input entry order, so the file
+ * leaves appear at the same positions a flat-sort listing would have
+ * placed them.
+ */
+function buildDisplayRows(nodes: TreeNode[], level = 0): DisplayRow[] {
+  const out: DisplayRow[] = [];
+  for (const n of nodes) {
+    if (n.type === "dir") {
+      out.push({ kind: "dir", text: INDENT.repeat(level) + n.name + "/" });
+      out.push(...buildDisplayRows(n.children, level + 1));
+    } else {
+      out.push({ kind: "file", text: INDENT.repeat(level) + n.name, entry: n.entry });
+    }
+  }
+  return out;
 }
 
-function buildListContent(
-  entries: FileEntry[],
-  selected: number,
-  changedFiles: Set<string>,
-): string {
-  return entries
-    .map((e, i) => {
-      const prefix = i === selected ? ">" : " ";
-      const marker = changedFiles.has(e.path) ? " \u25CF" : "";
-      return prefix + formatEntryLabel(e) + marker;
+function buildListContent(rows: DisplayRow[], changedFiles: Set<string>): string {
+  return rows
+    .map((r) => {
+      if (r.kind === "dir") return r.text;
+      const marker = changedFiles.has(r.entry.path) ? " ●" : "";
+      return r.text + marker;
     })
     .join("\n");
 }
@@ -63,18 +84,31 @@ export function createSidebar(
   onOpen: (filePath: string) => void,
 ): SidebarSetup {
   const entries = fileTree.entries;
+  const displayRows = buildDisplayRows(buildFileTree(entries));
+
+  // leafIndex → displayRow index lookup. The cursor moves in leaf space
+  // (so search, open, change markers all index by file), but the visual
+  // row for highlight/scroll lives at displayRows[leafToRow[cursor]].
+  const leafToRow: number[] = [];
+  displayRows.forEach((r, i) => {
+    if (r.kind === "file") leafToRow.push(i);
+  });
+  const getCursorRow = () => leafToRow[cursorIndex] ?? 0;
+
   let cursorIndex = 0;
   let visible = true;
   const changedFiles = new Set<string>();
 
-  // Sidebar search state
+  // Sidebar search state — labels are the file relative paths so the
+  // search query matches against the FULL path even though the visible
+  // label only shows the basename. Useful for "I know it's somewhere
+  // under guides/".
   const sidebarSearch = new SearchManager();
   const entryLabels = entries.map((e) => e.relativePath);
 
   const cursorRGBA = RGBA.fromHex(colors.blue);
   cursorRGBA.a = 0.3;
 
-  // Outer container
   const sidebarBox = new BoxRenderable(renderer, {
     id: "sidebar",
     width: SIDEBAR_WIDTH,
@@ -83,7 +117,6 @@ export function createSidebar(
     overflow: "hidden",
   });
 
-  // Header
   const header = new TextRenderable(renderer, {
     id: "sidebar-header",
     content: "FILES",
@@ -94,7 +127,6 @@ export function createSidebar(
   });
   sidebarBox.add(header);
 
-  // Search input line (hidden by default)
   const searchText = new TextRenderable(renderer, {
     id: "sidebar-search",
     content: "",
@@ -104,7 +136,6 @@ export function createSidebar(
   });
   sidebarBox.add(searchText);
 
-  // Scrollable file list
   const scrollBox = new ScrollBoxRenderable(renderer, {
     id: "sidebar-scroll",
     flexGrow: 1,
@@ -113,31 +144,26 @@ export function createSidebar(
   });
   sidebarBox.add(scrollBox);
 
-  // Single text renderable for the entire file list
   const listText = new TextRenderable(renderer, {
     id: "sidebar-list",
-    content: buildListContent(entries, cursorIndex, changedFiles),
+    content: buildListContent(displayRows, changedFiles),
     fg: colors.fg,
     wrapMode: "none",
     truncate: true,
   });
   scrollBox.add(listText);
 
-  // Rebuild list content to reflect new cursor position.
-  // Setting .content dirties the renderable, triggering a repaint.
   const refreshList = () => {
-    listText.content = buildListContent(entries, cursorIndex, changedFiles);
+    listText.content = buildListContent(displayRows, changedFiles);
   };
 
-  // Draw cursor highlight overlay on the scroll content.
+  // Cursor highlight overlay. Y maps from leaf index to display row so
+  // the rect lands on the right text line — directory headers between
+  // file rows get correctly skipped over.
   if (scrollBox.content) {
     scrollBox.content.renderAfter = (buffer) => {
       if (entries.length === 0) return;
-
-      const baseY = listText.y;
-      const y = baseY + cursorIndex;
-
-      // Clip to visible area
+      const y = listText.y + getCursorRow();
       if (y < 0 || y >= buffer.height) return;
       buffer.fillRect(0, y, buffer.width, 1, cursorRGBA);
     };
@@ -145,15 +171,12 @@ export function createSidebar(
 
   const scrollToCursor = () => {
     if (entries.length === 0) return;
-
-    // Each entry = 1 terminal row. Use lineCount from the text buffer
-    // to get the actual content height; fall back to entry count.
-    const totalLines = listText.lineCount > 0 ? listText.lineCount : entries.length;
+    const totalLines = listText.lineCount > 0 ? listText.lineCount : displayRows.length;
     const scrollHeight = scrollBox.scrollHeight;
     if (scrollHeight <= 0) return;
 
     const lineHeight = scrollHeight / totalLines;
-    const cursorY = cursorIndex * lineHeight;
+    const cursorY = getCursorRow() * lineHeight;
     const viewportHeight = scrollBox.viewport?.height || scrollHeight;
     const margin = lineHeight * 2;
 
@@ -208,14 +231,12 @@ export function createSidebar(
       return true;
     }
 
-    // / - start search
     if (event.name === "/" || (event.sequence === "/" && !event.ctrl)) {
       sidebarSearch.startInput();
       showSearchInput("");
       return true;
     }
 
-    // n - next search match
     if (event.name === "n" && !event.ctrl && !event.shift) {
       if (sidebarSearch.pattern) {
         const line = sidebarSearch.nextMatch();
@@ -228,7 +249,6 @@ export function createSidebar(
       return true;
     }
 
-    // N - previous search match
     if (event.name === "N" || (event.name === "n" && event.shift)) {
       if (sidebarSearch.pattern) {
         const line = sidebarSearch.prevMatch();
