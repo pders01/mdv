@@ -48,6 +48,7 @@ const MAX_WS_CLIENTS = 50;
 import templatePath from "./assets/template.html" with { type: "file" };
 import appCssPath from "./assets/app.css" with { type: "file" };
 import clientJsPath from "./assets/client.js" with { type: "file" };
+import faviconPath from "./assets/favicon.svg" with { type: "file" };
 
 interface ServerContext {
   rootDir: string;
@@ -275,6 +276,11 @@ async function handleRequest(req: Request, ctx: ServerContext): Promise<Response
   }
   if (pathname === "/_static/client.js") {
     return jsResponse(ctx.clientJs);
+  }
+  // Browser tab icon. Served at the conventional root path so even the
+  // pre-link-tag fallback request hits something.
+  if (pathname === "/favicon.svg" || pathname === "/favicon.ico") {
+    return await fileResponse(faviconPath);
   }
 
   // Adapter-owned static assets (mermaid bundle, etc.).
