@@ -67,6 +67,12 @@ mdv -w README.md
 # Watch a directory (reloads active file, marks changed files in sidebar)
 mdv -w ./docs
 
+# Serve a directory over HTTP with the same vim keymap on the web
+mdv serve ./docs
+
+# Serve with live reload — page refreshes on every save
+mdv serve ./docs --watch
+
 # With a specific theme
 mdv -t dracula README.md
 
@@ -89,7 +95,45 @@ This recursively scans for `.md` files and displays them in a navigable sidebar.
 
 Use `-e`/`--exclude` to add custom exclusions (repeatable).
 
+## Serve Mode
+
+Use `mdv serve` to serve a directory of markdown files over HTTP. The web UI mirrors the TUI's two-pane layout and vim keymap, so muscle memory carries between modes:
+
+```bash
+mdv serve ./docs
+```
+
+Default URL is `http://localhost:4280`. The same Shiki theme drives both modes — `mdv serve --theme dracula` recolors the entire web UI from a single CSS-variable block.
+
+### Live reload
+
+Pass `--watch` and the page refreshes whenever a markdown file in the served tree changes (creates and renames included):
+
+```bash
+mdv serve ./docs --watch
+```
+
+Scroll position, sidebar cursor, and pane focus are preserved across reloads via `sessionStorage`, so saving a file lands you back at the same place — no manual re-scrolling.
+
+### Mermaid diagrams
+
+Fenced ```` ```mermaid ```` blocks render client-side from a locally-vendored mermaid bundle. The bundle is lazy-loaded only when a page actually contains a mermaid fence, so docs without diagrams pay zero bytes. Pass `--no-mermaid` to skip it; fences then render as plain code blocks.
+
+### Serve options
+
+```
+    --serve           Serve over HTTP instead of TUI (or use the `serve` subcommand)
+-p, --port <port>     Port to bind (default: 4280)
+    --host <host>     Host to bind (default: localhost)
+-o, --open            Open the URL in the default browser
+-q, --quiet           Suppress startup banner and access log
+-w, --watch           Live reload on file changes
+    --no-mermaid      Skip the mermaid adapter
+```
+
 ## Keybindings
+
+The same vim-style keymap drives the TUI and the web UI; tables below apply to both unless noted.
 
 ### Navigation
 
@@ -150,10 +194,12 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 - Full markdown rendering with proper styling
 - Syntax highlighting for code blocks (50+ languages)
 - Theme support via shiki (github-dark default, 30+ themes available)
-- Live reload with `--watch` (single file and directory mode)
+- Two viewing modes from one binary: TUI (default) and HTTP (`mdv serve`)
+- Live reload with `--watch` in both modes; the web mode preserves scroll and cursor across reloads
 - Directory browsing with sidebar file tree
-- Pager-style search (`/`, `n`/`N`) with inline match highlighting
-- Vim-style navigation (works in both sidebar and reader panes)
+- Pager-style search (`/`, `n`/`N`) with inline match highlighting (works against the active pane in both modes)
+- Vim-style navigation shared between the TUI and the web UI
+- Mermaid diagrams rendered as ASCII in the TUI and SVG client-side on the web (locally bundled, no CDN)
 - Supports:
   - Headings (ATX and Setext style)
   - Bold, italic, strikethrough
@@ -177,11 +223,19 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 -T, --list-themes     List available themes
 -w, --watch           Live reload on file changes
 -e, --exclude <dir>   Exclude directory from scan (repeatable)
-    --no-mouse        Disable mouse input
+    --no-mouse        Disable mouse input (TUI only)
+    --no-mermaid      Disable mermaid diagram rendering
+    --serve           Serve over HTTP instead of TUI
+-p, --port <port>     Port for serve mode (default: 4280)
+    --host <host>     Host for serve mode (default: localhost)
+-o, --open            Open the served URL in the default browser
+-q, --quiet           Suppress startup banner and access log (serve mode)
     --debug           Enable debug logging
 -v, --version         Show version
 -h, --help            Show help
 ```
+
+Run `mdv --help` for the same list grouped by section.
 
 ## Development
 
