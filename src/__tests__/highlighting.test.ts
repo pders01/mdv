@@ -42,16 +42,18 @@ describe("shikiLangs", () => {
 
 describe("createHighlighterInstance", () => {
   test("creates highlighter instance", async () => {
-    const instance = await createHighlighterInstance("github-dark", defaultColors);
+    const instance = await createHighlighterInstance("github-dark");
 
     expect(instance).toBeDefined();
     expect(instance.highlighter).toBeDefined();
     expect(instance.theme).toBe("github-dark");
-    expect(instance.colors).toBeDefined();
+    // colors are populated by the caller after extractThemeColors runs;
+    // they're undefined immediately after construction
+    expect(instance.colors).toBeUndefined();
   });
 
   test("highlighter has loaded languages", async () => {
-    const instance = await createHighlighterInstance("github-dark", defaultColors);
+    const instance = await createHighlighterInstance("github-dark");
     const loadedLangs = instance.highlighter.getLoadedLanguages();
 
     expect(loadedLangs).toContain("javascript");
@@ -64,7 +66,8 @@ describe("shikiToChunks", () => {
   let instance: HighlighterInstance;
 
   beforeAll(async () => {
-    instance = await createHighlighterInstance("github-dark", defaultColors);
+    instance = await createHighlighterInstance("github-dark");
+    instance.colors = defaultColors;
   });
 
   test("returns chunks for JavaScript code", () => {
