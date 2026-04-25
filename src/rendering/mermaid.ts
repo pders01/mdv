@@ -18,7 +18,7 @@ import { createHash } from "crypto";
 import { homedir } from "os";
 import { join } from "path";
 import { mkdir } from "fs/promises";
-import { marked, type Token } from "marked";
+import { walkCodeFences } from "../util/markdown.js";
 
 const CONCURRENCY = 4;
 const TIMEOUT_MS = 5000;
@@ -220,27 +220,15 @@ async function pickBestVariant(
 }
 
 /**
- * Walk marked tokens and collect every mermaid code block source.
- * Covers nested cases (list items, blockquotes) since marked exposes
- * children via `.tokens` / `.items`.
+ * Collect every mermaid code block source from a markdown document.
+ * Delegates to the shared walker so any future pre-pass (math, plantuml,
+ * server-side SVG) gets identical traversal semantics for free.
  */
 function collectMermaidSources(content: string): string[] {
-  const tokens = marked.lexer(content);
   const sources: string[] = [];
-
-  const walk = (toks: Token[]): void => {
-    for (const t of toks) {
-      if (t.type === "code" && (t as Token & { lang?: string }).lang === "mermaid") {
-        sources.push((t as Token & { text: string }).text);
-      }
-      const nested = (t as Token & { tokens?: Token[] }).tokens;
-      if (Array.isArray(nested)) walk(nested);
-      const items = (t as Token & { items?: Token[] }).items;
-      if (Array.isArray(items)) walk(items);
-    }
-  };
-
-  walk(tokens);
+  walkCodeFences(content, (block) => {
+    if (block.lang === "mermaid") sources.push(block.text);
+  });
   return sources;
 }
 

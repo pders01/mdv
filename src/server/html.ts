@@ -10,9 +10,10 @@
 import { Marked } from "marked";
 import type { CodeAdapterRegistry } from "./adapters/index.js";
 import { escapeHtml } from "../util/escape.js";
+import { createMarkedOptions } from "../util/markdown.js";
 
 export function createMarkdown(registry: CodeAdapterRegistry): Marked {
-  const m = new Marked({ gfm: true, breaks: false });
+  const m = new Marked(createMarkedOptions());
 
   m.use({
     renderer: {
