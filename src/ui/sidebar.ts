@@ -106,8 +106,13 @@ export function createSidebar(
   const sidebarSearch = new SearchManager();
   const entryLabels = entries.map((e) => e.relativePath);
 
+  // Match the content pane's two-tone marker: opaque 2-cell bar + faint
+  // full-row tint. Avoids the previous dark-navy fill that sat over the
+  // entry text and dropped contrast on dark themes.
   const cursorRGBA = RGBA.fromHex(colors.blue);
-  cursorRGBA.a = 0.3;
+  cursorRGBA.a = 1;
+  const cursorTintRGBA = RGBA.fromHex(colors.blue);
+  cursorTintRGBA.a = 0.08;
 
   const sidebarBox = new BoxRenderable(renderer, {
     id: "sidebar",
@@ -165,7 +170,8 @@ export function createSidebar(
       if (entries.length === 0) return;
       const y = listText.y + getCursorRow();
       if (y < 0 || y >= buffer.height) return;
-      buffer.fillRect(0, y, buffer.width, 1, cursorRGBA);
+      buffer.fillRect(0, y, buffer.width, 1, cursorTintRGBA);
+      buffer.fillRect(0, y, 2, 1, cursorRGBA);
     };
   }
 

@@ -117,7 +117,9 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     codeBgColor: string;
     searchHighlightColor: string;
     cursorRGBA: InstanceType<typeof RGBA>;
+    cursorTintRGBA: InstanceType<typeof RGBA>;
     selectionRGBA: InstanceType<typeof RGBA>;
+    selectionTintRGBA: InstanceType<typeof RGBA>;
     codeBgRGBA: InstanceType<typeof RGBA>;
     searchRGBA: InstanceType<typeof RGBA>;
   } | null = null;
@@ -260,7 +262,15 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const content = scrollBox.content;
     if (!content || !highlightState) return;
 
-    const { getCursorState, cursorRGBA, selectionRGBA, codeBgRGBA, searchRGBA } = highlightState;
+    const {
+      getCursorState,
+      cursorRGBA,
+      cursorTintRGBA,
+      selectionRGBA,
+      selectionTintRGBA,
+      codeBgRGBA,
+      searchRGBA,
+    } = highlightState;
 
     content.renderBefore = (buffer) => {
       if (currentContentLines.length === 0) return;
@@ -290,14 +300,17 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       const state = getCursorState();
       if (currentContentLines.length === 0) return;
 
-      // Edge bar instead of a full-row fill: a tinted full-row band sat on
-      // top of code-block colors made the syntax highlighting unreadable
-      // (cyan-on-orange at low contrast). A 1-cell left bar at full alpha
-      // reads as "this row" without touching the text.
-      const drawEdgeBar = (
+      // Edge bar plus a very faint full-row tint: the bar anchors the eye to
+      // the active row without painting strong color over the text, the
+      // tint adds enough peripheral signal that the row is locatable when
+      // the bar scrolls into a corner of the viewport. A previous iteration
+      // used a wide tinted band which fought with code-block colors; a 1-cell
+      // bar alone was invisible on busy screens.
+      const drawRowMarker = (
         line: number,
         color: InstanceType<typeof RGBA>,
-        width: number,
+        tint: InstanceType<typeof RGBA>,
+        barWidth: number,
       ) => {
         const pos = getLinePosition(line);
         if (!pos) return;
@@ -310,9 +323,10 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
           y = 0;
         }
 
-        if (height > 0) {
-          buffer.fillRect(0, y, width, height, color);
-        }
+        if (height <= 0) return;
+
+        buffer.fillRect(0, y, buffer.width, height, tint);
+        buffer.fillRect(0, y, barWidth, height, color);
       };
 
       // Draw search match highlights (before cursor so cursor overlays)
@@ -336,10 +350,10 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
         // Wider left bar for the selected range so it reads as "block of
         // selected lines" rather than a single-row cursor.
         for (let line = state.selectionStart; line <= state.selectionEnd; line++) {
-          drawEdgeBar(line, selectionRGBA, 2);
+          drawRowMarker(line, selectionRGBA, selectionTintRGBA, 2);
         }
       } else {
-        drawEdgeBar(state.cursorLine, cursorRGBA, 1);
+        drawRowMarker(state.cursorLine, cursorRGBA, cursorTintRGBA, 2);
       }
     };
   };
@@ -354,13 +368,18 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
   ): { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY } {
     currentMarkdown = markdown;
 
-    // Bars are narrow (1-2 cells) so they need higher alpha to read as a
-    // distinct rail; full-row fills used to compensate for low alpha by
-    // covering more area, but that hurt text contrast.
+    // Two-tone marker: a solid 2-cell bar (cursorRGBA) anchors the eye, and
+    // a very faint full-row tint (cursorTintRGBA) marks the row without
+    // overwriting syntax colors. Past attempts at one-or-the-other failed —
+    // wide tints crushed contrast, narrow bars vanished on busy screens.
     const cursorRGBA = RGBA.fromHex(cursorColor);
     cursorRGBA.a = 1;
+    const cursorTintRGBA = RGBA.fromHex(cursorColor);
+    cursorTintRGBA.a = 0.08;
     const selectionRGBA = RGBA.fromHex(selectionColor);
     selectionRGBA.a = 1;
+    const selectionTintRGBA = RGBA.fromHex(selectionColor);
+    selectionTintRGBA.a = 0.12;
     const codeBgRGBA = RGBA.fromHex(codeBgColor);
     const searchRGBA = RGBA.fromHex(searchHighlightColor);
     searchRGBA.a = 0.4;
@@ -372,7 +391,9 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       codeBgColor,
       searchHighlightColor,
       cursorRGBA,
+      cursorTintRGBA,
       selectionRGBA,
+      selectionTintRGBA,
       codeBgRGBA,
       searchRGBA,
     };
