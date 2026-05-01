@@ -396,7 +396,14 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     // stranded before the first paint populates _blockStates.
     if (!blockStates) return true;
     ensureLineMappings(blockStates);
-    return cachedLineToBlock?.has(line) ?? true;
+    if (!cachedLineToBlock?.has(line)) return false;
+    // Block-mapped but the source line is whitespace-only (e.g. trailing
+    // blanks inside a token's `raw`, or interior blanks in a blockquote /
+    // code block). Treat those the same as gap lines — visually empty,
+    // nothing to anchor a cursor highlight on.
+    const text = currentContentLines[line];
+    if (text === undefined) return false;
+    return text.trim().length > 0;
   };
 
   return { container, scrollBox, setupHighlighting, reloadContent, isLineCursorable };
