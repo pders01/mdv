@@ -191,9 +191,16 @@ function listToken(node: List, ctx: ConvertContext): Token {
 }
 
 function listItemToken(node: ListItem, ctx: ConvertContext, parentSpread: boolean): MarkedListItem {
-  // mdast list items have block children. Marked's list-item.tokens flattens
-  // a single-paragraph child into inline tokens; multi-block items keep
-  // block tokens. Mirror that.
+  // mdast list items have block children. Marked's tight-item shape wraps
+  // the inline children in a single `text` token whose `.tokens` array
+  // holds the inlines:
+  //   tokens: [{ type: "text", text, tokens: [strong, codespan, ...] }]
+  // The renderer in `src/rendering/list.ts` looks for that wrapper to
+  // pull inline segments. Flattening the inlines to the top level —
+  // which an earlier version did — silently drops everything past the
+  // first source line because the fallback `item.text.split("\n")[0]`
+  // only kept one line for paragraphs that wrapped in source.
+  // Loose / multi-block items keep their block tokens (matches marked).
   const blockChildren = node.children;
   let tokens: Token[];
   if (
@@ -203,7 +210,16 @@ function listItemToken(node: ListItem, ctx: ConvertContext, parentSpread: boolea
     blockChildren[0]!.type === "paragraph"
   ) {
     const p = blockChildren[0] as Paragraph;
-    tokens = p.children.map((c) => convertInline(c, ctx));
+    const inline = p.children.map((c) => convertInline(c, ctx));
+    const flatText = inline.map(extractText).join("");
+    tokens = [
+      {
+        type: "text",
+        raw: flatText,
+        text: flatText,
+        tokens: inline,
+      } as unknown as Token,
+    ];
   } else {
     tokens = blockChildren.map((c) => convertBlock(c, ctx)).filter((t): t is Token => t !== null);
   }

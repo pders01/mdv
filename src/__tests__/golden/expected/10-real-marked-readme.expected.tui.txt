@@ -34,7 +34,7 @@
  Also read about:                                                               
                                                                                 
                                                                                 
- • Options                                                                      
- • Extensibility                                                                
+ • Options (https://marked.js.org/using_advanced)                               
+ • Extensibility (https://marked.js.org/using_pro)                              
                                                                                 
                                                                                 

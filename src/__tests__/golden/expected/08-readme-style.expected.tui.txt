@@ -11,7 +11,7 @@
  Features                                                                       
                                                                                 
                                                                                 
- • Syntax highlighting via Shiki                                                
+ • Syntax highlighting via Shiki (https://shiki.style/)                         
  • Vim-style keybindings: j/k, gg/G, Ctrl-d/Ctrl-u, yy, V, /, n/N               
  • Mouse support (click, drag, scroll)                                          
  • File tree sidebar for directory mode                                         

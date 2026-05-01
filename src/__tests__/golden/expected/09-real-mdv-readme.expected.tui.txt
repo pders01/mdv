@@ -11,7 +11,7 @@
  Requirements                                                                   
                                                                                 
                                                                                 
- • Bun v1.0 or later                                                            
+ • Bun (https://bun.sh) v1.0 or later                                           
                                                                                 
                                                                                 
                                                                                 
