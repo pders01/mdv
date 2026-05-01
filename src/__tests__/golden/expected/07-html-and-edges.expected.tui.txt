@@ -1,0 +1,40 @@
+                                                                               █
+                                                                               █
+                                                                               █
+ HTML and edge cases                                                           █
+                                                                               █
+ Block HTML:                                                                   █
+                                                                               █
+ Inside HTML                                                                   █
+                                                                               █
+ Inline HTML: this word is red.                                                █
+                                                                               █
+ HTML entities: &copy; & < >   &#35; &#x22; &AElig;.                           █
+                                                                               █
+ Invalid entities: &madeup; &copy (no semi).                                   █
+                                                                               █
+ Backslash escapes: * _ [ ] ( ) \ ` ! # +.                                     █
+                                                                               █
+ Horizontal rules:                                                             █
+                                                                               █
+                                                                               █
+ ────────────────────────────────────────────────────────────────────────────  █
+                                                                                
+                                                                                
+ ────────────────────────────────────────────────────────────────────────────   
+                                                                                
+                                                                                
+ ────────────────────────────────────────────────────────────────────────────   
+                                                                                
+ Empty line behavior:                                                           
+                                                                                
+ Para one.                                                                      
+                                                                                
+ Para two (after multiple blank lines).                                         
+                                                                                
+ Inline link with title containing entities: foo (url).                         
+                                                                                
+ Link with parens in URL: link (https://example.com/(group)/x).                 
+                                                                                
+ Link with bracket in label: foo [bar] (url).                                   
+                                                                                

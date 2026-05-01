@@ -1,0 +1,40 @@
+                                                                               █
+                                                                               █
+                                                                               █
+ Blockquotes                                                                   █
+                                                                               █
+ Simple:                                                                       █
+                                                                               █
+                                                                               █
+   │ A single-line quote.                                                      █
+                                                                               █
+ Multi-line:                                                                   █
+                                                                               █
+                                                                               █
+   │ Line one of a longer quote                                                █
+     that wraps across two lines.                                              █
+                                                                               █
+ Multi-paragraph:                                                              █
+                                                                               █
+                                                                               █
+   │ First paragraph.                                                          █
+                                                                                
+     Second paragraph.                                                          
+                                                                                
+ Nested:                                                                        
+                                                                                
+                                                                                
+   │ Outer quote                                                                
+                                                                                
+     > Inner quote                                                              
+     >                                                                          
+     > > Deeply nested                                                          
+                                                                                
+ Quote with content:                                                            
+                                                                                
+                                                                                
+   │ A quote with **bold**, `code`, and a [link](https://example.com).          
+                                                                                
+     ```ts                                                                      
+     const inside = "block";                                                    
+     ```                                                                        

@@ -1,0 +1,40 @@
+                                                                               ▀
+                                                                                
+                                                                                
+ Code blocks                                                                    
+                                                                                
+ Inline code and code with `backticks` inside.                                  
+                                                                                
+ Plain fence:                                                                   
+                                                                                
+                                                                                
+                                                                                
+  plain text                                                                    
+  no language                                                                   
+                                                                                
+                                                                                
+ TypeScript:                                                                    
+                                                                                
+                                                                                
+                                                                                
+  interface Foo {                                                               
+    bar: string;                                                                
+    baz?: number;                                                               
+  }                                                                             
+                                                                                
+  const f: Foo = { bar: "hello" };                                              
+  console.log(f.bar);                                                           
+                                                                                
+                                                                                
+ JavaScript:                                                                    
+                                                                                
+                                                                                
+                                                                                
+  function add(a, b) {                                                          
+    return a + b;                                                               
+  }                                                                             
+                                                                                
+                                                                                
+ Bash:                                                                          
+                                                                                
+                                                                                

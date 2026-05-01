@@ -1,0 +1,40 @@
+                                                                               █
+                                                                               █
+                                                                               █
+ Tables                                                                        █
+                                                                               █
+ Basic:                                                                        █
+                                                                               █
+                                                                               █
+ | Col A  | Col B  | Col C   |                                                 █
+ |--------|--------|---------|                                                 █
+ | a1     | b1     | c1      |                                                 █
+ | a2     | b2     | c2      |                                                 █
+                                                                               █
+ Alignment:                                                                    █
+                                                                               █
+                                                                               █
+ | Left  |  Center |   Right |                                                 █
+ |-------|---------|---------|                                                 █
+ | 1     |    2    |       3 |                                                 █
+ | foo   |   bar   |     baz |                                                 █
+                                                                               █
+ Inline content in cells:                                                      ▀
+                                                                                
+                                                                                
+ | Feature  | Status    | Notes                |                                
+ |----------|-----------|----------------------|                                
+ | Parser   | **Done**  | `marked` v15         |                                
+ | Render   | *WIP*     | See [docs](#docs)    |                                
+ | Theme    | Done      | ~~old~~ new system   |                                
+                                                                                
+ Wide table:                                                                    
+                                                                                
+                                                                                
+ | One  | Two  | Three  | Four  | Five  | Six  | Seven  | Eight   |             
+ |------|------|--------|-------|-------|------|--------|---------|             
+ | 1    | 2    | 3      | 4     | 5     | 6    | 7      | 8       |             
+                                                                                
+ Pipe in cell:                                                                  
+                                                                                
+                                                                                

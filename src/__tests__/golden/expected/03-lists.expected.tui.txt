@@ -1,0 +1,40 @@
+                                                                               █
+                                                                               █
+                                                                               █
+ Lists                                                                         █
+                                                                               █
+ Unordered:                                                                    █
+                                                                               █
+                                                                               █
+ • One                                                                         █
+ • Two                                                                         █
+ • Three                                                                       █
+                                                                               █
+ Ordered:                                                                      █
+                                                                               █
+                                                                               █
+ 1. First                                                                      █
+ 2. Second                                                                     █
+ 3. Third                                                                      █
+                                                                               █
+ Starting at 5:                                                                █
+                                                                                
+                                                                                
+ 1. Five                                                                        
+ 2. Six                                                                         
+ 3. Seven                                                                       
+                                                                                
+ Nested:                                                                        
+                                                                                
+                                                                                
+ • Top                                                                          
+   • Mid                                                                        
+     • Deep                                                                     
+   • Mid 2                                                                      
+ • Top 2                                                                        
+                                                                                
+ Mixed nesting:                                                                 
+                                                                                
+                                                                                
+ 1. Ordered top                                                                 
+   • Bullet child                                                               

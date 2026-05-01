@@ -49,8 +49,16 @@ export function expectedPath(name: string): string {
   return join(GOLDEN_EXPECTED_DIR, name.replace(/\.md$/, ".expected.html"));
 }
 
+export function expectedTuiPath(name: string): string {
+  return join(GOLDEN_EXPECTED_DIR, name.replace(/\.md$/, ".expected.tui.txt"));
+}
+
 export function readExpected(name: string): string {
   return readFileSync(expectedPath(name), "utf8");
+}
+
+export function readExpectedTui(name: string): string {
+  return readFileSync(expectedTuiPath(name), "utf8");
 }
 
 export function renderGolden(source: string): string {

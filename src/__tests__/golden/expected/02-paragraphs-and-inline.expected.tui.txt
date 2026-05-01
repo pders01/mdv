@@ -1,0 +1,40 @@
+                                                                                
+                                                                                
+                                                                                
+ Inline content                                                                 
+                                                                                
+ A plain paragraph with bold, italic, bold italic, strike, and inline code.     
+                                                                                
+ Underscores: italic, bold, both.                                               
+                                                                                
+ A link (https://example.com) and a link with title (https://example.com).      
+                                                                                
+ A reference link (https://example.com/ref) and a collapsed reference (https:// 
+ example.com/collapsed) and a shortcut (https://example.com/shortcut).          
+                                                                                
+ Autolink: https://example.com (https://example.com) and email user@example.    
+ com (mailto:user@example.com).                                                 
+                                                                                
+ Bare URL: https://example.com (https://example.com).                           
+                                                                                
+ An image: .                                                                    
+                                                                                
+ Linked image: ![alt](img.png) (https://example.com).                           
+                                                                                
+ Hard break before this:this comes after a backslash break.                     
+                                                                                
+ Soft                                                                           
+ break.                                                                         
+                                                                                
+ Escapes: *not bold*, `not code`, \backslash\.                                  
+                                                                                
+ Entities: &copy; &   &#35; &#x22;.                                             
+                                                                                
+ Mixed inline: see code() in bold with link (url) inside.                       
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

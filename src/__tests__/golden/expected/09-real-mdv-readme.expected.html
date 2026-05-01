@@ -1,0 +1,328 @@
+<h1>mdv</h1>
+<p>A terminal markdown viewer with vim keybindings, built with <a href="https://opentui.com">OpenTUI</a> and <a href="https://shiki.style">shiki</a> for syntax highlighting.</p>
+<h2>Requirements</h2>
+<ul>
+<li><a href="https://bun.sh">Bun</a> v1.0 or later</li>
+</ul>
+<h2>Installation</h2>
+<h3>From GitHub Releases (recommended)</h3>
+<p>Download the latest binary for your platform from <a href="https://github.com/pders01/mdv/releases">Releases</a>:</p>
+<pre><code class="language-bash"># macOS (Apple Silicon)
+curl -LO https://github.com/pders01/mdv/releases/latest/download/mdv-darwin-arm64.tar.gz
+tar xzf mdv-darwin-arm64.tar.gz &amp;&amp; sudo mv mdv-darwin-arm64 /usr/local/bin/mdv
+
+# macOS (Intel)
+curl -LO https://github.com/pders01/mdv/releases/latest/download/mdv-darwin-x64.tar.gz
+tar xzf mdv-darwin-x64.tar.gz &amp;&amp; sudo mv mdv-darwin-x64 /usr/local/bin/mdv
+
+# Linux (x64)
+curl -LO https://github.com/pders01/mdv/releases/latest/download/mdv-linux-x64.tar.gz
+tar xzf mdv-linux-x64.tar.gz &amp;&amp; sudo mv mdv-linux-x64 /usr/local/bin/mdv</code></pre>
+<h3>From source</h3>
+<pre><code class="language-bash">git clone https://github.com/pders01/mdv.git
+cd mdv
+bun install
+
+# Build for current platform
+bun run build
+sudo mv mdv /usr/local/bin/
+
+# Or use the install script
+bun run install-global</code></pre>
+<h3>Run without installing</h3>
+<pre><code class="language-bash">bun run src/index.ts README.md</code></pre>
+<h2>Usage</h2>
+<pre><code class="language-bash"># View a markdown file
+mdv README.md
+
+# Browse a directory of markdown files
+mdv ./docs
+mdv .
+
+# Read from stdin (pipe)
+cat README.md | mdv
+curl -s https://example.com/doc.md | mdv
+
+# Watch a file for live reload
+mdv -w README.md
+
+# Watch a directory (reloads active file, marks changed files in sidebar)
+mdv -w ./docs
+
+# Serve a directory over HTTP with the same vim keymap on the web
+mdv serve ./docs
+
+# Serve with live reload — page refreshes on every save
+mdv serve ./docs --watch
+
+# With a specific theme
+mdv -t dracula README.md
+
+# Exclude directories when browsing
+mdv -e drafts -e tmp ./docs
+
+# List available themes
+mdv --list-themes</code></pre>
+<h2>Directory Browsing</h2>
+<p>Pass a directory instead of a file to open a sidebar file browser:</p>
+<pre><code class="language-bash">mdv ./docs</code></pre>
+<p>This recursively scans for <code>.md</code> files and displays them in a navigable sidebar. The following directories are excluded by default: <code>node_modules</code>, <code>.git</code>, <code>vendor</code>, <code>dist</code>, <code>build</code>, <code>.next</code>, <code>.nuxt</code>, <code>__pycache__</code>, <code>.venv</code>, <code>target</code>, <code>.hg</code>, <code>.svn</code>.</p>
+<p>Use <code>-e</code>/<code>--exclude</code> to add custom exclusions (repeatable).</p>
+<h2>Serve Mode</h2>
+<p>Use <code>mdv serve</code> to serve a directory of markdown files over HTTP. The web UI mirrors the TUI&#39;s two-pane layout and vim keymap, so muscle memory carries between modes:</p>
+<pre><code class="language-bash">mdv serve ./docs</code></pre>
+<p>Default URL is <code>http://localhost:4280</code>. The same Shiki theme drives both modes — <code>mdv serve --theme dracula</code> recolors the entire web UI from a single CSS-variable block.</p>
+<p>When <code>--theme=auto</code> (the default), the web UI ships <strong>both</strong> <code>github-light</code> and <code>github-dark</code> and the browser picks per <code>prefers-color-scheme</code>. This is independent of the host OS — a server reached over <code>--host 0.0.0.0</code> matches each viewer&#39;s appearance, not the machine running <code>mdv serve</code>. Pass <code>--theme &lt;name&gt;</code> to lock a single theme for everyone.</p>
+<h3>Live reload</h3>
+<p>Pass <code>--watch</code> and the page refreshes whenever a markdown file in the served tree changes (creates and renames included):</p>
+<pre><code class="language-bash">mdv serve ./docs --watch</code></pre>
+<p>Scroll position, sidebar cursor, and pane focus are preserved across reloads via <code>sessionStorage</code>, so saving a file lands you back at the same place — no manual re-scrolling.</p>
+<h3>Mermaid diagrams</h3>
+<p>Fenced <code>```mermaid</code> blocks render client-side from a locally-vendored mermaid bundle. The bundle is lazy-loaded only when a page actually contains a mermaid fence, so docs without diagrams pay zero bytes. Pass <code>--no-mermaid</code> to skip it; fences then render as plain code blocks.</p>
+<h3>Serve options</h3>
+<pre><code>    --serve           Serve over HTTP instead of TUI (or use the `serve` subcommand)
+-p, --port &lt;port&gt;     Port to bind (default: 4280)
+    --host &lt;host&gt;     Host to bind (default: localhost)
+-o, --open            Open the URL in the default browser
+-q, --quiet           Suppress startup banner and access log
+-w, --watch           Live reload on file changes
+    --no-mermaid      Skip the mermaid adapter</code></pre>
+<h2>Themes</h2>
+<p>Default <code>--theme=auto</code> picks <code>github-light</code> or <code>github-dark</code> based on system appearance. Detection ladder:</p>
+<ol>
+<li><code>MDV_APPEARANCE=light|dark</code> env var (explicit override)</li>
+<li><code>COLORFGBG</code> env var (set by some terminals)</li>
+<li>macOS: <code>defaults read -g AppleInterfaceStyle</code></li>
+<li>Linux: <code>gsettings get org.gnome.desktop.interface color-scheme</code></li>
+<li>Falls back to <code>dark</code></li>
+</ol>
+<p>In TUI mode the resolved theme is used directly. In <code>mdv serve</code> mode <code>auto</code> ships both light and dark CSS and the browser picks per <code>prefers-color-scheme</code>.</p>
+<pre><code class="language-bash"># Force light/dark for one run regardless of system
+MDV_APPEARANCE=light mdv ./docs
+
+# Pick an explicit theme
+mdv -t dracula README.md
+
+# Browse all available themes
+mdv --list-themes</code></pre>
+<p>Shiki languages load on demand based on what fence languages a file actually uses, so cold-open is fast even when many themes/languages are bundled.</p>
+<h2>Keybindings</h2>
+<p>The same vim-style keymap drives the TUI and the web UI; tables below apply to both unless noted.</p>
+<h3>Navigation</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>j</code> / <code>↓</code></td>
+<td>Scroll down one line</td>
+</tr>
+<tr>
+<td><code>k</code> / <code>↑</code></td>
+<td>Scroll up one line</td>
+</tr>
+<tr>
+<td><code>gg</code></td>
+<td>Go to top</td>
+</tr>
+<tr>
+<td><code>G</code></td>
+<td>Go to bottom</td>
+</tr>
+<tr>
+<td><code>Ctrl-d</code></td>
+<td>Scroll down half page</td>
+</tr>
+<tr>
+<td><code>Ctrl-u</code></td>
+<td>Scroll up half page</td>
+</tr>
+<tr>
+<td><code>Ctrl-f</code> / <code>Space</code> / <code>PageDown</code></td>
+<td>Scroll down full page</td>
+</tr>
+<tr>
+<td><code>Ctrl-b</code> / <code>PageUp</code></td>
+<td>Scroll up full page</td>
+</tr>
+<tr>
+<td><code>Home</code></td>
+<td>Go to top</td>
+</tr>
+<tr>
+<td><code>End</code></td>
+<td>Go to bottom</td>
+</tr>
+</tbody></table>
+<h3>Directory Mode</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Tab</code></td>
+<td>Switch panes</td>
+</tr>
+<tr>
+<td><code>Ctrl-h</code></td>
+<td>Focus sidebar</td>
+</tr>
+<tr>
+<td><code>Ctrl-l</code></td>
+<td>Focus reader</td>
+</tr>
+<tr>
+<td><code>\</code></td>
+<td>Toggle sidebar</td>
+</tr>
+<tr>
+<td><code>Enter</code></td>
+<td>Open file from sidebar</td>
+</tr>
+<tr>
+<td><code>Esc</code></td>
+<td>Back to reader pane</td>
+</tr>
+</tbody></table>
+<p>All navigation keys (j/k, Ctrl-d/u, etc.) work in both panes.</p>
+<h3>Yank (Copy)</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>yy</code></td>
+<td>Copy entire document to clipboard</td>
+</tr>
+<tr>
+<td><code>V</code></td>
+<td>Enter visual line mode</td>
+</tr>
+<tr>
+<td><code>y</code> (in visual mode)</td>
+<td>Copy selection to clipboard</td>
+</tr>
+<tr>
+<td><code>Esc</code></td>
+<td>Exit visual mode</td>
+</tr>
+</tbody></table>
+<h3>Search</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/</code></td>
+<td>Start search</td>
+</tr>
+<tr>
+<td><code>n</code></td>
+<td>Next match</td>
+</tr>
+<tr>
+<td><code>N</code></td>
+<td>Previous match</td>
+</tr>
+<tr>
+<td><code>Esc</code></td>
+<td>Clear search / cancel input</td>
+</tr>
+</tbody></table>
+<p>Search works in both the reader pane and the sidebar file list. Matches are highlighted inline with exact position awareness (accounts for markdown conceal).</p>
+<h3>General</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>q</code> / <code>Ctrl-c</code></td>
+<td>Quit</td>
+</tr>
+</tbody></table>
+<h2>Features</h2>
+<ul>
+<li>Full markdown rendering with proper styling</li>
+<li>Syntax highlighting for code blocks (50+ languages)</li>
+<li>Theme support via shiki (auto-detects light/dark from system, 60+ explicit themes available)</li>
+<li>Two viewing modes from one binary: TUI (default) and HTTP (<code>mdv serve</code>)</li>
+<li>Live reload with <code>--watch</code> in both modes; the web mode preserves scroll and cursor across reloads</li>
+<li>Directory browsing with sidebar file tree</li>
+<li>Pager-style search (<code>/</code>, <code>n</code>/<code>N</code>) with inline match highlighting (works against the active pane in both modes)</li>
+<li>Vim-style navigation shared between the TUI and the web UI</li>
+<li>Mermaid diagrams rendered as ASCII in the TUI and SVG client-side on the web (locally bundled, no CDN)</li>
+<li>Supports:<ul>
+<li>Headings (ATX and Setext style)</li>
+<li>Bold, italic, strikethrough</li>
+<li>Links (with URL display)</li>
+<li>Images (shows alt text)</li>
+<li>Code blocks with syntax highlighting</li>
+<li>Inline code</li>
+<li>Ordered and unordered lists (nested)</li>
+<li>Blockquotes (nested)</li>
+<li>Tables</li>
+<li>Horizontal rules</li>
+<li>HTML blocks and inline HTML</li>
+<li>Subscript/superscript (via Unicode)</li>
+<li>Reference-style links</li>
+<li>Escape sequences</li>
+</ul>
+</li>
+</ul>
+<h2>Options</h2>
+<pre><code>-t, --theme &lt;name&gt;    Set syntax highlighting theme (default: auto, follows system light/dark)
+-T, --list-themes     List available themes
+-w, --watch           Live reload on file changes
+-e, --exclude &lt;dir&gt;   Exclude directory from scan (repeatable)
+    --no-mouse        Disable mouse input (TUI only)
+    --no-mermaid      Disable mermaid diagram rendering
+    --serve           Serve over HTTP instead of TUI
+-p, --port &lt;port&gt;     Port for serve mode (default: 4280)
+    --host &lt;host&gt;     Host for serve mode (default: localhost)
+-o, --open            Open the served URL in the default browser
+-q, --quiet           Suppress startup banner and access log (serve mode)
+    --debug           Enable debug logging
+-v, --version         Show version
+-h, --help            Show help</code></pre>
+<p>Run <code>mdv --help</code> for the same list grouped by section.</p>
+<h2>Development</h2>
+<pre><code class="language-bash"># Run with hot reload
+bun dev
+
+# Run directly
+bun run src/index.ts &lt;file.md&gt;
+
+# Run tests / lint
+bun test
+bun run lint
+
+# Performance benches (TestRenderer-backed, no TTY needed)
+bun run bench:scroll        # j-key scroll loop, prints per-frame stats
+bun run bench:keys           # per-action timing for j/k, gg/G, search, etc.
+bun run bench:reload         # construct vs mutate cost on file reload
+bun run bench:gen-fixture    # regenerate src/__tests__/fixtures/big.md</code></pre>
+<p>Press <code>Ctrl-G</code> inside the running TUI to toggle a live fps overlay. Run with <code>--debug</code> to print a phase breakdown (shiki create / theme extract / mermaid prerender / markdown construct / etc.) on startup.</p>
+<h2>Built With</h2>
+<ul>
+<li><a href="https://opentui.com">OpenTUI</a> - Terminal UI framework</li>
+<li><a href="https://shiki.style">shiki</a> - Syntax highlighting</li>
+<li><a href="https://marked.js.org">marked</a> - Markdown parsing</li>
+<li><a href="https://bun.sh">Bun</a> - JavaScript runtime</li>
+</ul>
+<h2>License</h2>
+<p>MIT</p>

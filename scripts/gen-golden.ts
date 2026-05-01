@@ -20,12 +20,17 @@ import { dirname } from "node:path";
 import {
   GOLDEN_EXPECTED_DIR,
   expectedPath,
+  expectedTuiPath,
   listGoldenInputs,
   readInput,
   renderGolden,
 } from "../src/__tests__/golden/helper.js";
+import { renderTuiSnapshot } from "../src/__tests__/golden/tui-helper.js";
 
-const filter = Bun.argv[2];
+const args = Bun.argv.slice(2);
+const filter = args.find((a) => !a.startsWith("--"));
+const skipTui = args.includes("--no-tui");
+const onlyTui = args.includes("--tui-only");
 
 mkdirSync(GOLDEN_EXPECTED_DIR, { recursive: true });
 
@@ -37,11 +42,22 @@ if (inputs.length === 0) {
 
 for (const name of inputs) {
   const source = readInput(name);
-  const html = renderGolden(source);
-  const out = expectedPath(name);
-  mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, html);
-  console.log(`✓ ${name} → ${out.replace(process.cwd() + "/", "")}`);
+
+  if (!onlyTui) {
+    const html = renderGolden(source);
+    const htmlOut = expectedPath(name);
+    mkdirSync(dirname(htmlOut), { recursive: true });
+    writeFileSync(htmlOut, html);
+    console.log(`✓ html ${name} → ${htmlOut.replace(process.cwd() + "/", "")}`);
+  }
+
+  if (!skipTui) {
+    const tui = await renderTuiSnapshot(source);
+    const tuiOut = expectedTuiPath(name);
+    mkdirSync(dirname(tuiOut), { recursive: true });
+    writeFileSync(tuiOut, tui);
+    console.log(`✓ tui  ${name} → ${tuiOut.replace(process.cwd() + "/", "")}`);
+  }
 }
 
-console.log(`\nWrote ${inputs.length} snapshot${inputs.length === 1 ? "" : "s"}.`);
+console.log(`\nWrote ${inputs.length} input${inputs.length === 1 ? "" : "s"}.`);
