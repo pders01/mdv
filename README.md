@@ -105,6 +105,8 @@ mdv serve ./docs
 
 Default URL is `http://localhost:4280`. The same Shiki theme drives both modes — `mdv serve --theme dracula` recolors the entire web UI from a single CSS-variable block.
 
+When `--theme=auto` (the default), the web UI ships **both** `github-light` and `github-dark` and the browser picks per `prefers-color-scheme`. This is independent of the host OS — a server reached over `--host 0.0.0.0` matches each viewer's appearance, not the machine running `mdv serve`. Pass `--theme <name>` to lock a single theme for everyone.
+
 ### Live reload
 
 Pass `--watch` and the page refreshes whenever a markdown file in the served tree changes (creates and renames included):
@@ -130,6 +132,31 @@ Fenced ```` ```mermaid ```` blocks render client-side from a locally-vendored me
 -w, --watch           Live reload on file changes
     --no-mermaid      Skip the mermaid adapter
 ```
+
+## Themes
+
+Default `--theme=auto` picks `github-light` or `github-dark` based on system appearance. Detection ladder:
+
+1. `MDV_APPEARANCE=light|dark` env var (explicit override)
+2. `COLORFGBG` env var (set by some terminals)
+3. macOS: `defaults read -g AppleInterfaceStyle`
+4. Linux: `gsettings get org.gnome.desktop.interface color-scheme`
+5. Falls back to `dark`
+
+In TUI mode the resolved theme is used directly. In `mdv serve` mode `auto` ships both light and dark CSS and the browser picks per `prefers-color-scheme`.
+
+```bash
+# Force light/dark for one run regardless of system
+MDV_APPEARANCE=light mdv ./docs
+
+# Pick an explicit theme
+mdv -t dracula README.md
+
+# Browse all available themes
+mdv --list-themes
+```
+
+Shiki languages load on demand based on what fence languages a file actually uses, so cold-open is fast even when many themes/languages are bundled.
 
 ## Keybindings
 
@@ -193,7 +220,7 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 
 - Full markdown rendering with proper styling
 - Syntax highlighting for code blocks (50+ languages)
-- Theme support via shiki (github-dark default, 30+ themes available)
+- Theme support via shiki (auto-detects light/dark from system, 60+ explicit themes available)
 - Two viewing modes from one binary: TUI (default) and HTTP (`mdv serve`)
 - Live reload with `--watch` in both modes; the web mode preserves scroll and cursor across reloads
 - Directory browsing with sidebar file tree
@@ -219,7 +246,7 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 ## Options
 
 ```
--t, --theme <name>    Set syntax highlighting theme (default: github-dark)
+-t, --theme <name>    Set syntax highlighting theme (default: auto, follows system light/dark)
 -T, --list-themes     List available themes
 -w, --watch           Live reload on file changes
 -e, --exclude <dir>   Exclude directory from scan (repeatable)
@@ -245,7 +272,19 @@ bun dev
 
 # Run directly
 bun run src/index.ts <file.md>
+
+# Run tests / lint
+bun test
+bun run lint
+
+# Performance benches (TestRenderer-backed, no TTY needed)
+bun run bench:scroll        # j-key scroll loop, prints per-frame stats
+bun run bench:keys           # per-action timing for j/k, gg/G, search, etc.
+bun run bench:reload         # construct vs mutate cost on file reload
+bun run bench:gen-fixture    # regenerate src/__tests__/fixtures/big.md
 ```
+
+Press `Ctrl-G` inside the running TUI to toggle a live fps overlay. Run with `--debug` to print a phase breakdown (shiki create / theme extract / mermaid prerender / markdown construct / etc.) on startup.
 
 ## Built With
 
