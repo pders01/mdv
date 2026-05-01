@@ -44,6 +44,28 @@ export function createStatusBar(
     backgroundColor: colors.codeBg,
   });
 
+  // Mode pill — mirrors the web sidebar's status-mode badge. Same accent
+  // colors per mode (cyan / orange / yellow), same casing, same position
+  // (left of the filename). Wrapping in a BoxRenderable lets us set a bg
+  // since TextRenderable alone has no fill.
+  const modeBox = new BoxRenderable(renderer, {
+    id: "mode-box",
+    flexDirection: "row",
+    flexShrink: 0,
+    backgroundColor: colors.cyan,
+    paddingLeft: 1,
+    paddingRight: 1,
+    marginRight: 1,
+  });
+  const modeText = new TextRenderable(renderer, {
+    id: "mode-text",
+    content: "NORMAL",
+    fg: colors.bg,
+    attributes: TextAttributes.BOLD,
+  });
+  modeBox.add(modeText);
+  statusBar.add(modeBox);
+
   // Filename
   const filenameText = new TextRenderable(renderer, {
     id: "filename",
@@ -114,9 +136,13 @@ export function createStatusBar(
       const lines = selectionEnd - selectionStart + 1;
       const start = selectionStart + 1;
       const end = selectionEnd + 1;
-      helpText.content = `  -- VISUAL -- L${start}-${end} (${lines} line${lines > 1 ? "s" : ""}) | y yank | Esc cancel`;
+      modeText.content = "VISUAL";
+      modeBox.backgroundColor = colors.yellow;
+      helpText.content = `  L${start}-${end} (${lines} line${lines > 1 ? "s" : ""}) | y yank | Esc cancel`;
       helpText.fg = colors.yellow;
     } else {
+      modeText.content = "NORMAL";
+      modeBox.backgroundColor = colors.cyan;
       helpText.content = "  j/k gg/G | / search | V visual | yy yank | q quit";
       helpText.fg = colors.gray;
     }
@@ -134,12 +160,16 @@ export function createStatusBar(
 
   function showSearchInput(buffer: string) {
     isSearchInputActive = true;
+    modeText.content = "SEARCH";
+    modeBox.backgroundColor = colors.orange;
     helpText.content = `  /${buffer}_`;
     helpText.fg = colors.fg;
   }
 
   function hideSearchInput() {
     isSearchInputActive = false;
+    modeText.content = "NORMAL";
+    modeBox.backgroundColor = colors.cyan;
     helpText.fg = colors.gray;
     // Will be updated by next cursor movement
   }

@@ -23,6 +23,7 @@ import {
   type CliRenderer,
   type KeyEvent,
 } from "@opentui/core";
+import { basename } from "node:path";
 import { buildFileTree, type FileEntry, type FileTree, type TreeNode } from "../fs/tree.js";
 import type { ThemeColors } from "../types.js";
 import { SearchManager } from "../input/search.js";
@@ -42,6 +43,20 @@ export interface SidebarSetup {
 
 const SIDEBAR_WIDTH = 30;
 const INDENT = "  ";
+
+/** Available char columns for the sidebar header text (paddingLeft eats one). */
+const HEADER_INNER_WIDTH = SIDEBAR_WIDTH - 1;
+
+/**
+ * Truncate `s` to fit `max` columns, appending `…` when shortening. Matches
+ * the web sidebar's behavior of showing the rootDir basename, but here we
+ * have to do it manually since there's no CSS text-overflow in the TUI.
+ */
+function truncateEnd(s: string, max: number): string {
+  if (s.length <= max) return s;
+  if (max <= 1) return "…";
+  return s.slice(0, max - 1) + "…";
+}
 
 type DisplayRow =
   | { kind: "dir"; text: string }
@@ -128,10 +143,17 @@ export function createSidebar(
     overflow: "hidden",
   });
 
+  // Header label mirrors the web sidebar: basename of the root directory,
+  // uppercased + truncated to fit the fixed sidebar width. The web side
+  // applies the same transformation via CSS (text-transform: uppercase
+  // on `.mdv-sidebar__header`); here we do it manually. Falls back to
+  // "FILES" when mdv is opened on a single file (no meaningful dir name).
+  const rawLabel = fileTree.rootDir ? basename(fileTree.rootDir) || "FILES" : "FILES";
+  const headerLabel = truncateEnd(rawLabel.toUpperCase(), HEADER_INNER_WIDTH);
   const header = new TextRenderable(renderer, {
     id: "sidebar-header",
-    content: "FILES",
-    fg: colors.fg,
+    content: headerLabel,
+    fg: colors.gray,
     attributes: TextAttributes.BOLD,
     height: 1,
     paddingLeft: 1,
