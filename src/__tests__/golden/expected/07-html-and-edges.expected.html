@@ -1,0 +1,23 @@
+<h1>HTML and edge cases</h1>
+<p>Block HTML:</p>
+<div class="custom">
+  <p>Inside HTML</p>
+</div>
+
+<p>Inline HTML: this <span style="color:red">word</span> is red.</p>
+<p>HTML entities: © &amp; &lt; &gt;   # &quot; Æ.</p>
+<p>Invalid entities: &madeup; &amp;copy (no semi).</p>
+<p>Backslash escapes: * _ [ ] ( ) \ ` ! # +.</p>
+<p>Horizontal rules:</p>
+<hr>
+<hr>
+<hr>
+<p>Empty line behavior:</p>
+<p>Para one.</p>
+<p>Para two (after multiple blank lines).</p>
+<p>Inline link with title containing entities: <a href="url" title="title with © entity">foo</a>.</p>
+<p>Link with parens in URL: <a href="https://example.com/(group)/x">link</a>.</p>
+<p>Link with bracket in label: <a href="url">foo [bar]</a>.</p>
+<p>Code span with leading/trailing space: <code>code</code>.</p>
+<p>Code span with backtick: <code>`</code>.</p>
+<p>Reference at end of doc:</p>

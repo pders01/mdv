@@ -7,6 +7,9 @@
  * after a tolerant normalization pass. Prints a per-section pass rate and
  * lists the first few failures per section for triage.
  *
+ * Engine logic lives in `scripts/lib/commonmark-bench.ts` so the same code
+ * can back the regression-gate test in `__tests__/golden/spec-threshold`.
+ *
  * Usage:
  *   bun run scripts/bench-commonmark.ts                   # summary
  *   bun run scripts/bench-commonmark.ts --section Lists   # filter
@@ -14,117 +17,24 @@
  *   bun run scripts/bench-commonmark.ts --json out.json   # machine output
  */
 
-import { Marked } from "marked";
-import { createMarkedOptions } from "../src/util/markdown.js";
+import { normalizeHtml, runBench } from "./lib/commonmark-bench.js";
 
-const SPEC_URL = "https://spec.commonmark.org/0.31.2/spec.json";
-const SPEC_CACHE = new URL("../.cache/commonmark-spec-0.31.2.json", import.meta.url);
-
-interface SpecExample {
-  markdown: string;
-  html: string;
-  example: number;
-  start_line: number;
-  end_line: number;
-  section: string;
-}
-
-async function loadSpec(): Promise<SpecExample[]> {
-  const cache = Bun.file(SPEC_CACHE);
-  if (await cache.exists()) {
-    return (await cache.json()) as SpecExample[];
-  }
-  const res = await fetch(SPEC_URL);
-  if (!res.ok) throw new Error(`Spec fetch failed: ${res.status}`);
-  const text = await res.text();
-  await Bun.write(SPEC_CACHE, text);
-  return JSON.parse(text) as SpecExample[];
-}
-
-/**
- * Normalize HTML for comparison. Modeled on CommonMark dingus normalizer:
- * collapse whitespace between block-level tags, trim, lowercase tag names.
- * Tolerant enough that minor formatting churn (e.g. self-closing slashes,
- * attribute order) doesn't count as a conformance failure.
- */
-function normalizeHtml(html: string): string {
-  return html
-    .replace(/\r\n?/g, "\n")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/\s+(?=<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|hr|table|thead|tbody|tr|td|th|div)\b)/gi, "")
-    .replace(/(<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|hr|table|thead|tbody|tr|td|th|div)\b[^>]*>)\s+/gi, "$1")
-    .replace(/<(\/?)([A-Za-z][A-Za-z0-9]*)/g, (_m, slash, name) => `<${slash}${name.toLowerCase()}`)
-    // HTML5 void tags: `<br />` and `<br>` are equivalent — collapse to bare form
-    .replace(/<(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)([^>]*?)\s*\/?>/gi,
-      (_m, tag, attrs) => `<${tag.toLowerCase()}${attrs.replace(/\s+/g, " ").replace(/\s+$/, "")}>`)
-    .replace(/[ \t]+\n/g, "\n")
-    // Spec emits `<br>\n`; some renderers drop the trailing newline. Equivalent.
-    .replace(/<br>\s*/g, "<br>\n")
-    // `'` ↔ `&#39;` ↔ `&apos;` — all browser-equivalent. Spec uses bare `'`.
-    .replace(/&#39;|&apos;/g, "'")
-    // Empty fenced code: marked emits `<pre><code>\n</code></pre>`; spec emits `<pre><code></code></pre>`.
-    // Both render identically.
-    .replace(/<pre><code([^>]*)>\n<\/code><\/pre>/g, "<pre><code$1></code></pre>")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-interface Result {
-  example: SpecExample;
-  pass: boolean;
-  actual: string;
-  error?: string;
-}
-
-async function run() {
+async function main() {
   const args = Bun.argv.slice(2);
-  const sectionFilter = readFlag(args, "--section");
+  const section = readFlag(args, "--section");
   const jsonOut = readFlag(args, "--json");
   const verbose = args.includes("--verbose");
-  const limit = Number(readFlag(args, "--limit") ?? "0") || Infinity;
+  const limit = Number(readFlag(args, "--limit") ?? "0") || undefined;
   const showFailures = Number(readFlag(args, "--show-failures") ?? "3");
 
-  const spec = await loadSpec();
-  const filtered = sectionFilter
-    ? spec.filter(e => e.section.toLowerCase().includes(sectionFilter.toLowerCase()))
-    : spec;
+  const summary = await runBench({ section, limit });
+  const pct = summary.total ? ((summary.pass / summary.total) * 100).toFixed(1) : "0.0";
 
-  const marked = new Marked(createMarkedOptions());
-  const results: Result[] = [];
-
-  for (const ex of filtered.slice(0, limit)) {
-    let actual = "";
-    let error: string | undefined;
-    try {
-      actual = (await marked.parse(ex.markdown)) as string;
-    } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
-    }
-    const pass = !error && normalizeHtml(actual) === normalizeHtml(ex.html);
-    results.push({ example: ex, pass, actual, error });
-  }
-
-  // Per-section aggregation.
-  const bySection = new Map<string, { pass: number; total: number; failures: Result[] }>();
-  for (const r of results) {
-    const slot = bySection.get(r.example.section) ?? { pass: 0, total: 0, failures: [] };
-    slot.total += 1;
-    if (r.pass) slot.pass += 1;
-    else slot.failures.push(r);
-    bySection.set(r.example.section, slot);
-  }
-
-  const totalPass = results.filter(r => r.pass).length;
-  const total = results.length;
-  const pct = total ? ((totalPass / total) * 100).toFixed(1) : "0.0";
-
-  console.log(`CommonMark 0.31.2 — ${totalPass}/${total} (${pct}%)`);
+  console.log(`CommonMark 0.31.2 — ${summary.pass}/${summary.total} (${pct}%)`);
   console.log("─".repeat(60));
 
-  const sorted = [...bySection.entries()].sort((a, b) => {
-    const ra = a[1].pass / a[1].total;
-    const rb = b[1].pass / b[1].total;
-    return ra - rb;
+  const sorted = [...summary.bySection.entries()].sort((a, b) => {
+    return a[1].pass / a[1].total - b[1].pass / b[1].total;
   });
 
   for (const [section, slot] of sorted) {
@@ -150,14 +60,14 @@ async function run() {
       jsonOut,
       JSON.stringify(
         {
-          total,
-          pass: totalPass,
+          total: summary.total,
+          pass: summary.pass,
           sections: Object.fromEntries(
-            [...bySection.entries()].map(([k, v]) => [k, { pass: v.pass, total: v.total }]),
+            [...summary.bySection.entries()].map(([k, v]) => [k, { pass: v.pass, total: v.total }]),
           ),
-          failures: results
-            .filter(r => !r.pass)
-            .map(r => ({
+          failures: summary.results
+            .filter((r) => !r.pass)
+            .map((r) => ({
               example: r.example.example,
               section: r.example.section,
               line: r.example.start_line,
@@ -187,4 +97,4 @@ function renderBar(ratio: number): string {
   return "[" + "█".repeat(filled) + " ".repeat(width - filled) + "]";
 }
 
-await run();
+await main();

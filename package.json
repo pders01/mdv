@@ -22,6 +22,7 @@
     "bench:reload": "bun run scripts/bench-reload.ts",
     "bench:gen-fixture": "bun run scripts/gen-bench-fixture.ts",
     "bench:commonmark": "bun run scripts/bench-commonmark.ts",
+    "regen-golden": "bun run scripts/gen-golden.ts",
     "test": "bun test",
     "lint": "oxlint --ignore-path .oxlintignore",
     "lint:fix": "oxlint --ignore-path .oxlintignore --fix",

@@ -1,0 +1,99 @@
+<h1>mdv</h1>
+<blockquote>
+<p>A terminal markdown viewer with vim keybindings.</p>
+</blockquote>
+<h2>Features</h2>
+<ul>
+<li><strong>Syntax highlighting</strong> via <a href="https://shiki.style/">Shiki</a></li>
+<li><strong>Vim-style keybindings</strong>: <code>j</code>/<code>k</code>, <code>gg</code>/<code>G</code>, <code>Ctrl-d</code>/<code>Ctrl-u</code>, <code>yy</code>, <code>V</code>, <code>/</code>, <code>n</code>/<code>N</code></li>
+<li>Mouse support (click, drag, scroll)</li>
+<li>File tree sidebar for directory mode</li>
+<li>Watch mode (<code>--watch</code>) for live reload</li>
+<li>Web UI via <code>mdv serve</code></li>
+</ul>
+<h2>Install</h2>
+<pre><code class="language-bash"># from source
+git clone https://github.com/example/mdv
+cd mdv
+bun run install-global</code></pre>
+<p>Or download a prebuilt binary from the <a href="https://github.com/example/mdv/releases">releases page</a>.</p>
+<h2>Usage</h2>
+<pre><code class="language-bash">mdv README.md           # view a single file
+mdv ./docs              # browse a directory
+mdv --watch README.md   # live-reload on save
+mdv serve ./docs        # serve as a web UI</code></pre>
+<h3>Keybindings</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>j</code> / <code>k</code></td>
+<td>Cursor down / up</td>
+</tr>
+<tr>
+<td><code>gg</code></td>
+<td>Top of document</td>
+</tr>
+<tr>
+<td><code>G</code></td>
+<td>Bottom of document</td>
+</tr>
+<tr>
+<td><code>Ctrl-d</code></td>
+<td>Half-page down</td>
+</tr>
+<tr>
+<td><code>Ctrl-u</code></td>
+<td>Half-page up</td>
+</tr>
+<tr>
+<td><code>yy</code></td>
+<td>Yank current line</td>
+</tr>
+<tr>
+<td><code>V</code></td>
+<td>Visual line mode</td>
+</tr>
+<tr>
+<td><code>/</code></td>
+<td>Search forward</td>
+</tr>
+<tr>
+<td><code>n</code> / <code>N</code></td>
+<td>Next / prev match</td>
+</tr>
+<tr>
+<td><code>q</code></td>
+<td>Quit</td>
+</tr>
+</tbody></table>
+<h3>Themes</h3>
+<p>By default mdv detects your terminal appearance and picks a matching theme:</p>
+<ol>
+<li><code>MDV_APPEARANCE</code> env var (<code>light</code> / <code>dark</code>)</li>
+<li><code>COLORFGBG</code> env var</li>
+<li>macOS <code>defaults read -g AppleInterfaceStyle</code></li>
+<li>Linux <code>gsettings get</code> for GNOME</li>
+<li>Falls back to dark</li>
+</ol>
+<p>Override with <code>--theme</code>:</p>
+<pre><code class="language-bash">mdv --theme github-light README.md
+mdv --theme dracula      README.md</code></pre>
+<h2>Configuration</h2>
+<p>See <code>~/.config/mdv/config.toml</code> (TODO):</p>
+<pre><code class="language-toml">theme = &quot;auto&quot;
+mouse = true
+
+[keybindings]
+quit = [&quot;q&quot;, &quot;Esc&quot;]</code></pre>
+<h2>Contributing</h2>
+<p>Pull requests welcome. Please run:</p>
+<pre><code class="language-bash">bun test
+bun run lint</code></pre>
+<p>before opening a PR.</p>
+<h2>License</h2>
+<p>MIT © 2026</p>
