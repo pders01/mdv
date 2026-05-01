@@ -60,6 +60,11 @@ function normalizeHtml(html: string): string {
     .replace(/[ \t]+\n/g, "\n")
     // Spec emits `<br>\n`; some renderers drop the trailing newline. Equivalent.
     .replace(/<br>\s*/g, "<br>\n")
+    // `'` ↔ `&#39;` ↔ `&apos;` — all browser-equivalent. Spec uses bare `'`.
+    .replace(/&#39;|&apos;/g, "'")
+    // Empty fenced code: marked emits `<pre><code>\n</code></pre>`; spec emits `<pre><code></code></pre>`.
+    // Both render identically.
+    .replace(/<pre><code([^>]*)>\n<\/code><\/pre>/g, "<pre><code$1></code></pre>")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }

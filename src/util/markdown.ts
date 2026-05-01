@@ -29,16 +29,23 @@ export function createMarkedOptions(): MarkedOptions {
   return {
     gfm: true,
     breaks: false,
-    walkTokens: decodeEntitiesInToken,
+    walkTokens: normalizeToken,
   };
 }
 
 /**
- * In-place entity decode for token fields where CommonMark says entity
- * references are recognized. Skipped for code spans / code blocks — the
- * spec preserves them as literal characters there.
+ * Per-token spec-conformance fixups applied bottom-up by `walkTokens`.
+ *
+ * 1. Decode HTML named/numeric entity refs in fields the spec recognizes
+ *    (text, link/image href + title, code lang). Marked preserves entities
+ *    verbatim in the token stream, so without this the TUI prints `&copy;`
+ *    literally and HTML output emits unprocessed refs.
+ * 2. Strip continuation-line whitespace from paragraphs. Spec §6.9
+ *    collapses indentation on lines 2..N of a paragraph; marked preserves
+ *    it. Scoped to direct text children of paragraph/heading so code spans,
+ *    fences, and link-label inner text aren't disturbed.
  */
-function decodeEntitiesInToken(token: Token): void {
+function normalizeToken(token: Token): void {
   switch (token.type) {
     case "text":
     case "escape": {
@@ -58,9 +65,46 @@ function decodeEntitiesInToken(token: Token): void {
       if (typeof t.lang === "string") t.lang = decodeHTML(t.lang);
       return;
     }
+    case "paragraph":
+    case "heading": {
+      const t = token as Token & { tokens?: Token[] };
+      if (!Array.isArray(t.tokens)) return;
+      // Strip leading whitespace only on the first child (line 1 indent).
+      // Strip continuation-line whitespace (`\n   foo` → `\n foo`-style) on
+      // every child — it's safe regardless of position because the source
+      // newline is intrinsic to the text fragment, not inter-token spacing.
+      let first = true;
+      for (const child of t.tokens) {
+        if (child.type !== "text") {
+          first = false;
+          continue;
+        }
+        const ct = child as Token & { text?: string };
+        if (typeof ct.text === "string") {
+          ct.text = stripContinuationIndent(ct.text, first);
+        }
+        first = false;
+      }
+      return;
+    }
     default:
       return;
   }
+}
+
+/**
+ * CommonMark §6.9: line 1 indentation and continuation-line indentation
+ * are non-significant in paragraphs. Marked preserves both literally.
+ *
+ * `stripLeading` controls whether the very start of the fragment is also
+ * trimmed. Only set for the first inline child of a block — interior text
+ * tokens (those following an em/strong/code-span sibling) need their
+ * leading space preserved as the inter-token separator.
+ */
+function stripContinuationIndent(text: string, stripLeading: boolean): string {
+  let out = text;
+  if (stripLeading) out = out.replace(/^[ \t]+/, "");
+  return out.replace(/[ \t]*\n[ \t]+/g, "\n");
 }
 
 export interface CodeBlock {
