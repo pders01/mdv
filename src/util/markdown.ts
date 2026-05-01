@@ -11,7 +11,7 @@
  */
 
 import { marked, type MarkedOptions, type Token } from "marked";
-import { decodeHTML } from "entities";
+import { decodeHTMLStrict as decodeHTML } from "entities";
 
 /**
  * Parser options used everywhere mdv invokes marked. Centralized so the
@@ -56,8 +56,8 @@ function normalizeToken(token: Token): void {
     case "link":
     case "image": {
       const t = token as Token & { href?: string; title?: string | null };
-      if (typeof t.href === "string") t.href = decodeHTML(t.href);
-      if (typeof t.title === "string") t.title = decodeHTML(t.title);
+      if (typeof t.href === "string") t.href = escapeAmpInAttr(decodeHTML(t.href));
+      if (typeof t.title === "string") t.title = escapeAmpInAttr(decodeHTML(t.title));
       return;
     }
     case "code": {
@@ -105,6 +105,18 @@ function stripContinuationIndent(text: string, stripLeading: boolean): string {
   let out = text;
   if (stripLeading) out = out.replace(/^[ \t]+/, "");
   return out.replace(/[ \t]*\n[ \t]+/g, "\n");
+}
+
+/**
+ * After entity decode, link/image href and title contain raw characters.
+ * Spec §6.6 emits these inside an HTML attribute, where bare `&` must be
+ * escaped to `&amp;`. Marked's renderer omits this step (entity-aware
+ * escape sees `&id=22` as already-an-entity and skips it), so we pre-escape
+ * here. `&amp;` round-trips cleanly through marked's renderer because its
+ * smart escape recognizes the named ref and leaves it alone.
+ */
+function escapeAmpInAttr(value: string): string {
+  return value.replace(/&/g, "&amp;");
 }
 
 export interface CodeBlock {
