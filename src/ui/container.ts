@@ -13,6 +13,22 @@ import type { Mode } from "../types.js";
 import type { SearchMatch } from "../input/search.js";
 
 /**
+ * Pre-blend a foreground color over a background at `alpha` and return a
+ * fully opaque RGBA. OpenTUI's fillRect blends against whatever is in the
+ * cell buffer, which is uninitialized/transparent for our render hooks —
+ * a 0.08-alpha cyan therefore renders as 8% cyan on black (~dark teal),
+ * not 8% cyan on theme bg as intended. Doing the blend in JS sidesteps it.
+ */
+function blendOver(fg: InstanceType<typeof RGBA>, bg: InstanceType<typeof RGBA>, alpha: number): InstanceType<typeof RGBA> {
+  return RGBA.fromValues(
+    fg.r * alpha + bg.r * (1 - alpha),
+    fg.g * alpha + bg.g * (1 - alpha),
+    fg.b * alpha + bg.b * (1 - alpha),
+    1,
+  );
+}
+
+/**
  * BlockState from OpenTUI's MarkdownRenderable internal state
  */
 interface BlockState {
@@ -64,6 +80,7 @@ export interface ContainerSetup {
     selectionColor: string,
     codeBgColor: string,
     searchHighlightColor: string,
+    bgColor: string,
     markdown: MarkdownRenderable,
   ) => { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY };
   /**
@@ -364,25 +381,26 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     selectionColor: string,
     codeBgColor: string,
     searchHighlightColor: string,
+    bgColor: string,
     markdown: MarkdownRenderable,
   ): { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY } {
     currentMarkdown = markdown;
 
-    // Two-tone marker: a solid 2-cell bar (cursorRGBA) anchors the eye, and
-    // a very faint full-row tint (cursorTintRGBA) marks the row without
-    // overwriting syntax colors. Past attempts at one-or-the-other failed —
-    // wide tints crushed contrast, narrow bars vanished on busy screens.
-    const cursorRGBA = RGBA.fromHex(cursorColor);
-    cursorRGBA.a = 1;
-    const cursorTintRGBA = RGBA.fromHex(cursorColor);
-    cursorTintRGBA.a = 0.08;
-    const selectionRGBA = RGBA.fromHex(selectionColor);
-    selectionRGBA.a = 1;
-    const selectionTintRGBA = RGBA.fromHex(selectionColor);
-    selectionTintRGBA.a = 0.12;
+    // Two-tone marker: a solid 2-cell bar anchors the eye, a faint full-row
+    // tint marks the row without overwriting syntax colors. Tints are
+    // pre-blended against the theme bg so the final color is what we'd
+    // expect from "12% cursor over bg" — otherwise OpenTUI renders 12% of
+    // the cursor color over a transparent buffer, which looks like a dark
+    // version of the cursor color on every theme.
+    const bgRGBA = RGBA.fromHex(bgColor);
+    const cursorBaseRGBA = RGBA.fromHex(cursorColor);
+    const selectionBaseRGBA = RGBA.fromHex(selectionColor);
+    const cursorRGBA = cursorBaseRGBA;
+    const cursorTintRGBA = blendOver(cursorBaseRGBA, bgRGBA, 0.18);
+    const selectionRGBA = selectionBaseRGBA;
+    const selectionTintRGBA = blendOver(selectionBaseRGBA, bgRGBA, 0.22);
     const codeBgRGBA = RGBA.fromHex(codeBgColor);
-    const searchRGBA = RGBA.fromHex(searchHighlightColor);
-    searchRGBA.a = 0.4;
+    const searchRGBA = blendOver(RGBA.fromHex(searchHighlightColor), bgRGBA, 0.55);
 
     highlightState = {
       getCursorState,

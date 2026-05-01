@@ -261,6 +261,7 @@ let { getLinePosition, getContentLineY } = phaseSync("highlighting:setup", () =>
     themeColors.yellow, // Selection color
     themeColors.codeBg, // Code block background
     themeColors.orange, // Search highlight color
+    themeColors.bg, // Theme bg, for pre-blended tints
     markdown, // For actual rendered positions
   ),
 );

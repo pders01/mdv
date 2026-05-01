@@ -107,12 +107,19 @@ export function createSidebar(
   const entryLabels = entries.map((e) => e.relativePath);
 
   // Match the content pane's two-tone marker: opaque 2-cell bar + faint
-  // full-row tint. Avoids the previous dark-navy fill that sat over the
-  // entry text and dropped contrast on dark themes.
-  const cursorRGBA = RGBA.fromHex(colors.blue);
-  cursorRGBA.a = 1;
-  const cursorTintRGBA = RGBA.fromHex(colors.blue);
-  cursorTintRGBA.a = 0.08;
+  // full-row tint pre-blended against theme bg. OpenTUI's fillRect alpha
+  // composites against an empty buffer, so a low-alpha color on its own
+  // renders as a darkened solid — pre-blending in JS gives the actual
+  // "tint over bg" appearance.
+  const bgRGBA = RGBA.fromHex(colors.bg);
+  const baseRGBA = RGBA.fromHex(colors.blue);
+  const cursorRGBA = baseRGBA;
+  const cursorTintRGBA = RGBA.fromValues(
+    baseRGBA.r * 0.18 + bgRGBA.r * 0.82,
+    baseRGBA.g * 0.18 + bgRGBA.g * 0.82,
+    baseRGBA.b * 0.18 + bgRGBA.b * 0.82,
+    1,
+  );
 
   const sidebarBox = new BoxRenderable(renderer, {
     id: "sidebar",
