@@ -19,7 +19,17 @@ export interface CursorState {
 }
 
 /**
- * Cursor manager with Vim-style behavior
+ * Cursor manager with Vim-style behavior.
+ *
+ * The cursor is constrained to "cursorable" lines — typically lines that map
+ * to a parsed markdown token, since gap lines between tokens aren't part of
+ * any yankable block. Without the constraint, j/k traversed blanks but the
+ * highlight disappeared on those rows (no block to anchor it to), which
+ * read as the cursor jumping past empty space.
+ *
+ * The predicate is supplied after construction (the renderer's block
+ * mapping isn't ready until first paint); until then every line is
+ * considered cursorable so the cursor doesn't get stranded at startup.
  */
 export class CursorManager {
   private _mode: Mode = "normal";
@@ -29,10 +39,44 @@ export class CursorManager {
   private _selectionEnd = 0;
   private totalLines: number;
   private onUpdate: () => void;
+  private isCursorable: (line: number) => boolean = () => true;
 
   constructor(totalLines: number, onUpdate: () => void) {
     this.totalLines = totalLines;
     this.onUpdate = onUpdate;
+  }
+
+  /** Constrain cursor to lines the predicate accepts (default: all). */
+  setCursorablePredicate(predicate: (line: number) => boolean): void {
+    this.isCursorable = predicate;
+  }
+
+  /**
+   * If the current line is not cursorable, scan in `prefer` direction first;
+   * fall back to the opposite direction if no cursorable line exists there.
+   * Bails out (leaves cursor where it is) if the predicate accepts nothing.
+   */
+  private snapToCursorable(prefer: "down" | "up"): void {
+    if (this.totalLines === 0) return;
+    if (this.isCursorable(this._cursorLine)) return;
+
+    const tryDir = (step: number): boolean => {
+      let l = this._cursorLine + step;
+      while (l >= 0 && l < this.totalLines) {
+        if (this.isCursorable(l)) {
+          this._cursorLine = l;
+          return true;
+        }
+        l += step;
+      }
+      return false;
+    };
+
+    if (prefer === "down") {
+      if (!tryDir(1) && !tryDir(-1)) return;
+    } else {
+      if (!tryDir(-1) && !tryDir(1)) return;
+    }
   }
 
   get mode(): Mode {
@@ -70,19 +114,25 @@ export class CursorManager {
   }
 
   /**
-   * Move cursor by relative amount
+   * Move cursor by relative amount, snapping past gap lines in the same
+   * direction. A single j press over a paragraph boundary therefore lands
+   * on the first line of the next block instead of pausing on a blank row.
    */
   moveCursor(delta: number): void {
     this._cursorLine = Math.max(0, Math.min(this._cursorLine + delta, this.totalLines - 1));
+    this.snapToCursorable(delta >= 0 ? "down" : "up");
     this.updateSelectionBounds();
     this.onUpdate();
   }
 
   /**
-   * Move cursor to specific line
+   * Move cursor to specific line. Used by mouse clicks, search jumps, and
+   * file-switch resets — snap downward by default so a click lands on the
+   * nearest content row (matches what the user pointed at).
    */
   setCursor(line: number): void {
     this._cursorLine = Math.max(0, Math.min(line, this.totalLines - 1));
+    this.snapToCursorable("down");
     this.updateSelectionBounds();
     this.onUpdate();
   }
@@ -92,6 +142,7 @@ export class CursorManager {
    */
   moveToFirst(): void {
     this._cursorLine = 0;
+    this.snapToCursorable("down");
     this.updateSelectionBounds();
     this.onUpdate();
   }
@@ -101,6 +152,7 @@ export class CursorManager {
    */
   moveToLast(): void {
     this._cursorLine = this.totalLines - 1;
+    this.snapToCursorable("up");
     this.updateSelectionBounds();
     this.onUpdate();
   }
@@ -153,6 +205,7 @@ export class CursorManager {
     this._selectionStart = 0;
     this._selectionEnd = 0;
     this._mode = "normal";
+    this.snapToCursorable("down");
     this.onUpdate();
   }
 

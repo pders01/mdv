@@ -171,3 +171,74 @@ describe("createCursorManager factory", () => {
     expect(cursor.cursorLine).toBe(0);
   });
 });
+
+describe("CursorManager cursorable predicate", () => {
+  // Layout: lines 0,1,2 mapped, line 3 blank, lines 4,5 mapped, line 6 blank,
+  // lines 7,8 mapped. Models a typical paragraph-blank-paragraph rhythm.
+  const isCursorable = (line: number) => line !== 3 && line !== 6;
+  const totalLines = 9;
+
+  function newCursor() {
+    const c = createCursorManager(totalLines, () => {});
+    c.setCursorablePredicate(isCursorable);
+    return c;
+  }
+
+  test("moveCursor down skips a blank line", () => {
+    const c = newCursor();
+    c.setCursor(2);
+    c.moveCursor(1);
+    // would land on 3 (blank); snaps down to 4
+    expect(c.cursorLine).toBe(4);
+  });
+
+  test("moveCursor up skips a blank line", () => {
+    const c = newCursor();
+    c.setCursor(4);
+    c.moveCursor(-1);
+    // would land on 3 (blank); snaps up to 2
+    expect(c.cursorLine).toBe(2);
+  });
+
+  test("moveCursor by larger delta still ends on cursorable", () => {
+    const c = newCursor();
+    c.setCursor(2);
+    c.moveCursor(4);
+    // 2 -> 6 (blank) -> snap down to 7
+    expect(c.cursorLine).toBe(7);
+  });
+
+  test("setCursor onto a blank line snaps downward", () => {
+    const c = newCursor();
+    c.setCursor(3);
+    expect(c.cursorLine).toBe(4);
+  });
+
+  test("moveToFirst snaps down if line 0 is blank", () => {
+    const c = createCursorManager(totalLines, () => {});
+    c.setCursorablePredicate((line) => line >= 2);
+    c.moveToFirst();
+    expect(c.cursorLine).toBe(2);
+  });
+
+  test("moveToLast snaps up if last line is blank", () => {
+    const c = createCursorManager(totalLines, () => {});
+    c.setCursorablePredicate((line) => line <= 5);
+    c.moveToLast();
+    expect(c.cursorLine).toBe(5);
+  });
+
+  test("moveCursor at top boundary holds when no cursorable line above", () => {
+    const c = newCursor();
+    c.setCursor(0);
+    c.moveCursor(-1);
+    // already at top; no cursorable line above; cursor stays put
+    expect(c.cursorLine).toBe(0);
+  });
+
+  test("default predicate (none set) accepts every line", () => {
+    const c = createCursorManager(totalLines, () => {});
+    c.setCursor(3);
+    expect(c.cursorLine).toBe(3);
+  });
+});

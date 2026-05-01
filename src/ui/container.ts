@@ -76,6 +76,13 @@ export interface ContainerSetup {
     newContent: string,
     newContentLines: string[],
   ) => { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY };
+  /**
+   * True when `line` is covered by a parsed markdown token (i.e. yankable).
+   * Used by CursorManager to skip blank gap lines on j/k movement.
+   * Returns true for every line before the first render — predicate must
+   * not strand the cursor while block state is still being populated.
+   */
+  isLineCursorable: (line: number) => boolean;
 }
 
 /**
@@ -383,5 +390,14 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     return { getLinePosition, getContentLineY };
   }
 
-  return { container, scrollBox, setupHighlighting, reloadContent };
+  const isLineCursorable = (line: number): boolean => {
+    const blockStates = getBlockStates();
+    // Pre-render or torn-down state — allow every line so the cursor isn't
+    // stranded before the first paint populates _blockStates.
+    if (!blockStates) return true;
+    ensureLineMappings(blockStates);
+    return cachedLineToBlock?.has(line) ?? true;
+  };
+
+  return { container, scrollBox, setupHighlighting, reloadContent, isLineCursorable };
 }

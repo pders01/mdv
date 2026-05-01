@@ -190,10 +190,15 @@ const search = new SearchManager();
 // =============================================================================
 
 // Create container and scroll box
-const { container, scrollBox, setupHighlighting, reloadContent } = phaseSync(
+const { container, scrollBox, setupHighlighting, reloadContent, isLineCursorable } = phaseSync(
   "container:create",
   () => createMainContainer(renderer, currentContentLines),
 );
+
+// Cursor lands only on token-covered lines (matches the no-copy semantic
+// for blanks). Predicate evaluates lazily against the line-to-block cache,
+// which is built on first render — until then it allows everything.
+cursor.setCursorablePredicate(isLineCursorable);
 
 // Create render node callback
 // In directory mode, subtract sidebar width (30) from available content width
