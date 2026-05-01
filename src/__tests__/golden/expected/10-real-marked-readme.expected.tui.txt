@@ -3,16 +3,11 @@
                                                                                 
  Marked                                                                         
                                                                                 
- ![npm](https://badgen.net/npm/v/marked) (https://www.npmjs.com/package/marked) 
- ![install size](https://badgen.net/packagephobia/install/marked) (https://     
- packagephobia.now.sh/result?p=marked)                                          
- ![downloads](https://badgen.net/npm/dt/marked) (https://www.npmjs.com/package/ 
- marked)                                                                        
- ![github actions](https://github.com/markedjs/marked/workflows/Tests/badge.    
- svg) (https://github.com/markedjs/marked/actions)                              
- ![snyk](https://snyk.io/test/npm/marked/badge.svg) (https://snyk.io/test/npm/  
- marked)                                                                        
-                                                                                
+ npm (https://www.npmjs.com/package/marked)                                     
+ install size (https://packagephobia.now.sh/result?p=marked)                    
+ downloads (https://www.npmjs.com/package/marked)                               
+ github actions (https://github.com/markedjs/marked/actions)                    
+ snyk (https://snyk.io/test/npm/marked)                                         
                                                                                 
                                                                                 
  • ⚡ built for speed                                                           
@@ -37,4 +32,9 @@
  marked 💯                                                                      
                                                                                 
  Also read about:                                                               
+                                                                                
+                                                                                
+ • Options                                                                      
+ • Extensibility                                                                
+                                                                                
                                                                                 

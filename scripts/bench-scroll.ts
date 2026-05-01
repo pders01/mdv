@@ -16,13 +16,14 @@
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import type { BundledTheme } from "shiki";
-import { MarkdownRenderable, type KeyEvent } from "@opentui/core";
+import { type KeyEvent } from "@opentui/core";
 import { createTestRenderer } from "@opentui/core/testing";
 
 import { extractThemeColors, createSyntaxStyle, resolveTheme } from "../src/theme/index.js";
 import { createHighlighterInstance, loadLangsForContent } from "../src/highlighting/shiki.js";
 import { createRenderNode } from "../src/rendering/index.js";
 import { createMainContainer } from "../src/ui/container.js";
+import { MdvMarkdownRenderable } from "../src/ui/markdown.js";
 import { createCursorManager } from "../src/input/cursor.js";
 import { SearchManager } from "../src/input/search.js";
 import { handleContentKey, type KeyboardState } from "../src/input/keyboard.js";
@@ -88,7 +89,7 @@ async function main(): Promise<void> {
   );
   highlighter.colors = themeColors;
   await phase("shiki:load-langs", () => loadLangsForContent(highlighter, content));
-  const syntaxStyle = phaseSync("theme:syntax-style", () => createSyntaxStyle(themeColors));
+  void createSyntaxStyle;
 
   const { renderer, mockInput, renderOnce } = await phase("renderer:create", () =>
     createTestRenderer({ width: flags.width, height: flags.height }),
@@ -106,10 +107,9 @@ async function main(): Promise<void> {
   const markdown = phaseSync(
     "markdown:construct",
     () =>
-      new MarkdownRenderable(renderer, {
+      new MdvMarkdownRenderable(renderer, {
         id: "markdown-content",
         content,
-        syntaxStyle,
         conceal: true,
         renderNode,
       }),
@@ -128,6 +128,7 @@ async function main(): Promise<void> {
       themeColors.yellow,
       themeColors.codeBg,
       themeColors.orange,
+      themeColors.bg,
       markdown,
     ),
   );

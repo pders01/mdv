@@ -19,7 +19,7 @@
                                                                                 
  An image: .                                                                    
                                                                                 
- Linked image: ![alt](img.png) (https://example.com).                           
+ Linked image: alt (https://example.com).                                       
                                                                                 
  Hard break before this:this comes after a backslash break.                     
                                                                                 
@@ -28,7 +28,7 @@
                                                                                 
  Escapes: *not bold*, `not code`, \backslash\.                                  
                                                                                 
- Entities: &copy; &   &#35; &#x22;.                                             
+ Entities: © &   # ".                                                           
                                                                                 
  Mixed inline: see code() in bold with link (url) inside.                       
                                                                                 

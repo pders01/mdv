@@ -14,10 +14,11 @@
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import type { BundledTheme } from "shiki";
-import { MarkdownRenderable, type KeyEvent } from "@opentui/core";
+import { type KeyEvent } from "@opentui/core";
+import { MdvMarkdownRenderable } from "../src/ui/markdown.js";
 import { createTestRenderer } from "@opentui/core/testing";
 
-import { extractThemeColors, createSyntaxStyle, resolveTheme } from "../src/theme/index.js";
+import { extractThemeColors, resolveTheme } from "../src/theme/index.js";
 import { createHighlighterInstance, loadLangsForContent } from "../src/highlighting/shiki.js";
 import { createRenderNode } from "../src/rendering/index.js";
 import { createMainContainer } from "../src/ui/container.js";
@@ -87,17 +88,14 @@ async function main(): Promise<void> {
   const themeColors = extractThemeColors(highlighter.highlighter, theme as BundledTheme);
   highlighter.colors = themeColors;
   await loadLangsForContent(highlighter, content);
-  const syntaxStyle = createSyntaxStyle(themeColors);
-
   const { renderer, renderOnce } = await createTestRenderer({ width: 120, height: 40 });
   const cursor = createCursorManager(contentLines.length, () => {});
   const search = new SearchManager();
   const { container, scrollBox, setupHighlighting } = createMainContainer(renderer, contentLines);
   const renderNode = createRenderNode(renderer, themeColors, highlighter, 118, new Map());
-  const markdown = new MarkdownRenderable(renderer, {
+  const markdown = new MdvMarkdownRenderable(renderer, {
     id: "md",
     content,
-    syntaxStyle,
     conceal: true,
     renderNode,
   });
@@ -114,6 +112,7 @@ async function main(): Promise<void> {
     themeColors.yellow,
     themeColors.codeBg,
     themeColors.orange,
+    themeColors.bg,
     markdown,
   );
   renderer.root.add(container);

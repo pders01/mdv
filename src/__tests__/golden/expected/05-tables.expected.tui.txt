@@ -22,11 +22,11 @@
  Inline content in cells:                                                      ▀
                                                                                 
                                                                                 
- | Feature  | Status    | Notes                |                                
- |----------|-----------|----------------------|                                
- | Parser   | **Done**  | `marked` v15         |                                
- | Render   | *WIP*     | See [docs](#docs)    |                                
- | Theme    | Done      | ~~old~~ new system   |                                
+ | Feature  | Status  | Notes            |                                      
+ |----------|---------|------------------|                                      
+ | Parser   | Done    | marked v15       |                                      
+ | Render   | WIP     | See docs         |                                      
+ | Theme    | Done    | old new system   |                                      
                                                                                 
  Wide table:                                                                    
                                                                                 

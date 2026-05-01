@@ -16,10 +16,10 @@
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import type { BundledTheme } from "shiki";
-import { MarkdownRenderable } from "@opentui/core";
 import { createTestRenderer } from "@opentui/core/testing";
 
-import { extractThemeColors, createSyntaxStyle, resolveTheme } from "../src/theme/index.js";
+import { extractThemeColors, resolveTheme } from "../src/theme/index.js";
+import { MdvMarkdownRenderable } from "../src/ui/markdown.js";
 import { createHighlighterInstance } from "../src/highlighting/shiki.js";
 import { createRenderNode } from "../src/rendering/index.js";
 import { createMainContainer } from "../src/ui/container.js";
@@ -82,8 +82,6 @@ async function main(): Promise<void> {
   const highlighter = await createHighlighterInstance(theme);
   const themeColors = extractThemeColors(highlighter.highlighter, theme as BundledTheme);
   highlighter.colors = themeColors;
-  const syntaxStyle = createSyntaxStyle(themeColors);
-
   const { renderer, renderOnce } = await createTestRenderer({
     width: flags.width,
     height: flags.height,
@@ -104,10 +102,9 @@ async function main(): Promise<void> {
   const constructSamples: number[] = [];
   for (let i = 0; i < flags.iterations; i++) {
     const t0 = performance.now();
-    const md = new MarkdownRenderable(renderer, {
+    const md = new MdvMarkdownRenderable(renderer, {
       id: `md-construct-${i}`,
       content: i % 2 === 0 ? altered : content,
-      syntaxStyle,
       conceal: true,
       renderNode,
     });
@@ -118,10 +115,9 @@ async function main(): Promise<void> {
   }
 
   // Path 2: keep one MarkdownRenderable, mutate .content (the new path).
-  const stable = new MarkdownRenderable(renderer, {
+  const stable = new MdvMarkdownRenderable(renderer, {
     id: "md-stable",
     content,
-    syntaxStyle,
     conceal: true,
     renderNode,
   });

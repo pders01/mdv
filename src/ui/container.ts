@@ -5,10 +5,10 @@
 import {
   BoxRenderable,
   ScrollBoxRenderable,
-  MarkdownRenderable,
   RGBA,
   type CliRenderer,
 } from "@opentui/core";
+import type { MdvMarkdownRenderable } from "./markdown.js";
 import type { Mode } from "../types.js";
 import type { SearchMatch } from "../input/search.js";
 
@@ -29,7 +29,7 @@ function blendOver(fg: InstanceType<typeof RGBA>, bg: InstanceType<typeof RGBA>,
 }
 
 /**
- * BlockState from OpenTUI's MarkdownRenderable internal state
+ * BlockState from OpenTUI's MdvMarkdownRenderable internal state
  */
 interface BlockState {
   token: { type: string; raw: string };
@@ -81,13 +81,13 @@ export interface ContainerSetup {
     codeBgColor: string,
     searchHighlightColor: string,
     bgColor: string,
-    markdown: MarkdownRenderable,
+    markdown: MdvMarkdownRenderable,
   ) => { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY };
   /**
-   * Update the existing MarkdownRenderable's content in place. Avoids a full
+   * Update the existing MdvMarkdownRenderable's content in place. Avoids a full
    * rebuild of the renderable tree — OpenTUI's incremental parser reuses
    * unchanged tokens, so a swap of similar content is two orders of
-   * magnitude cheaper than constructing a new MarkdownRenderable.
+   * magnitude cheaper than constructing a new MdvMarkdownRenderable.
    */
   reloadContent: (
     newContent: string,
@@ -124,7 +124,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
   // Mutable state for reload support
   let currentContentLines = contentLines;
-  let currentMarkdown: MarkdownRenderable | null = null;
+  let currentMarkdown: MdvMarkdownRenderable | null = null;
 
   // Highlighting state (set once by setupHighlighting, reused on reload)
   let highlightState: {
@@ -368,7 +368,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     codeBgColor: string,
     searchHighlightColor: string,
     bgColor: string,
-    markdown: MarkdownRenderable,
+    markdown: MdvMarkdownRenderable,
   ): { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY } {
     currentMarkdown = markdown;
 
@@ -405,7 +405,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       throw new Error("reloadContent called before setupHighlighting wired the markdown ref");
     }
 
-    // Mutating .content drives MarkdownRenderable's incremental parser; the
+    // Mutating .content drives MdvMarkdownRenderable's incremental parser; the
     // renderable tree, _blockStates and layout update in place without
     // tearing down the scrollBox child.
     currentMarkdown.content = newContent;

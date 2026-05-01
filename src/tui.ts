@@ -1,12 +1,13 @@
 /**
  * mdv - Markdown Viewer TUI
- * Uses OpenTUI's MarkdownRenderable with vim keybindings
+ * Uses MdvMarkdownRenderable (unified parser) with vim keybindings
  */
 
 import { basename, resolve } from "path";
 import { openSync, statSync, watch } from "fs";
 import { ReadStream } from "tty";
-import { createCliRenderer, MarkdownRenderable, BoxRenderable } from "@opentui/core";
+import { createCliRenderer, BoxRenderable } from "@opentui/core";
+import { MdvMarkdownRenderable } from "./ui/markdown.js";
 import type { BundledTheme } from "shiki";
 
 // Local modules
@@ -231,19 +232,19 @@ const renderNode = phaseSync("render-node:create", () =>
 
 // Create markdown renderable. Reload paths mutate `markdown.content` rather
 // than rebuilding this instance — see container.reloadContent. Construction
-// is the dominant startup cost (~250 ms on a 1500-line file) because
-// OpenTUI's incremental parser re-runs marked.lex from scratch.
+// runs unified once over the source and converts the mdast tree to the
+// marked-shaped tokens the renderers in `src/rendering/*` consume.
 const markdown = phaseSync(
   "markdown:construct",
   () =>
-    new MarkdownRenderable(renderer, {
+    new MdvMarkdownRenderable(renderer, {
       id: "markdown-content",
       content: currentContent,
-      syntaxStyle,
       conceal: true,
       renderNode,
     }),
 );
+void syntaxStyle;
 scrollBox.add(markdown);
 
 // Setup cursor and selection highlighting (AFTER markdown is added to scrollBox)

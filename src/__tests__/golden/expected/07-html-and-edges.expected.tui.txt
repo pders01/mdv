@@ -9,7 +9,7 @@
                                                                                █
  Inline HTML: this word is red.                                                █
                                                                                █
- HTML entities: &copy; & < >   &#35; &#x22; &AElig;.                           █
+ HTML entities: © & < >   # " Æ.                                               █
                                                                                █
  Invalid entities: &madeup; &copy (no semi).                                   █
                                                                                █

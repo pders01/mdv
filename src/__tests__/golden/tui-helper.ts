@@ -15,10 +15,9 @@
  * per call, so sharing across snapshots keeps the test suite fast.
  */
 
-import { MarkdownRenderable } from "@opentui/core";
 import { createTestRenderer } from "@opentui/core/testing";
 import type { BundledTheme } from "shiki";
-import { extractThemeColors, createSyntaxStyle } from "../../theme/index.js";
+import { extractThemeColors } from "../../theme/index.js";
 import {
   createHighlighterInstance,
   loadLangsForContent,
@@ -26,6 +25,7 @@ import {
 } from "../../highlighting/shiki.js";
 import { createRenderNode } from "../../rendering/index.js";
 import { createMainContainer } from "../../ui/container.js";
+import { MdvMarkdownRenderable } from "../../ui/markdown.js";
 
 export const TUI_VIEWPORT_WIDTH = 80;
 export const TUI_VIEWPORT_HEIGHT = 40;
@@ -47,7 +47,6 @@ export function getSharedHighlighter(): Promise<HighlighterInstance> {
 export async function renderTuiSnapshot(content: string): Promise<string> {
   const highlighter = await getSharedHighlighter();
   await loadLangsForContent(highlighter, content);
-  const syntaxStyle = createSyntaxStyle(highlighter.colors);
 
   const { renderer, renderOnce, captureCharFrame } = await createTestRenderer({
     width: TUI_VIEWPORT_WIDTH,
@@ -58,15 +57,14 @@ export async function renderTuiSnapshot(content: string): Promise<string> {
   const { container, scrollBox } = createMainContainer(renderer, contentLines);
   const renderNode = createRenderNode(
     renderer,
-    highlighter.colors,
+    highlighter.colors!,
     highlighter,
     TUI_VIEWPORT_WIDTH - 2,
     new Map(),
   );
-  const markdown = new MarkdownRenderable(renderer, {
+  const markdown = new MdvMarkdownRenderable(renderer, {
     id: "markdown-content",
     content,
-    syntaxStyle,
     conceal: true,
     renderNode,
   });

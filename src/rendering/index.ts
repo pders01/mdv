@@ -9,8 +9,8 @@ import {
   TextAttributes,
   type CliRenderer,
   type Renderable,
-  type RenderNodeContext,
 } from "@opentui/core";
+import type { MdvRenderNodeContext } from "../ui/markdown.js";
 import type { Token } from "marked";
 import type { ThemeColors, ListToken, TableToken, ParagraphToken } from "../types.js";
 
@@ -34,7 +34,7 @@ import { renderParagraph } from "./paragraph.js";
  */
 export type RenderNodeCallback = (
   token: Token,
-  context: RenderNodeContext,
+  context: MdvRenderNodeContext,
 ) => Renderable | null | undefined;
 
 /**
@@ -63,7 +63,7 @@ export function createRenderNode(
     colors.blue, // h6
   ];
 
-  return (token: Token, _context: RenderNodeContext): BoxRenderable | null => {
+  return (token: Token, _context: MdvRenderNodeContext): BoxRenderable | null => {
     // Handle headings (OpenTUI 0.1.86+ no longer renders these by default
     // when a renderNode callback is provided)
     if (token.type === "heading") {

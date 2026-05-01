@@ -18,23 +18,23 @@
                                                                                █
                                                                                █
    │ First paragraph.                                                          █
-                                                                                
-     Second paragraph.                                                          
+     Second paragraph.                                                         ▀
                                                                                 
  Nested:                                                                        
                                                                                 
                                                                                 
    │ Outer quote                                                                
-                                                                                
-     > Inner quote                                                              
-     >                                                                          
-     > > Deeply nested                                                          
+     Inner quote                                                                
+     Deeply nested                                                              
                                                                                 
  Quote with content:                                                            
                                                                                 
                                                                                 
-   │ A quote with **bold**, `code`, and a [link](https://example.com).          
-                                                                                
-     ```ts                                                                      
+   │ A quote with bold, code, and a link.                                       
      const inside = "block";                                                    
-     ```                                                                        
+                                                                                
+                                                                                
+ Lazy continuation:                                                             
+                                                                                
+                                                                                
+   │ Lazy continuation                                                          
