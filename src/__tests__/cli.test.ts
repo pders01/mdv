@@ -26,7 +26,7 @@ describe("parseCliArgs", () => {
 
   test("uses default theme when not specified", () => {
     const args = parseCliArgs(["node", "mdv", "file.md"]);
-    expect(args.theme).toBe("github-dark");
+    expect(args.theme).toBe("auto");
   });
 
   test("parses help flag short form", () => {

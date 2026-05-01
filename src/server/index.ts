@@ -18,7 +18,7 @@ import type { BundledTheme } from "shiki";
 import type { CliArgs } from "../cli.js";
 import { scanDirectory, makeExclusionFilter, type FileTree } from "../fs/tree.js";
 import { createHighlighterInstance, type HighlighterInstance } from "../highlighting/shiki.js";
-import { extractThemeColors } from "../theme/index.js";
+import { extractThemeColors, resolveTheme } from "../theme/index.js";
 
 import { createMarkdown } from "./html.js";
 import { renderSidebar } from "./sidebar.js";
@@ -95,8 +95,9 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
   const rootDir = rootIsDirectory ? targetPath : dirname(targetPath);
   const singleFilePath = rootIsDirectory ? null : targetPath;
 
-  const highlighter = await createHighlighterInstance(args.theme);
-  const themeColors = extractThemeColors(highlighter.highlighter, args.theme as BundledTheme);
+  const resolvedTheme = resolveTheme(args.theme);
+  const highlighter = await createHighlighterInstance(resolvedTheme);
+  const themeColors = extractThemeColors(highlighter.highlighter, resolvedTheme as BundledTheme);
   highlighter.colors = themeColors;
   const themeCss = themeColorsToCss(themeColors);
 
@@ -104,7 +105,7 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
   // over the default Shiki adapter when a fence claims their lang.
   const registry = new CodeAdapterRegistry();
   if (!args.noMermaid) {
-    registry.register(createMermaidAdapter({ themeName: args.theme }));
+    registry.register(createMermaidAdapter({ themeName: resolvedTheme }));
   }
   registry.register(createShikiAdapter(highlighter));
 
@@ -193,7 +194,7 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
       rootDir,
       rootIsDirectory,
       fileCount: initialFileCount,
-      theme: args.theme,
+      theme: args.theme === "auto" ? `auto (${resolvedTheme})` : resolvedTheme,
       mermaid: !args.noMermaid,
     });
   }

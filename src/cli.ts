@@ -36,13 +36,13 @@ interface OptionDef {
 type HelpGroup = "general" | "serve";
 
 /** Defaults referenced from both the OPTIONS table and the parseCliArgs fallback. */
-const DEFAULT_THEME = "github-dark";
+const DEFAULT_THEME = "auto";
 const DEFAULT_PORT = 4280;
 const DEFAULT_HOST = "localhost";
 
 const OPTIONS: readonly OptionDef[] = [
   // general
-  { name: "theme", short: "t", type: "string", default: DEFAULT_THEME, valueDesc: "<name>", description: "Set syntax highlighting theme", group: "general" },
+  { name: "theme", short: "t", type: "string", default: DEFAULT_THEME, valueDesc: "<name>", description: "Set syntax highlighting theme (default: auto, follows system light/dark)", group: "general" },
   { name: "list-themes", short: "T", type: "boolean", description: "List available themes", group: "general" },
   { name: "no-mouse", type: "boolean", description: "Disable mouse input (TUI only)", group: "general" },
   { name: "no-mermaid", type: "boolean", description: "Disable mermaid diagram rendering", group: "general" },
@@ -223,6 +223,7 @@ export function showHelp(): void {
 export async function listThemes(): Promise<void> {
   const { bundledThemes } = await import("shiki");
   console.log("Available themes:");
+  console.log("  auto (follows system light/dark; override via MDV_APPEARANCE)");
   Object.keys(bundledThemes)
     .sort()
     .forEach((t) => console.log(`  ${t}`));

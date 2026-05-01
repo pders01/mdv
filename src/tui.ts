@@ -17,7 +17,7 @@ import {
   hasStdinContent,
   readStdinContent,
 } from "./cli.js";
-import { extractThemeColors, createSyntaxStyle } from "./theme/index.js";
+import { extractThemeColors, createSyntaxStyle, resolveTheme } from "./theme/index.js";
 import { createHighlighterInstance } from "./highlighting/shiki.js";
 import { createRenderNode } from "./rendering/index.js";
 import { prerenderMermaid } from "./rendering/mermaid.js";
@@ -119,9 +119,11 @@ const contentLines = content.split("\n");
 // Debug Logging
 // =============================================================================
 
+const resolvedTheme = resolveTheme(args.theme);
+
 if (args.debug) {
   console.error("[debug] file:", isStdin ? "<stdin>" : args.filePath);
-  console.error("[debug] theme:", args.theme);
+  console.error("[debug] theme:", args.theme === "auto" ? `auto -> ${resolvedTheme}` : resolvedTheme);
   console.error("[debug] lines:", contentLines.length);
   console.error("[debug] terminal:", process.stdout.columns + "x" + process.stdout.rows);
   console.error("[debug] mouse:", args.noMouse ? "disabled" : "enabled");
@@ -131,8 +133,8 @@ if (args.debug) {
 // Shiki Syntax Highlighter
 // =============================================================================
 
-const highlighterInstance = await createHighlighterInstance(args.theme);
-const themeColors = extractThemeColors(highlighterInstance.highlighter, args.theme as BundledTheme);
+const highlighterInstance = await createHighlighterInstance(resolvedTheme);
+const themeColors = extractThemeColors(highlighterInstance.highlighter, resolvedTheme as BundledTheme);
 highlighterInstance.colors = themeColors;
 
 // =============================================================================
