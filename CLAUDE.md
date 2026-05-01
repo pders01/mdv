@@ -46,10 +46,16 @@ Custom markdown token renderers in `src/rendering/`:
 - `html.ts` - HTML blocks and inline HTML handling
 - `text.ts` - Text utilities (HTML entities, subscript/superscript)
 
+### Parser Pipeline
+
+- `src/util/markdown.ts` - Shared `unified` processor used by the TUI and the mermaid pre-pass. `walkCodeFences()` walks mdast for code blocks (replaces the older `marked.lexer()` walk).
+- `src/util/mdast-to-marked.ts` - `mdastRootToTokens(root)` converts the parsed mdast tree into the marked-shaped tokens existing renderers in `src/rendering/*` consume. Covers every token type the renderers handle (heading, paragraph, list with GFM tasks, code, blockquote with alert detection, table, html, definition, footnotes, mark, sub/sup, wiki links, deflist, directives).
+- Both `mdv serve` and the TUI use the same plugin order: `remark-frontmatter` → `remark-gfm({singleTilde:false})` → `remark-math` → `remark-wiki-link` → `remark-deflist` → `remark-directive` → `remark-flexible-markers` → `remark-supersub` → `remark-github-blockquote-alert`. Server then runs `remark-rehype` + `rehype-katex` + `rehype-stringify` for HTML; the TUI runs the mdast-to-marked translation instead.
+
 ### Syntax Highlighting
 
 - `src/highlighting/shiki.ts` - Shiki highlighter setup, language aliases, token-to-chunk conversion, dual-theme HTML for the web UI
-- Highlighter is created with zero pre-loaded languages; `loadLangsForContent` scans a markdown buffer with a regex (no marked.lex) and loads only the fences that appear, awaiting before render
+- Highlighter is created with zero pre-loaded languages; `loadLangsForContent` scans a markdown buffer with a regex and loads only the fences that appear, awaiting before render
 - Converts Shiki tokens to OpenTUI `TextChunk` format with colors and styles
 - `shikiToHtmlDual` renders code with `themes: { light, dark }` + `defaultColor: false` so each span carries `--shiki-light`/`--shiki-dark` CSS vars; the page picks per `prefers-color-scheme`
 
@@ -73,10 +79,11 @@ Custom markdown token renderers in `src/rendering/`:
 
 ### UI Components
 
-- `src/ui/container.ts` - Main scrollable container, cursor/selection highlighting, code block backgrounds; exposes `reloadContent` (mutates the existing `MarkdownRenderable.content` for cheap reloads via OpenTUI's incremental parser) and `isLineCursorable` (predicate for `CursorManager`)
+- `src/ui/markdown.ts` - `MdvMarkdownRenderable extends BoxRenderable`. Forks OpenTUI's `MarkdownRenderable` so the TUI can use the `unified` parser (same one as `mdv serve`). Parses content with remark + plugins, runs `mdastRootToTokens` to translate the mdast tree into the marked-shaped tokens existing renderers consume, exposes `_blockStates` in the same shape `container.ts` reads.
+- `src/ui/container.ts` - Main scrollable container, cursor/selection highlighting, code block backgrounds; exposes `reloadContent` (mutates `MdvMarkdownRenderable.content` for cheap re-parses) and `isLineCursorable` (predicate for `CursorManager`)
 - Cursor highlight is a pre-blended row tint (theme accent over theme bg) so the active row reads on every theme without a full-color band overlapping syntax colors
-- `src/ui/statusbar.ts` - Status bar with mode indicator, notifications, and dynamic filename/line count updates
-- `src/ui/sidebar.ts` - File tree sidebar for directory browsing mode (vim j/k navigation, Enter to open, `/` search, change markers for `--watch`)
+- `src/ui/statusbar.ts` - Status bar with NORMAL / SEARCH / VISUAL mode pill (cyan / orange / yellow bg, mirrors web's `.mdv-statusbar__mode`), notifications, and dynamic filename/line count updates
+- `src/ui/sidebar.ts` - File tree sidebar for directory browsing mode (vim j/k navigation, Enter to open, `/` search, change markers for `--watch`). Header shows the rootDir basename uppercased + truncated, matching the web sidebar.
 
 ### File System
 
@@ -88,7 +95,8 @@ Custom markdown token renderers in `src/rendering/`:
 - `src/perf/phase.ts` - Lightweight startup phase profiler. `phase("label", fn)`/`phaseSync` wrap hotspots when `--debug` is set; `dumpPhases()` prints aggregated table grouped by label
 - `scripts/bench-scroll.ts` - Headless `j`-key scroll bench using `@opentui/core/testing` `TestRenderer`
 - `scripts/bench-keys.ts` - Per-action bench (j/k, ctrl-d/u, gg/G, V, search, n/N) with avg/p50/p95/p99/max
-- `scripts/bench-reload.ts` - Compares full `MarkdownRenderable` rebuild vs `.content` mutation on reload
+- `scripts/bench-reload.ts` - Compares full `MdvMarkdownRenderable` rebuild vs `.content` mutation on reload
+- `scripts/bench-commonmark.ts` - Runs the CommonMark 0.31.2 spec corpus against the server pipeline; engine in `scripts/lib/commonmark-bench.ts` is shared with the regression-gate test
 - `scripts/gen-bench-fixture.ts` - Deterministic markdown generator (seeded mulberry32)
 
 ### Type Definitions
@@ -181,9 +189,12 @@ Custom markdown token renderers in `src/rendering/`:
 
 ## Key Dependencies
 
-- `@opentui/core` - Terminal UI framework (BoxRenderable, MarkdownRenderable, ScrollBox)
+- `@opentui/core` - Terminal UI framework (BoxRenderable, ScrollBox, TextRenderable). `MarkdownRenderable` was the original parser host but is no longer used; `MdvMarkdownRenderable` in `src/ui/markdown.ts` replaces it.
 - `shiki` - Syntax highlighting engine
-- `marked` - Markdown parsing (tokens are processed by custom renderers)
+- `unified` + `remark-parse` + `remark-gfm` + `remark-rehype` + `rehype-stringify` - Markdown pipeline shared between the TUI and `mdv serve`
+- `remark-frontmatter`, `remark-github-blockquote-alert`, `remark-math` + `rehype-katex`, `remark-wiki-link`, `remark-deflist`, `remark-directive`, `remark-flexible-markers`, `remark-supersub` - Plugin set; full coverage matrix in `README.md`
+- `entities` - HTML entity decode for token text fields
+- `marked` (devDependency) - Token type imports + a few test fixtures using `lexer()`. No longer in the runtime path.
 
 ## Server (mdv serve)
 
@@ -191,17 +202,19 @@ Custom markdown token renderers in `src/rendering/`:
 - `src/server/theme-vars.ts` - `themeColorsToCss` (single) and `themeColorsToCssDual` (light at `:root`, dark inside `@media (prefers-color-scheme: dark)`, plus a Shiki override block scoped to dual mode so single-theme inline colors aren't broken by undefined `var(--shiki-*)` lookups)
 - `src/server/adapters/shiki.ts` - Code-block adapter; `dual` opt routes to `shikiToHtmlDual`
 - `src/server/adapters/mermaid.ts` - Lazy mermaid loader; in dual mode it uses `matchMedia("(prefers-color-scheme: dark)")` and re-renders SVGs on system flips
-- Per request the server calls `loadLangsForContent(ctx.highlighter, source)` so any new fence languages are loaded before `marked.parse`
+- Per request the server calls `loadLangsForContent(ctx.highlighter, source)` so any new fence languages are loaded before the unified processor runs
+- KaTeX assets (CSS + 60 fonts) are mounted under `/_static/vendor/katex/` via `collectKatexStaticAssets` (`src/server/assets/katex.ts`); resolved from `node_modules/katex/dist/` at server startup so the binary stays self-contained
+- `singleTilde: false` is set on `remark-gfm` everywhere it's used so `~text~` is owned by `remark-supersub` (subscript). `~~text~~` still parses as strikethrough.
 
 ## Performance Notes
 
-- First-paint is dominated by OpenTUI's `MarkdownRenderable` constructor (~250 ms on a 1500-line file, mostly `marked.lex`); reloads avoid this entirely via `set content`
-- Shiki highlighter creation is now lazy (~15 ms vs ~150 ms eager); fence languages load on demand per file
+- First-paint cost is dominated by `MdvMarkdownRenderable.rebuild` (one unified parse + mdast→token convert + child mount) plus Shiki language loading. ~250 ms total on a 1500-line file; reloads via `set content` re-run the parse but the mount is cheap.
+- Shiki highlighter creation is lazy (~15 ms vs ~150 ms eager); fence languages load on demand per file
 - Renderer runs at 60 fps target / 120 fps max (OpenTUI defaults are 30/60); j-key handler measures at 1.5–2 ms p50 with plenty of headroom
 
 ## Testing
 
-Tests use `bun:test` and are in `src/__tests__/`. Most tests focus on token parsing via `marked.lexer()` and utility functions rather than full rendering.
+Tests use `bun:test` and are in `src/__tests__/`. Most tests focus on rendering helpers (segment generation, table sizing, etc.) and utility functions; `src/__tests__/golden/` holds HTML and TUI snapshots regenerated via `bun run regen-golden` whenever rendering output legitimately changes.
 
 ## Commits
 

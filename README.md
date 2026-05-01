@@ -218,30 +218,32 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 
 ## Features
 
-- Full markdown rendering with proper styling
-- Syntax highlighting for code blocks (50+ languages)
+- 98% CommonMark conformance, GFM tables / task lists / strikethrough / autolinks
+- Built on the `unified` / `remark` / `rehype` ecosystem — same parser the web uses
+- Syntax highlighting for code blocks (50+ languages) via shiki
 - Theme support via shiki (auto-detects light/dark from system, 60+ explicit themes available)
 - Two viewing modes from one binary: TUI (default) and HTTP (`mdv serve`)
 - Live reload with `--watch` in both modes; the web mode preserves scroll and cursor across reloads
 - Directory browsing with sidebar file tree
 - Pager-style search (`/`, `n`/`N`) with inline match highlighting (works against the active pane in both modes)
 - Vim-style navigation shared between the TUI and the web UI
-- Mermaid diagrams rendered as ASCII in the TUI and SVG client-side on the web (locally bundled, no CDN)
-- Supports:
-  - Headings (ATX and Setext style)
-  - Bold, italic, strikethrough
-  - Links (with URL display)
-  - Images (shows alt text)
-  - Code blocks with syntax highlighting
-  - Inline code
-  - Ordered and unordered lists (nested)
-  - Blockquotes (nested)
-  - Tables
-  - Horizontal rules
-  - HTML blocks and inline HTML
-  - Subscript/superscript (via Unicode)
-  - Reference-style links
-  - Escape sequences
+
+### Markdown formats supported
+
+| Format | TUI render | Web render |
+| --- | --- | --- |
+| CommonMark | full | full |
+| GFM (tables, task lists, strikethrough, autolinks) | full | full |
+| Frontmatter (YAML / TOML) | hidden | hidden |
+| GitHub-style alerts (`> [!NOTE]` etc) | colored bar + icon + label | styled `<div class=markdown-alert>` |
+| Footnotes (`[^N]` + definitions) | `[N]` refs + numbered defs at bottom | `<section>` with backrefs |
+| Math (`$inline$` and `$$block$$`) | LaTeX source preserved | KaTeX rendered |
+| Wiki links (`[[Page]]`, `[[Page\|Label]]`) | link to `#/page/slug` | `<a class="internal new">` |
+| Definition lists (`term\n: def`) | indented stack | `<dl><dt><dd>` |
+| Container directives (`:::name`) | alert (if name matches) or labelled blockquote | hast tree via `remark-directive` |
+| Highlight (`==text==`) | yellow bold | `<mark>` |
+| Subscript / superscript (`H~2~O`, `x^2^`) | unicode `₂` `²` | `<sub>` / `<sup>` |
+| Mermaid diagrams | pre-rendered ASCII | client-side SVG (locally bundled, no CDN) |
 
 ## Options
 
