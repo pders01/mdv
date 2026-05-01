@@ -106,18 +106,17 @@ export function createSidebar(
   const sidebarSearch = new SearchManager();
   const entryLabels = entries.map((e) => e.relativePath);
 
-  // Match the content pane's two-tone marker: opaque 2-cell bar + faint
-  // full-row tint pre-blended against theme bg. OpenTUI's fillRect alpha
-  // composites against an empty buffer, so a low-alpha color on its own
-  // renders as a darkened solid — pre-blending in JS gives the actual
-  // "tint over bg" appearance.
+  // Cursor row tint: pre-blended against theme bg so the cell paints the
+  // visible "cyan over bg" color in one pass — OpenTUI's fillRect alpha
+  // composites against an empty buffer, which would otherwise turn 22%
+  // cyan into 22% of cyan on black (a dark solid). Same accent the
+  // content pane uses so both panes read as part of one TUI.
   const bgRGBA = RGBA.fromHex(colors.bg);
-  const baseRGBA = RGBA.fromHex(colors.blue);
-  const cursorRGBA = baseRGBA;
+  const accentRGBA = RGBA.fromHex(colors.cyan);
   const cursorTintRGBA = RGBA.fromValues(
-    baseRGBA.r * 0.18 + bgRGBA.r * 0.82,
-    baseRGBA.g * 0.18 + bgRGBA.g * 0.82,
-    baseRGBA.b * 0.18 + bgRGBA.b * 0.82,
+    accentRGBA.r * 0.22 + bgRGBA.r * 0.78,
+    accentRGBA.g * 0.22 + bgRGBA.g * 0.78,
+    accentRGBA.b * 0.22 + bgRGBA.b * 0.78,
     1,
   );
 
@@ -178,7 +177,6 @@ export function createSidebar(
       const y = listText.y + getCursorRow();
       if (y < 0 || y >= buffer.height) return;
       buffer.fillRect(0, y, buffer.width, 1, cursorTintRGBA);
-      buffer.fillRect(0, y, 2, 1, cursorRGBA);
     };
   }
 

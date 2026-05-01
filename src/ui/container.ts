@@ -133,9 +133,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     selectionColor: string;
     codeBgColor: string;
     searchHighlightColor: string;
-    cursorRGBA: InstanceType<typeof RGBA>;
     cursorTintRGBA: InstanceType<typeof RGBA>;
-    selectionRGBA: InstanceType<typeof RGBA>;
     selectionTintRGBA: InstanceType<typeof RGBA>;
     codeBgRGBA: InstanceType<typeof RGBA>;
     searchRGBA: InstanceType<typeof RGBA>;
@@ -281,9 +279,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
     const {
       getCursorState,
-      cursorRGBA,
       cursorTintRGBA,
-      selectionRGBA,
       selectionTintRGBA,
       codeBgRGBA,
       searchRGBA,
@@ -317,18 +313,11 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       const state = getCursorState();
       if (currentContentLines.length === 0) return;
 
-      // Edge bar plus a very faint full-row tint: the bar anchors the eye to
-      // the active row without painting strong color over the text, the
-      // tint adds enough peripheral signal that the row is locatable when
-      // the bar scrolls into a corner of the viewport. A previous iteration
-      // used a wide tinted band which fought with code-block colors; a 1-cell
-      // bar alone was invisible on busy screens.
-      const drawRowMarker = (
-        line: number,
-        color: InstanceType<typeof RGBA>,
-        tint: InstanceType<typeof RGBA>,
-        barWidth: number,
-      ) => {
+      // Pre-blended tint covers the active row without overpainting the
+      // text. Past attempts at a left-edge bar tripped on text rendered at
+      // x=0 (sidebar entries and indented content alike) — the bar covered
+      // the first characters. Tint alone reads clean across both panes.
+      const drawRowMarker = (line: number, tint: InstanceType<typeof RGBA>) => {
         const pos = getLinePosition(line);
         if (!pos) return;
 
@@ -343,7 +332,6 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
         if (height <= 0) return;
 
         buffer.fillRect(0, y, buffer.width, height, tint);
-        buffer.fillRect(0, y, barWidth, height, color);
       };
 
       // Draw search match highlights (before cursor so cursor overlays)
@@ -364,13 +352,11 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       }
 
       if (state.mode === "visual") {
-        // Wider left bar for the selected range so it reads as "block of
-        // selected lines" rather than a single-row cursor.
         for (let line = state.selectionStart; line <= state.selectionEnd; line++) {
-          drawRowMarker(line, selectionRGBA, selectionTintRGBA, 2);
+          drawRowMarker(line, selectionTintRGBA);
         }
       } else {
-        drawRowMarker(state.cursorLine, cursorRGBA, cursorTintRGBA, 2);
+        drawRowMarker(state.cursorLine, cursorTintRGBA);
       }
     };
   };
@@ -386,19 +372,12 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
   ): { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY } {
     currentMarkdown = markdown;
 
-    // Two-tone marker: a solid 2-cell bar anchors the eye, a faint full-row
-    // tint marks the row without overwriting syntax colors. Tints are
-    // pre-blended against the theme bg so the final color is what we'd
-    // expect from "12% cursor over bg" — otherwise OpenTUI renders 12% of
-    // the cursor color over a transparent buffer, which looks like a dark
-    // version of the cursor color on every theme.
+    // Pre-blended tints so OpenTUI's fillRect lays a fully opaque cell of
+    // the visible blended color on top of an empty buffer; setting alpha
+    // directly led to tint-as-darkened-color artifacts on every theme.
     const bgRGBA = RGBA.fromHex(bgColor);
-    const cursorBaseRGBA = RGBA.fromHex(cursorColor);
-    const selectionBaseRGBA = RGBA.fromHex(selectionColor);
-    const cursorRGBA = cursorBaseRGBA;
-    const cursorTintRGBA = blendOver(cursorBaseRGBA, bgRGBA, 0.18);
-    const selectionRGBA = selectionBaseRGBA;
-    const selectionTintRGBA = blendOver(selectionBaseRGBA, bgRGBA, 0.22);
+    const cursorTintRGBA = blendOver(RGBA.fromHex(cursorColor), bgRGBA, 0.22);
+    const selectionTintRGBA = blendOver(RGBA.fromHex(selectionColor), bgRGBA, 0.28);
     const codeBgRGBA = RGBA.fromHex(codeBgColor);
     const searchRGBA = blendOver(RGBA.fromHex(searchHighlightColor), bgRGBA, 0.55);
 
@@ -408,9 +387,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       selectionColor,
       codeBgColor,
       searchHighlightColor,
-      cursorRGBA,
       cursorTintRGBA,
-      selectionRGBA,
       selectionTintRGBA,
       codeBgRGBA,
       searchRGBA,
