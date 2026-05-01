@@ -32,6 +32,7 @@ function createMockHighlighter(
       codeToTokens: () => ({ tokens: mockTokens }),
     } as any,
     theme: "test-theme",
+    themes: ["test-theme"],
     colors: TEST_COLORS,
   };
 }
