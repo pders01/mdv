@@ -92,7 +92,8 @@ describe("MermaidAdapter", () => {
     r.register(createShikiAdapter(highlighter));
     const html = renderMarkdown(r, "```mermaid\nA --> <script>\n```\n");
     expect(html).not.toContain("<script>");
-    expect(html).toContain("&lt;script&gt;");
+    // `<` must be escaped; `>` is optional in body text content per HTML spec.
+    expect(html).toContain("&lt;script");
   });
 
   test("body assets reference the local bundle URL, not a CDN", () => {

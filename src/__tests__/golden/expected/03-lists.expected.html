@@ -19,8 +19,10 @@
 </ol>
 <p>Nested:</p>
 <ul>
-<li>Top<ul>
-<li>Mid<ul>
+<li>Top
+<ul>
+<li>Mid
+<ul>
 <li>Deep</li>
 </ul>
 </li>
@@ -31,9 +33,11 @@
 </ul>
 <p>Mixed nesting:</p>
 <ol>
-<li>Ordered top<ul>
+<li>Ordered top
+<ul>
 <li>Bullet child</li>
-<li>Another bullet<ol>
+<li>Another bullet
+<ol>
 <li>Numbered grandchild</li>
 <li>Another numbered</li>
 </ol>
@@ -44,36 +48,44 @@
 </ol>
 <p>Loose list (with blank lines):</p>
 <ul>
-<li><p>Item one paragraph.</p>
+<li>
+<p>Item one paragraph.</p>
 <p>Item one second paragraph.</p>
 </li>
-<li><p>Item two.</p>
+<li>
+<p>Item two.</p>
 </li>
 </ul>
 <p>Task list:</p>
-<ul>
-<li><input disabled="" type="checkbox"> Todo</li>
-<li><input checked="" disabled="" type="checkbox"> Done</li>
-<li><input disabled="" type="checkbox"> Another todo<ul>
-<li><input checked="" disabled="" type="checkbox"> Nested done</li>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Todo</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> Done</li>
+<li class="task-list-item"><input type="checkbox" disabled> Another todo
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" checked disabled> Nested done</li>
 </ul>
 </li>
 </ul>
 <p>List with code:</p>
 <ul>
-<li><p>Item with code:</p>
+<li>
+<p>Item with code:</p>
 <pre><code class="language-ts">const x = 1;</code></pre>
+
 </li>
-<li><p>Plain item.</p>
+<li>
+<p>Plain item.</p>
 </li>
 </ul>
 <p>List with blockquote:</p>
 <ul>
-<li><p>Item with quote:</p>
+<li>
+<p>Item with quote:</p>
 <blockquote>
 <p>Quoted text.</p>
 </blockquote>
 </li>
-<li><p>Plain item.</p>
+<li>
+<p>Plain item.</p>
 </li>
 </ul>

@@ -1,7 +1,6 @@
 <a href="https://marked.js.org">
   <img width="60px" height="60px" src="https://marked.js.org/img/logo-black.svg" align="right" />
 </a>
-
 <h1>Marked</h1>
 <p><a href="https://www.npmjs.com/package/marked"><img src="https://badgen.net/npm/v/marked" alt="npm"></a>
 <a href="https://packagephobia.now.sh/result?p=marked"><img src="https://badgen.net/packagephobia/install/marked" alt="install size"></a>
@@ -29,11 +28,14 @@
 <h2>Installation</h2>
 <p><strong>CLI:</strong></p>
 <pre><code class="language-sh">npm install -g marked</code></pre>
+
 <p><strong>In-browser:</strong></p>
 <pre><code class="language-sh">npm install marked</code></pre>
+
 <h2>Usage</h2>
 <h3>Warning: 🚨 Marked does not <a href="https://marked.js.org/using_advanced#options">sanitize</a> the output HTML. Please use a sanitize library, like <a href="https://github.com/cure53/DOMPurify">DOMPurify</a> (recommended), <a href="https://github.com/apostrophecms/sanitize-html">sanitize-html</a> or <a href="https://github.com/bevacqua/insane">insane</a> on the <em>output</em> HTML! 🚨</h3>
 <pre><code>DOMPurify.sanitize(marked.parse(`&lt;img src=&quot;x&quot; onerror=&quot;alert('not happening')&quot;&gt;`));</code></pre>
+
 <p><strong>CLI</strong></p>
 <pre><code class="language-bash"># Example with stdin input
 $ marked -o hello.html
@@ -41,8 +43,10 @@ hello world
 ^D
 $ cat hello.html
 &lt;p&gt;hello world&lt;/p&gt;</code></pre>
+
 <pre><code class="language-bash"># Print all options
 $ marked --help</code></pre>
+
 <p><strong>Browser</strong></p>
 <pre><code class="language-html">&lt;!doctype html&gt;
 &lt;html&gt;
@@ -59,11 +63,13 @@ $ marked --help</code></pre>
   &lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;</code></pre>
+
 <p>or import esm module</p>
 <pre><code class="language-html">&lt;script type=&quot;module&quot;&gt;
   import { marked } from &quot;https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js&quot;;
   document.getElementById('content').innerHTML =
     marked.parse('# Marked in the browser\n\nRendered by **marked**.');
 &lt;/script&gt;</code></pre>
+
 <h2>License</h2>
 <p>Copyright (c) 2011-2022, Christopher Jeffrey. (MIT License)</p>

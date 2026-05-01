@@ -64,8 +64,8 @@ interface ServerContext {
   appCss: string;
   clientJs: string;
   registry: CodeAdapterRegistry;
-  /** One Marked instance for the lifetime of the server — stateless between requests. */
-  marked: ReturnType<typeof createMarkdown>;
+  /** One unified processor for the lifetime of the server — stateless between requests. */
+  markdown: ReturnType<typeof createMarkdown>;
   excludes: string[];
   headAssets: string;
   bodyAssets: string;
@@ -155,7 +155,7 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
     appCss,
     clientJs,
     registry,
-    marked: createMarkdown(registry),
+    markdown: createMarkdown(registry),
     excludes: args.exclude,
     headAssets: registry.collectHeadAssets(),
     bodyAssets: registry.collectBodyAssets(),
@@ -368,10 +368,10 @@ async function renderEntry(
   const source = await Bun.file(fullPath).text().catch(() => null);
   if (source == null) return notFound();
 
-  // Lazy-load any fence langs this file uses before marked.parse — the
-  // shiki adapter is sync and would fall back to plain text otherwise.
+  // Lazy-load any fence langs this file uses before the markdown pass —
+  // the shiki adapter is sync and would fall back to plain text otherwise.
   await loadLangsForContent(ctx.highlighter, source);
-  const html = ctx.marked.parse(source) as string;
+  const html = String(ctx.markdown.processSync(source));
   const sidebar = renderSidebar(tree, relativePath);
   const page = renderTemplate(ctx, {
     title: relativePath,

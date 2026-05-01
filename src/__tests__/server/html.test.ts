@@ -55,7 +55,10 @@ describe("renderMarkdown", () => {
     const md = "```\n<script>alert(1)</script>\n```\n";
     const html = renderMarkdown(registry, md);
     expect(html).not.toContain("<script>alert(1)</script>");
-    expect(html).toContain("&lt;script&gt;");
+    // `<` must be escaped; `>` is optional in body text per HTML spec, so
+    // we only assert on the form rehype-stringify actually emits.
+    expect(html).toContain("&lt;script");
+    expect(html).toContain("&lt;/script");
   });
 
   test("renders inline code", () => {

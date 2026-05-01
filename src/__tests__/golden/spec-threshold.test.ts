@@ -14,7 +14,7 @@
 import { test, expect } from "bun:test";
 import { runBench } from "../../../scripts/lib/commonmark-bench.js";
 
-const THRESHOLD = 631;
+const THRESHOLD = 645;
 const TOTAL = 652;
 
 test(

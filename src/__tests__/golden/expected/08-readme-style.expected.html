@@ -16,12 +16,14 @@
 git clone https://github.com/example/mdv
 cd mdv
 bun run install-global</code></pre>
+
 <p>Or download a prebuilt binary from the <a href="https://github.com/example/mdv/releases">releases page</a>.</p>
 <h2>Usage</h2>
 <pre><code class="language-bash">mdv README.md           # view a single file
 mdv ./docs              # browse a directory
 mdv --watch README.md   # live-reload on save
 mdv serve ./docs        # serve as a web UI</code></pre>
+
 <h3>Keybindings</h3>
 <table>
 <thead>
@@ -30,7 +32,8 @@ mdv serve ./docs        # serve as a web UI</code></pre>
 <th>Action</th>
 </tr>
 </thead>
-<tbody><tr>
+<tbody>
+<tr>
 <td><code>j</code> / <code>k</code></td>
 <td>Cursor down / up</td>
 </tr>
@@ -70,7 +73,8 @@ mdv serve ./docs        # serve as a web UI</code></pre>
 <td><code>q</code></td>
 <td>Quit</td>
 </tr>
-</tbody></table>
+</tbody>
+</table>
 <h3>Themes</h3>
 <p>By default mdv detects your terminal appearance and picks a matching theme:</p>
 <ol>
@@ -83,6 +87,7 @@ mdv serve ./docs        # serve as a web UI</code></pre>
 <p>Override with <code>--theme</code>:</p>
 <pre><code class="language-bash">mdv --theme github-light README.md
 mdv --theme dracula      README.md</code></pre>
+
 <h2>Configuration</h2>
 <p>See <code>~/.config/mdv/config.toml</code> (TODO):</p>
 <pre><code class="language-toml">theme = &quot;auto&quot;
@@ -90,10 +95,12 @@ mouse = true
 
 [keybindings]
 quit = [&quot;q&quot;, &quot;Esc&quot;]</code></pre>
+
 <h2>Contributing</h2>
 <p>Pull requests welcome. Please run:</p>
 <pre><code class="language-bash">bun test
 bun run lint</code></pre>
+
 <p>before opening a PR.</p>
 <h2>License</h2>
 <p>MIT © 2026</p>
