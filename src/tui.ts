@@ -179,7 +179,7 @@ const search = new SearchManager();
 // =============================================================================
 
 // Create container and scroll box
-const { container, scrollBox, setupHighlighting, reloadMarkdown } = phaseSync(
+const { container, scrollBox, setupHighlighting, reloadContent } = phaseSync(
   "container:create",
   () => createMainContainer(renderer, currentContentLines),
 );
@@ -213,8 +213,11 @@ const renderNode = phaseSync("render-node:create", () =>
   createRenderNode(renderer, themeColors, highlighterInstance, contentWidth, mermaidRenders),
 );
 
-// Create markdown renderable
-let markdown = phaseSync(
+// Create markdown renderable. Reload paths mutate `markdown.content` rather
+// than rebuilding this instance — see container.reloadContent. Construction
+// is the dominant startup cost (~250 ms on a 1500-line file) because
+// OpenTUI's incremental parser re-runs marked.lex from scratch.
+const markdown = phaseSync(
   "markdown:construct",
   () =>
     new MarkdownRenderable(renderer, {
@@ -331,17 +334,7 @@ if (isDirectory && fileTree) {
       // Refresh mermaid pre-pass for the newly opened file.
       await refreshMermaidRenders(newContent);
 
-      // Recreate markdown renderable
-      const newMarkdown = new MarkdownRenderable(renderer, {
-        id: "markdown-content",
-        content: currentContent,
-        syntaxStyle,
-        conceal: true,
-        renderNode,
-      });
-      markdown = newMarkdown;
-
-      ({ getLinePosition, getContentLineY } = reloadMarkdown(newMarkdown, currentContentLines));
+      ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
 
       // Reset cursor and search for new content
       cursor.reset(currentContentLines.length);
@@ -409,16 +402,7 @@ if (isDirectory && fileTree) {
           // Refresh mermaid pre-pass for the reloaded file.
           await refreshMermaidRenders(newContent);
 
-          const newMarkdown = new MarkdownRenderable(renderer, {
-            id: "markdown-content",
-            content: currentContent,
-            syntaxStyle,
-            conceal: true,
-            renderNode,
-          });
-          markdown = newMarkdown;
-
-          ({ getLinePosition, getContentLineY } = reloadMarkdown(newMarkdown, currentContentLines));
+          ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
 
           cursor.reset(
             currentContentLines.length,
@@ -573,16 +557,7 @@ if (args.watch && !isStdin && !isDirectory && args.filePath) {
       // Refresh mermaid pre-pass for the reloaded file.
       await refreshMermaidRenders(newContent);
 
-      const newMarkdown = new MarkdownRenderable(renderer, {
-        id: "markdown-content",
-        content: currentContent,
-        syntaxStyle,
-        conceal: true,
-        renderNode,
-      });
-      markdown = newMarkdown;
-
-      ({ getLinePosition, getContentLineY } = reloadMarkdown(newMarkdown, currentContentLines));
+      ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
 
       // Clamp cursor to new content bounds (don't reset to top)
       cursor.reset(

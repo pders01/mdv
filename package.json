@@ -18,6 +18,7 @@
     "install-global": "bun run build && sudo mv mdv /usr/local/bin/",
     "bundle:mermaid": "bun run scripts/bundle-mermaid.ts",
     "bench:scroll": "bun run scripts/bench-scroll.ts",
+    "bench:reload": "bun run scripts/bench-reload.ts",
     "bench:gen-fixture": "bun run scripts/gen-bench-fixture.ts",
     "test": "bun test",
     "lint": "oxlint --ignore-path .oxlintignore",

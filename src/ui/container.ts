@@ -66,8 +66,14 @@ export interface ContainerSetup {
     searchHighlightColor: string,
     markdown: MarkdownRenderable,
   ) => { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY };
-  reloadMarkdown: (
-    newMarkdown: MarkdownRenderable,
+  /**
+   * Update the existing MarkdownRenderable's content in place. Avoids a full
+   * rebuild of the renderable tree — OpenTUI's incremental parser reuses
+   * unchanged tokens, so a swap of similar content is two orders of
+   * magnitude cheaper than constructing a new MarkdownRenderable.
+   */
+  reloadContent: (
+    newContent: string,
     newContentLines: string[],
   ) => { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY };
 }
@@ -355,29 +361,27 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     return { getLinePosition, getContentLineY };
   }
 
-  function reloadMarkdown(
-    newMarkdown: MarkdownRenderable,
+  function reloadContent(
+    newContent: string,
     newContentLines: string[],
   ): { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY } {
-    // Remove old markdown by id
-    if (currentMarkdown) {
-      scrollBox.remove(currentMarkdown.id);
+    if (!currentMarkdown) {
+      throw new Error("reloadContent called before setupHighlighting wired the markdown ref");
     }
 
-    // Update mutable state
-    currentMarkdown = newMarkdown;
+    // Mutating .content drives MarkdownRenderable's incremental parser; the
+    // renderable tree, _blockStates and layout update in place without
+    // tearing down the scrollBox child.
+    currentMarkdown.content = newContent;
     currentContentLines = newContentLines;
     invalidateLineMappings();
 
-    // Add new markdown and re-wire render hooks
-    scrollBox.add(newMarkdown);
-    setupRenderHooks();
-
-    // Reset scroll
+    // Reset scroll so the new file starts at the top, matching the previous
+    // (rebuild-on-reload) behavior.
     scrollBox.scrollTo(0);
 
     return { getLinePosition, getContentLineY };
   }
 
-  return { container, scrollBox, setupHighlighting, reloadMarkdown };
+  return { container, scrollBox, setupHighlighting, reloadContent };
 }
