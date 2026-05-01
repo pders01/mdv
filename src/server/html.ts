@@ -27,7 +27,10 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkAlert from "remark-github-blockquote-alert";
+import remarkMath from "remark-math";
+import wikiLink from "remark-wiki-link";
 import remarkRehype from "remark-rehype";
+import rehypeKatex from "rehype-katex";
 import rehypeStringify from "rehype-stringify";
 import type { Code } from "mdast";
 import type { CodeAdapterRegistry } from "./adapters/index.js";
@@ -40,6 +43,8 @@ export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor
     .use(remarkParse)
     .use(remarkFrontmatter, ["yaml", "toml"])
     .use(remarkGfm)
+    .use(remarkMath)
+    .use(wikiLink, { aliasDivider: "|" })
     .use(remarkAlert)
     .use(remarkRehype, {
       allowDangerousHtml: true,
@@ -54,6 +59,7 @@ export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor
         },
       },
     })
+    .use(rehypeKatex)
     .use(rehypeStringify, {
       allowDangerousHtml: true,
       // Conventional HTML output uses named refs (`&lt;`, `&gt;`, `&amp;`).

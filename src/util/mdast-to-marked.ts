@@ -128,6 +128,15 @@ function convertBlock(node: RootContent, ctx: ConvertContext): Token | null {
       return tableToken(node as Table, ctx);
     case "thematicBreak":
       return { type: "hr", raw: "---\n" } as unknown as Token;
+    case "math": {
+      const m = node as { type: "math"; value: string; meta?: string | null };
+      return {
+        type: "code",
+        raw: "",
+        lang: "math",
+        text: m.value,
+      } as unknown as Token;
+    }
     case "html":
       return htmlToken(node as Html);
     case "definition":
@@ -431,6 +440,35 @@ function convertInline(node: PhrasingContent, ctx: ConvertContext): Token {
       const n = ctx.footnotes.get(fr.identifier);
       const label = n != null ? `[${n}]` : `[^${fr.identifier}]`;
       return { type: "text", raw: label, text: label } as unknown as Token;
+    }
+    case "inlineMath": {
+      // Best-effort TUI rendering: surface the LaTeX source verbatim,
+      // wrapped in `$…$` so it's still recognizable. The server gets full
+      // KaTeX rendering via rehype-katex; the terminal is plain text only.
+      const im = node as { type: "inlineMath"; value: string };
+      const text = `$${im.value}$`;
+      return { type: "codespan", raw: "", text } as unknown as Token;
+    }
+    case "wikiLink": {
+      // Obsidian-style `[[Page]]` / `[[Page|Label]]`. The plugin populates
+      // `value` (target) and `data.alias` (display label, defaults to value
+      // when no `|` divider). For the TUI we render it as a link to the
+      // permalink slug — same behavior as the server's hast output.
+      const wl = node as {
+        type: "wikiLink";
+        value: string;
+        data?: { alias?: string; permalink?: string };
+      };
+      const text = wl.data?.alias ?? wl.value;
+      const slug = wl.data?.permalink ?? wl.value;
+      return {
+        type: "link",
+        raw: "",
+        href: `#/page/${slug}`,
+        title: "",
+        text,
+        tokens: [{ type: "text", raw: text, text } as unknown as Token],
+      } as unknown as Token;
     }
     default:
       return {

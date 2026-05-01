@@ -14,13 +14,14 @@
 import { test, expect } from "bun:test";
 import { runBench } from "../../../scripts/lib/commonmark-bench.js";
 
-// 644 reflects two intentional conflicts with the strict spec:
-// - `---\nFoo\n---\nBar\n---` and `---\n---` get consumed by
-//   `remark-frontmatter` as YAML frontmatter even though the spec parses
-//   them as thematic breaks + setext heading. Frontmatter at doc-start is
-//   far more common in real-world markdown (Obsidian, Hugo, Jekyll), so
-//   the trade-off is the right one.
-const THRESHOLD = 644;
+// 641 reflects intentional conflicts with the strict spec, traded for
+// real-world feature support:
+// - `---\nFoo\n---` consumed by remark-frontmatter as YAML (-2)
+// - `[[Page]]` consumed by remark-wiki-link as Obsidian wiki link, even
+//   inside what spec would treat as triple-bracket links / image refs (-3)
+// Both features are far more common in actual user files than the edge
+// cases they shadow.
+const THRESHOLD = 641;
 const TOTAL = 652;
 
 test(

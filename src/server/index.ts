@@ -53,6 +53,7 @@ import templatePath from "./assets/template.html" with { type: "file" };
 import appCssPath from "./assets/app.css" with { type: "file" };
 import clientJsPath from "./assets/client.js" with { type: "file" };
 import faviconPath from "./assets/favicon.svg" with { type: "file" };
+import { collectKatexStaticAssets, katexHeadAssets } from "./assets/katex.js";
 
 interface ServerContext {
   rootDir: string;
@@ -157,9 +158,9 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
     registry,
     markdown: createMarkdown(registry),
     excludes: args.exclude,
-    headAssets: registry.collectHeadAssets(),
+    headAssets: registry.collectHeadAssets() + "\n" + katexHeadAssets(),
     bodyAssets: registry.collectBodyAssets(),
-    staticAssets: registry.collectStaticAssets(),
+    staticAssets: { ...registry.collectStaticAssets(), ...collectKatexStaticAssets() },
     quiet: args.quiet,
     debug: args.debug,
     watch: args.watch,
