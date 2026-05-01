@@ -2,12 +2,7 @@
  * Main container and scroll box setup
  */
 
-import {
-  BoxRenderable,
-  ScrollBoxRenderable,
-  RGBA,
-  type CliRenderer,
-} from "@opentui/core";
+import { BoxRenderable, ScrollBoxRenderable, RGBA, type CliRenderer } from "@opentui/core";
 import type { MdvMarkdownRenderable } from "./markdown.js";
 import type { Mode } from "../types.js";
 import type { SearchMatch } from "../input/search.js";
@@ -19,7 +14,11 @@ import type { SearchMatch } from "../input/search.js";
  * a 0.08-alpha cyan therefore renders as 8% cyan on black (~dark teal),
  * not 8% cyan on theme bg as intended. Doing the blend in JS sidesteps it.
  */
-function blendOver(fg: InstanceType<typeof RGBA>, bg: InstanceType<typeof RGBA>, alpha: number): InstanceType<typeof RGBA> {
+function blendOver(
+  fg: InstanceType<typeof RGBA>,
+  bg: InstanceType<typeof RGBA>,
+  alpha: number,
+): InstanceType<typeof RGBA> {
   return RGBA.fromValues(
     fg.r * alpha + bg.r * (1 - alpha),
     fg.g * alpha + bg.g * (1 - alpha),
@@ -277,13 +276,8 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const content = scrollBox.content;
     if (!content || !highlightState) return;
 
-    const {
-      getCursorState,
-      cursorTintRGBA,
-      selectionTintRGBA,
-      codeBgRGBA,
-      searchRGBA,
-    } = highlightState;
+    const { getCursorState, cursorTintRGBA, selectionTintRGBA, codeBgRGBA, searchRGBA } =
+      highlightState;
 
     content.renderBefore = (buffer) => {
       if (currentContentLines.length === 0) return;

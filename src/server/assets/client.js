@@ -459,8 +459,8 @@
     // (a colleague's first instinct on the TUI) get the same behavior
     // without learning the vim subset.
     if (focus === "sidebar") {
-      if (k === "j" || k === "ArrowDown") return moveSidebar(1), true;
-      if (k === "k" || k === "ArrowUp") return moveSidebar(-1), true;
+      if (k === "j" || k === "ArrowDown") return (moveSidebar(1), true);
+      if (k === "k" || k === "ArrowUp") return (moveSidebar(-1), true);
       if (k === "Home") {
         cursorIndex = 0;
         paintCursor();
@@ -471,21 +471,21 @@
         paintCursor();
         return true;
       }
-      if (k === "Enter") return openSidebarSelection(), true;
+      if (k === "Enter") return (openSidebarSelection(), true);
       return false;
     }
 
     // content focus
-    if (k === "j" || k === "ArrowDown") return moveContent(1), true;
-    if (k === "k" || k === "ArrowUp") return moveContent(-1), true;
-    if (k === "Home") return scrollTo(0), true;
-    if (k === "End" || (k === "G" && shift)) return scrollTo(content.scrollHeight), true;
+    if (k === "j" || k === "ArrowDown") return (moveContent(1), true);
+    if (k === "k" || k === "ArrowUp") return (moveContent(-1), true);
+    if (k === "Home") return (scrollTo(0), true);
+    if (k === "End" || (k === "G" && shift)) return (scrollTo(content.scrollHeight), true);
     if ((ctrl && k === "d") || (k === "PageDown" && shift))
-      return scrollBy(viewportPx() / 2), true;
+      return (scrollBy(viewportPx() / 2), true);
     if ((ctrl && k === "u") || (k === "PageUp" && shift))
-      return scrollBy(-viewportPx() / 2), true;
-    if ((ctrl && k === "f") || k === "PageDown") return scrollBy(viewportPx()), true;
-    if ((ctrl && k === "b") || k === "PageUp") return scrollBy(-viewportPx()), true;
+      return (scrollBy(-viewportPx() / 2), true);
+    if ((ctrl && k === "f") || k === "PageDown") return (scrollBy(viewportPx()), true);
+    if ((ctrl && k === "b") || k === "PageUp") return (scrollBy(-viewportPx()), true);
 
     return false;
   }

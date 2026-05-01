@@ -49,7 +49,8 @@ function parseArgs(argv: string[]): CliFlags {
   for (const arg of argv.slice(2)) {
     if (arg.startsWith("--width=")) flags.width = Number(arg.slice("--width=".length));
     else if (arg.startsWith("--height=")) flags.height = Number(arg.slice("--height=".length));
-    else if (arg.startsWith("--iterations=")) flags.iterations = Number(arg.slice("--iterations=".length));
+    else if (arg.startsWith("--iterations="))
+      flags.iterations = Number(arg.slice("--iterations=".length));
     else positional.push(arg);
   }
   if (positional[0]) flags.filePath = positional[0];
@@ -72,9 +73,7 @@ async function main(): Promise<void> {
   const filePath = resolve(flags.filePath);
   if (!existsSync(filePath)) {
     console.error(`fixture not found: ${filePath}`);
-    console.error(
-      "(generate with: bun run scripts/gen-bench-fixture.ts; or pass a real .md path)",
-    );
+    console.error("(generate with: bun run scripts/gen-bench-fixture.ts; or pass a real .md path)");
     process.exit(1);
   }
   const content = readFileSync(filePath, "utf8");
@@ -148,17 +147,21 @@ async function main(): Promise<void> {
       number: false,
       code: undefined,
     } as unknown as KeyEvent;
-    handleContentKey(event, {
-      renderer,
-      scrollBox,
-      cursor,
-      content,
-      contentLines,
-      showNotification: () => {},
-      search,
-      onSearchUpdate: () => {},
-      getContentLineY,
-    }, state);
+    handleContentKey(
+      event,
+      {
+        renderer,
+        scrollBox,
+        cursor,
+        content,
+        contentLines,
+        showNotification: () => {},
+        search,
+        onSearchUpdate: () => {},
+        getContentLineY,
+      },
+      state,
+    );
   };
 
   // Warm-up: first few frames pay one-time costs (Shiki cache fill, layout).
@@ -192,7 +195,9 @@ async function main(): Promise<void> {
   console.log(`  lines       ${contentLines.length}`);
   console.log(`  viewport    ${flags.width}x${flags.height}`);
   console.log(`  iterations  ${flags.iterations}`);
-  console.log(`  total       ${fmtMs(totalMs)} (${(flags.iterations / (totalMs / 1000)).toFixed(1)} keys/s)`);
+  console.log(
+    `  total       ${fmtMs(totalMs)} (${(flags.iterations / (totalMs / 1000)).toFixed(1)} keys/s)`,
+  );
   console.log("");
   console.log(`  per-frame (handle key + renderOnce):`);
   console.log(`    avg  ${fmtMs(avg)}`);

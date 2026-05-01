@@ -75,7 +75,7 @@ describe("CodeAdapterRegistry asset collection", () => {
 });
 
 describe("MermaidAdapter", () => {
-  test("renders mermaid fences as <pre class=\"mermaid\">", () => {
+  test('renders mermaid fences as <pre class="mermaid">', () => {
     const r = new CodeAdapterRegistry();
     r.register(createMermaidAdapter({ themeName: "github-dark" }));
     r.register(createShikiAdapter(highlighter));

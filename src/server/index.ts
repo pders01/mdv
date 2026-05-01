@@ -91,7 +91,9 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
   }
 
   const targetPath = resolve(args.filePath);
-  const stat = await Bun.file(targetPath).stat().catch(() => null);
+  const stat = await Bun.file(targetPath)
+    .stat()
+    .catch(() => null);
   if (!stat) {
     console.error(`mdv serve: path not found: ${targetPath}`);
     process.exit(1);
@@ -218,7 +220,8 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
 
   if (!args.quiet) {
     const initialFileCount = rootIsDirectory
-      ? (await scanDirectory(rootDir, { exclude: args.exclude }).catch(() => null))?.entries.length ?? 0
+      ? ((await scanDirectory(rootDir, { exclude: args.exclude }).catch(() => null))?.entries
+          .length ?? 0)
       : 1;
     printBanner({
       url: `http://${server.hostname}:${server.port}`,
@@ -281,7 +284,10 @@ async function handleAndLog(req: Request, ctx: ServerContext): Promise<Response>
     const body = "Internal server error";
     res = new Response(body, {
       status: 500,
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Content-Length": String(body.length) },
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Length": String(body.length),
+      },
     });
   }
   if (!ctx.quiet) {
@@ -335,7 +341,9 @@ async function handleRequest(req: Request, ctx: ServerContext): Promise<Response
   const resolved = resolveSafe(ctx.rootDir, requestedRel);
   if (!resolved) return notFound();
 
-  const fileStat = await Bun.file(resolved).stat().catch(() => null);
+  const fileStat = await Bun.file(resolved)
+    .stat()
+    .catch(() => null);
   if (!fileStat || fileStat.isDirectory()) return notFound();
 
   if (resolved.endsWith(".md")) {
@@ -366,7 +374,9 @@ async function renderEntry(
   relativePath: string,
 ): Promise<Response> {
   const fullPath = join(ctx.rootDir, relativePath);
-  const source = await Bun.file(fullPath).text().catch(() => null);
+  const source = await Bun.file(fullPath)
+    .text()
+    .catch(() => null);
   if (source == null) return notFound();
 
   // Lazy-load any fence langs this file uses before the markdown pass —

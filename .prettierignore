@@ -1,0 +1,19 @@
+# Vendored bundles must round-trip byte-for-byte
+src/server/assets/vendor/
+
+# Server template uses {{handlebars}} placeholders that confuse formatters
+src/server/assets/template.html
+
+# Snapshot inputs and expected outputs are exact fixtures — formatting them
+# would invalidate the snapshot tests they back.
+src/__tests__/golden/inputs/
+src/__tests__/golden/expected/
+src/__tests__/fixtures/
+
+# Bench / spec corpus caches
+.cache/
+
+# Compiled binary
+mdv
+mdv-*
+*.tar.gz

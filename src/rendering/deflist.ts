@@ -22,9 +22,7 @@ function renderInlineRow(
   baseFg: string,
   baseBold: boolean,
 ): TextRenderable {
-  const parts = tokens
-    .map((t) => convertInlineToken(t, colors)?.segment.text ?? "")
-    .join("");
+  const parts = tokens.map((t) => convertInlineToken(t, colors)?.segment.text ?? "").join("");
   return new TextRenderable(renderer, {
     content: parts,
     fg: baseFg,

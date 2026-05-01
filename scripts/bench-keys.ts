@@ -145,10 +145,7 @@ async function main(): Promise<void> {
     { label: "ctrl-u (half-page up)", keys: [{ name: "u", ctrl: true }] },
     {
       label: "gg (top)",
-      keys: [
-        { name: "g" },
-        { name: "g" },
-      ],
+      keys: [{ name: "g" }, { name: "g" }],
     },
     { label: "G (bottom)", keys: [{ name: "G", shift: true }] },
     {
@@ -197,7 +194,8 @@ async function main(): Promise<void> {
           { name: "h", sequence: "h" },
           { name: "e", sequence: "e" },
           { name: "return" },
-        ] as KeyStroke[]) fire(s);
+        ] as KeyStroke[])
+          fire(s);
         await renderOnce();
       }
     }

@@ -65,13 +65,9 @@ export function dumpPhases(prefix: string = "[perf]"): void {
     const g = groups.get(label)!;
     total += g.ms;
     const cnt = g.count > 1 ? `  (${g.count}x)` : "";
-    console.error(
-      `${prefix} ${label.padEnd(labelWidth)}  ${g.ms.toFixed(2).padStart(8)} ms${cnt}`,
-    );
+    console.error(`${prefix} ${label.padEnd(labelWidth)}  ${g.ms.toFixed(2).padStart(8)} ms${cnt}`);
   }
-  console.error(
-    `${prefix} ${"total".padEnd(labelWidth)}  ${total.toFixed(2).padStart(8)} ms`,
-  );
+  console.error(`${prefix} ${"total".padEnd(labelWidth)}  ${total.toFixed(2).padStart(8)} ms`);
 
   samples.length = 0;
 }

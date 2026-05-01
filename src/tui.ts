@@ -40,435 +40,459 @@ import { phase, phaseSync, setPhaseEnabled, dumpPhases } from "./perf/phase.js";
  * help/version/list-themes flags before calling here.
  */
 export async function startTui(args: CliArgs): Promise<void> {
-// =============================================================================
-// Read Content (stdin or file or directory)
-// =============================================================================
+  // =============================================================================
+  // Read Content (stdin or file or directory)
+  // =============================================================================
 
-let content: string;
-let isStdin = false;
-let isDirectory = false;
-let fileTree: Awaited<ReturnType<typeof scanDirectory>> | null = null;
+  let content: string;
+  let isStdin = false;
+  let isDirectory = false;
+  let fileTree: Awaited<ReturnType<typeof scanDirectory>> | null = null;
 
-try {
-  if (hasStdinContent()) {
-    // Read stdin content BEFORE creating renderer
-    content = await readStdinContent();
-    isStdin = true;
-  } else if (args.filePath) {
-    // Check if path is a directory
-    try {
-      const pathStat = statSync(args.filePath);
-      isDirectory = pathStat.isDirectory();
-    } catch {
-      // Not a valid path — will fail in readContent with a clear error
-    }
-
-    if (isDirectory) {
-      fileTree = await scanDirectory(args.filePath, { exclude: args.exclude });
-      if (fileTree.entries.length === 0) {
-        console.error(`No markdown files found in directory: ${args.filePath}`);
-        process.exit(1);
+  try {
+    if (hasStdinContent()) {
+      // Read stdin content BEFORE creating renderer
+      content = await readStdinContent();
+      isStdin = true;
+    } else if (args.filePath) {
+      // Check if path is a directory
+      try {
+        const pathStat = statSync(args.filePath);
+        isDirectory = pathStat.isDirectory();
+      } catch {
+        // Not a valid path — will fail in readContent with a clear error
       }
-      content = await readContent(fileTree.entries[0]!.path);
+
+      if (isDirectory) {
+        fileTree = await scanDirectory(args.filePath, { exclude: args.exclude });
+        if (fileTree.entries.length === 0) {
+          console.error(`No markdown files found in directory: ${args.filePath}`);
+          process.exit(1);
+        }
+        content = await readContent(fileTree.entries[0]!.path);
+      } else {
+        content = await readContent(args.filePath);
+      }
     } else {
-      content = await readContent(args.filePath);
+      showUsageError();
+      process.exit(1);
     }
-  } else {
-    showUsageError();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error: ${message}`);
+
+    // Provide helpful context for common file errors
+    if (args.filePath) {
+      if (message.includes("ENOENT") || message.includes("not found")) {
+        console.error(`File does not exist: ${args.filePath}`);
+      } else if (message.includes("EACCES") || message.includes("permission")) {
+        console.error(`Permission denied: ${args.filePath}`);
+      }
+    }
+
     process.exit(1);
   }
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`Error: ${message}`);
 
-  // Provide helpful context for common file errors
-  if (args.filePath) {
-    if (message.includes("ENOENT") || message.includes("not found")) {
-      console.error(`File does not exist: ${args.filePath}`);
-    } else if (message.includes("EACCES") || message.includes("permission")) {
-      console.error(`Permission denied: ${args.filePath}`);
+  // After reading piped stdin, reopen /dev/tty for keyboard input
+  if (isStdin) {
+    if (process.platform === "win32") {
+      console.error("Warning: Piped input on Windows may not support keyboard interaction");
+    } else {
+      try {
+        const ttyFd = openSync("/dev/tty", "r");
+        const ttyStream = new ReadStream(ttyFd);
+
+        // Replace process.stdin with TTY stream so OpenTUI can receive keyboard events
+        Object.defineProperty(process, "stdin", {
+          value: ttyStream,
+          writable: true,
+          configurable: true,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`Warning: Could not reopen TTY for keyboard input: ${message}`);
+        console.error("Keyboard shortcuts may not work when reading from stdin");
+      }
     }
   }
 
-  process.exit(1);
-}
+  const contentLines = content.split("\n");
 
-// After reading piped stdin, reopen /dev/tty for keyboard input
-if (isStdin) {
-  if (process.platform === "win32") {
-    console.error("Warning: Piped input on Windows may not support keyboard interaction");
-  } else {
-    try {
-      const ttyFd = openSync("/dev/tty", "r");
-      const ttyStream = new ReadStream(ttyFd);
+  // =============================================================================
+  // Debug Logging
+  // =============================================================================
 
-      // Replace process.stdin with TTY stream so OpenTUI can receive keyboard events
-      Object.defineProperty(process, "stdin", {
-        value: ttyStream,
-        writable: true,
-        configurable: true,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`Warning: Could not reopen TTY for keyboard input: ${message}`);
-      console.error("Keyboard shortcuts may not work when reading from stdin");
-    }
+  const resolvedTheme = resolveTheme(args.theme);
+
+  if (args.debug) {
+    console.error("[debug] file:", isStdin ? "<stdin>" : args.filePath);
+    console.error(
+      "[debug] theme:",
+      args.theme === "auto" ? `auto -> ${resolvedTheme}` : resolvedTheme,
+    );
+    console.error("[debug] lines:", contentLines.length);
+    console.error("[debug] terminal:", process.stdout.columns + "x" + process.stdout.rows);
+    console.error("[debug] mouse:", args.noMouse ? "disabled" : "enabled");
   }
-}
 
-const contentLines = content.split("\n");
+  setPhaseEnabled(args.debug);
 
-// =============================================================================
-// Debug Logging
-// =============================================================================
+  // =============================================================================
+  // Shiki Syntax Highlighter
+  // =============================================================================
 
-const resolvedTheme = resolveTheme(args.theme);
+  const highlighterInstance = await phase("shiki:create", () =>
+    createHighlighterInstance(resolvedTheme),
+  );
+  const themeColors = phaseSync("theme:extract", () =>
+    extractThemeColors(highlighterInstance.highlighter, resolvedTheme as BundledTheme),
+  );
+  highlighterInstance.colors = themeColors;
 
-if (args.debug) {
-  console.error("[debug] file:", isStdin ? "<stdin>" : args.filePath);
-  console.error("[debug] theme:", args.theme === "auto" ? `auto -> ${resolvedTheme}` : resolvedTheme);
-  console.error("[debug] lines:", contentLines.length);
-  console.error("[debug] terminal:", process.stdout.columns + "x" + process.stdout.rows);
-  console.error("[debug] mouse:", args.noMouse ? "disabled" : "enabled");
-}
+  // Lazy-load only the fence languages this file actually uses. On a file with
+  // no code blocks this is a free no-op; on a real file it loads ~3 langs in
+  // 30–60 ms versus ~150 ms for the full bundle.
+  await phase("shiki:load-langs", () => loadLangsForContent(highlighterInstance, content));
 
-setPhaseEnabled(args.debug);
+  // =============================================================================
+  // OpenTUI Setup
+  // =============================================================================
 
-// =============================================================================
-// Shiki Syntax Highlighter
-// =============================================================================
-
-const highlighterInstance = await phase("shiki:create", () =>
-  createHighlighterInstance(resolvedTheme),
-);
-const themeColors = phaseSync("theme:extract", () =>
-  extractThemeColors(highlighterInstance.highlighter, resolvedTheme as BundledTheme),
-);
-highlighterInstance.colors = themeColors;
-
-// Lazy-load only the fence languages this file actually uses. On a file with
-// no code blocks this is a free no-op; on a real file it loads ~3 langs in
-// 30–60 ms versus ~150 ms for the full bundle.
-await phase("shiki:load-langs", () => loadLangsForContent(highlighterInstance, content));
-
-// =============================================================================
-// OpenTUI Setup
-// =============================================================================
-
-// targetFps/maxFps lifted from OpenTUI defaults (30/60). The j-key handler
-// runs in <2 ms per press; the previous 30 fps cap meant input feedback
-// was paced to ~33 ms regardless, so holding j felt jerky. Frame work has
-// plenty of headroom for 120 fps even on a 7K-line file (max frame ~13 ms).
-const renderer = await phase("renderer:create", () =>
-  createCliRenderer({
-    exitOnCtrlC: false,
-    useMouse: !args.noMouse,
-    targetFps: 60,
-    maxFps: 120,
-  }),
-);
-
-// Create syntax style from theme colors
-const syntaxStyle = phaseSync("theme:syntax-style", () => createSyntaxStyle(themeColors));
-
-// =============================================================================
-// Cursor Manager Setup
-// =============================================================================
-
-// Mutable content state (for directory mode reloads)
-let currentContent = content;
-let currentContentLines = contentLines;
-
-// Create cursor manager (will get status bar update function later)
-let statusBarUpdate: () => void = () => {};
-const cursor = createCursorManager(currentContentLines.length, () => statusBarUpdate());
-
-// Create search manager
-const search = new SearchManager();
-
-// =============================================================================
-// UI Components
-// =============================================================================
-
-// Create container and scroll box
-const { container, scrollBox, setupHighlighting, reloadContent, isLineCursorable } = phaseSync(
-  "container:create",
-  () => createMainContainer(renderer, currentContentLines),
-);
-
-// Cursor lands only on token-covered lines (matches the no-copy semantic
-// for blanks). Predicate evaluates lazily against the line-to-block cache,
-// which is built on first render — until then it allows everything.
-cursor.setCursorablePredicate(isLineCursorable);
-
-// Create render node callback
-// In directory mode, subtract sidebar width (30) from available content width
-// Scrollbox padding (1 on each side) is accounted for internally
-const contentWidth = isDirectory ? renderer.width - 30 - 2 : renderer.width - 2;
-
-// Mermaid pre-pass: render all mermaid code blocks to ASCII before the first
-// paint. The map is mutated in place on reloads (directory switch, watch
-// reload) so the renderNode closure always sees current state.
-// availableWidth is contentWidth minus the code-block padding the wrapper adds.
-const mermaidWidth = Math.max(20, contentWidth - 2);
-const mermaidRenders = new Map<string, string>();
-let mermaidToolWasMissing = false;
-let mermaidInitialOverflow = 0;
-{
-  const result = await phase("mermaid:prerender", () =>
-    prerenderMermaid(currentContent, {
-      disabled: args.noMermaid,
-      availableWidth: mermaidWidth,
+  // targetFps/maxFps lifted from OpenTUI defaults (30/60). The j-key handler
+  // runs in <2 ms per press; the previous 30 fps cap meant input feedback
+  // was paced to ~33 ms regardless, so holding j felt jerky. Frame work has
+  // plenty of headroom for 120 fps even on a 7K-line file (max frame ~13 ms).
+  const renderer = await phase("renderer:create", () =>
+    createCliRenderer({
+      exitOnCtrlC: false,
+      useMouse: !args.noMouse,
+      targetFps: 60,
+      maxFps: 120,
     }),
   );
-  for (const [k, v] of result.renders) mermaidRenders.set(k, v);
-  mermaidToolWasMissing = result.toolMissing;
-  mermaidInitialOverflow = result.overflowed;
-}
 
-const renderNode = phaseSync("render-node:create", () =>
-  createRenderNode(renderer, themeColors, highlighterInstance, contentWidth, mermaidRenders),
-);
+  // Create syntax style from theme colors
+  const syntaxStyle = phaseSync("theme:syntax-style", () => createSyntaxStyle(themeColors));
 
-// Create markdown renderable. Reload paths mutate `markdown.content` rather
-// than rebuilding this instance — see container.reloadContent. Construction
-// runs unified once over the source and converts the mdast tree to the
-// marked-shaped tokens the renderers in `src/rendering/*` consume.
-const markdown = phaseSync(
-  "markdown:construct",
-  () =>
-    new MdvMarkdownRenderable(renderer, {
-      id: "markdown-content",
-      content: currentContent,
-      conceal: true,
-      renderNode,
-    }),
-);
-void syntaxStyle;
-scrollBox.add(markdown);
+  // =============================================================================
+  // Cursor Manager Setup
+  // =============================================================================
 
-// Setup cursor and selection highlighting (AFTER markdown is added to scrollBox)
-// Pass markdown instance to access actual rendered positions via _blockStates
-let { getLinePosition, getContentLineY } = phaseSync("highlighting:setup", () =>
-  setupHighlighting(
-    () => ({
-      mode: cursor.mode,
-      cursorLine: cursor.cursorLine,
-      selectionStart: cursor.selectionStart,
-      selectionEnd: cursor.selectionEnd,
-      searchMatches: search.matches,
-    }),
-    themeColors.cyan, // Cursor color (subtle)
-    themeColors.yellow, // Selection color
-    themeColors.codeBg, // Code block background
-    themeColors.orange, // Search highlight color
-    themeColors.bg, // Theme bg, for pre-blended tints
-    markdown, // For actual rendered positions
-  ),
-);
+  // Mutable content state (for directory mode reloads)
+  let currentContent = content;
+  let currentContentLines = contentLines;
 
-// Create status bar
-const initialFileName = isDirectory
-  ? basename(fileTree!.entries[0]!.path)
-  : isStdin
-    ? "stdin"
-    : basename(args.filePath!);
-const {
-  statusBar,
-  showNotification,
-  updateStatusBar,
-  setFileName,
-  setTotalLines,
-  showSearchInput,
-  hideSearchInput,
-} = createStatusBar(renderer, initialFileName, themeColors, currentContentLines.length);
+  // Create cursor manager (will get status bar update function later)
+  let statusBarUpdate: () => void = () => {};
+  const cursor = createCursorManager(currentContentLines.length, () => statusBarUpdate());
 
-// Search UI callback: update status bar when search input changes
-const onSearchUpdate = () => {
-  if (search.isInputActive) {
-    showSearchInput(search.inputBuffer);
-  } else {
-    hideSearchInput();
-    statusBarUpdate();
+  // Create search manager
+  const search = new SearchManager();
+
+  // =============================================================================
+  // UI Components
+  // =============================================================================
+
+  // Create container and scroll box
+  const { container, scrollBox, setupHighlighting, reloadContent, isLineCursorable } = phaseSync(
+    "container:create",
+    () => createMainContainer(renderer, currentContentLines),
+  );
+
+  // Cursor lands only on token-covered lines (matches the no-copy semantic
+  // for blanks). Predicate evaluates lazily against the line-to-block cache,
+  // which is built on first render — until then it allows everything.
+  cursor.setCursorablePredicate(isLineCursorable);
+
+  // Create render node callback
+  // In directory mode, subtract sidebar width (30) from available content width
+  // Scrollbox padding (1 on each side) is accounted for internally
+  const contentWidth = isDirectory ? renderer.width - 30 - 2 : renderer.width - 2;
+
+  // Mermaid pre-pass: render all mermaid code blocks to ASCII before the first
+  // paint. The map is mutated in place on reloads (directory switch, watch
+  // reload) so the renderNode closure always sees current state.
+  // availableWidth is contentWidth minus the code-block padding the wrapper adds.
+  const mermaidWidth = Math.max(20, contentWidth - 2);
+  const mermaidRenders = new Map<string, string>();
+  let mermaidToolWasMissing = false;
+  let mermaidInitialOverflow = 0;
+  {
+    const result = await phase("mermaid:prerender", () =>
+      prerenderMermaid(currentContent, {
+        disabled: args.noMermaid,
+        availableWidth: mermaidWidth,
+      }),
+    );
+    for (const [k, v] of result.renders) mermaidRenders.set(k, v);
+    mermaidToolWasMissing = result.toolMissing;
+    mermaidInitialOverflow = result.overflowed;
   }
-};
 
-// Connect cursor to status bar
-statusBarUpdate = () =>
-  updateStatusBar(cursor.mode, cursor.cursorLine, cursor.selectionStart, cursor.selectionEnd);
+  const renderNode = phaseSync("render-node:create", () =>
+    createRenderNode(renderer, themeColors, highlighterInstance, contentWidth, mermaidRenders),
+  );
 
-// Refresh mermaidRenders for a new content buffer. Mutates the shared map
-// in place so the renderNode closure stays valid across reloads.
-const refreshMermaidRenders = async (text: string): Promise<void> => {
-  const result = await prerenderMermaid(text, {
-    disabled: args.noMermaid,
-    availableWidth: mermaidWidth,
-  });
-  mermaidRenders.clear();
-  for (const [k, v] of result.renders) mermaidRenders.set(k, v);
-  if (result.toolMissing && result.hadBlocks) {
-    showNotification("mermaid-ascii not installed — showing source", 3000);
-  } else if (result.overflowed > 0) {
-    const n = result.overflowed;
-    showNotification(`${n} mermaid diagram${n > 1 ? "s" : ""} too wide — showing source`, 3000);
-  }
-};
+  // Create markdown renderable. Reload paths mutate `markdown.content` rather
+  // than rebuilding this instance — see container.reloadContent. Construction
+  // runs unified once over the source and converts the mdast tree to the
+  // marked-shaped tokens the renderers in `src/rendering/*` consume.
+  const markdown = phaseSync(
+    "markdown:construct",
+    () =>
+      new MdvMarkdownRenderable(renderer, {
+        id: "markdown-content",
+        content: currentContent,
+        conceal: true,
+        renderNode,
+      }),
+  );
+  void syntaxStyle;
+  scrollBox.add(markdown);
 
-// Initial notifications: tool missing or oversized diagrams.
-if (mermaidToolWasMissing) {
-  showNotification("mermaid-ascii not installed — showing source", 3000);
-} else if (mermaidInitialOverflow > 0) {
-  const n = mermaidInitialOverflow;
-  showNotification(`${n} mermaid diagram${n > 1 ? "s" : ""} too wide — showing source`, 3000);
-}
+  // Setup cursor and selection highlighting (AFTER markdown is added to scrollBox)
+  // Pass markdown instance to access actual rendered positions via _blockStates
+  let { getLinePosition, getContentLineY } = phaseSync("highlighting:setup", () =>
+    setupHighlighting(
+      () => ({
+        mode: cursor.mode,
+        cursorLine: cursor.cursorLine,
+        selectionStart: cursor.selectionStart,
+        selectionEnd: cursor.selectionEnd,
+        searchMatches: search.matches,
+      }),
+      themeColors.cyan, // Cursor color (subtle)
+      themeColors.yellow, // Selection color
+      themeColors.codeBg, // Code block background
+      themeColors.orange, // Search highlight color
+      themeColors.bg, // Theme bg, for pre-blended tints
+      markdown, // For actual rendered positions
+    ),
+  );
 
-// =============================================================================
-// UI Assembly
-// =============================================================================
+  // Create status bar
+  const initialFileName = isDirectory
+    ? basename(fileTree!.entries[0]!.path)
+    : isStdin
+      ? "stdin"
+      : basename(args.filePath!);
+  const {
+    statusBar,
+    showNotification,
+    updateStatusBar,
+    setFileName,
+    setTotalLines,
+    showSearchInput,
+    hideSearchInput,
+  } = createStatusBar(renderer, initialFileName, themeColors, currentContentLines.length);
 
-container.add(statusBar);
-
-if (isDirectory && fileTree) {
-  // Directory mode: sidebar + content in a row layout
-  const appRow = new BoxRenderable(renderer, {
-    id: "app-row",
-    flexDirection: "row",
-    flexGrow: 1,
-  });
-
-  const focusManager = createFocusManager("content");
-
-  // Track the currently viewed file for watch-mode reloads
-  let currentFilePath = fileTree.entries[0]!.path;
-
-  // Reload content when a file is opened from the sidebar
-  const onOpenFile = async (filePath: string) => {
-    try {
-      const newContent = await readContent(filePath);
-      currentContent = newContent;
-      currentContentLines = newContent.split("\n");
-      currentFilePath = filePath;
-
-      // Refresh mermaid pre-pass and load any new fence langs before swapping.
-      await refreshMermaidRenders(newContent);
-      await loadLangsForContent(highlighterInstance, newContent);
-
-      ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
-
-      // Reset cursor and search for new content
-      cursor.reset(currentContentLines.length);
-      search.clear();
-
-      // Update status bar
-      setFileName(basename(filePath));
-      setTotalLines(currentContentLines.length);
-
-      // Re-setup mouse handler for new content
-      if (!args.noMouse) {
-        setupMouseHandler({
-          scrollBox,
-          cursor,
-          contentLines: currentContentLines,
-          showNotification,
-          getLinePosition,
-        });
-      }
-
+  // Search UI callback: update status bar when search input changes
+  const onSearchUpdate = () => {
+    if (search.isInputActive) {
+      showSearchInput(search.inputBuffer);
+    } else {
+      hideSearchInput();
       statusBarUpdate();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      showNotification(`Error: ${msg}`);
     }
   };
 
-  const sidebar = createSidebar(renderer, fileTree, themeColors, async (filePath: string) => {
-    sidebar.clearChanged(filePath);
-    await onOpenFile(filePath);
-  });
-  sidebar.highlightEntry(fileTree.entries[0]!.path);
+  // Connect cursor to status bar
+  statusBarUpdate = () =>
+    updateStatusBar(cursor.mode, cursor.cursorLine, cursor.selectionStart, cursor.selectionEnd);
 
-  // Watch directory for file changes
-  if (args.watch) {
-    const knownPaths = new Set(fileTree.entries.map((e) => e.path));
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const DEBOUNCE_MS = 150;
-
-    watch(fileTree.rootDir, { recursive: true }, (_eventType, filename) => {
-      if (!filename || !filename.endsWith(".md")) return;
-
-      const fullPath = resolve(fileTree.rootDir, filename);
-      if (!knownPaths.has(fullPath)) return;
-
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(async () => {
-        // Mark file as changed in sidebar
-        if (fullPath !== currentFilePath) {
-          sidebar.markChanged(fullPath);
-          return;
-        }
-
-        // Reload the currently viewed file
-        try {
-          showNotification("Reloading...", 500);
-          await new Promise((r) => setTimeout(r, 80));
-
-          const newContent = await readContent(fullPath);
-          if (newContent === currentContent) return;
-
-          currentContent = newContent;
-          currentContentLines = newContent.split("\n");
-
-          // Refresh mermaid pre-pass and load any new fence langs.
-          await refreshMermaidRenders(newContent);
-          await loadLangsForContent(highlighterInstance, newContent);
-
-          ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
-
-          cursor.reset(
-            currentContentLines.length,
-            Math.min(cursor.cursorLine, currentContentLines.length - 1),
-          );
-          search.clear();
-          setTotalLines(currentContentLines.length);
-
-          if (!args.noMouse) {
-            setupMouseHandler({
-              scrollBox,
-              cursor,
-              contentLines: currentContentLines,
-              showNotification,
-              getLinePosition,
-            });
-          }
-
-          statusBarUpdate();
-          showNotification("File reloaded", 1500);
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
-          showNotification(`Reload error: ${msg}`);
-        }
-      }, DEBOUNCE_MS);
+  // Refresh mermaidRenders for a new content buffer. Mutates the shared map
+  // in place so the renderNode closure stays valid across reloads.
+  const refreshMermaidRenders = async (text: string): Promise<void> => {
+    const result = await prerenderMermaid(text, {
+      disabled: args.noMermaid,
+      availableWidth: mermaidWidth,
     });
+    mermaidRenders.clear();
+    for (const [k, v] of result.renders) mermaidRenders.set(k, v);
+    if (result.toolMissing && result.hadBlocks) {
+      showNotification("mermaid-ascii not installed — showing source", 3000);
+    } else if (result.overflowed > 0) {
+      const n = result.overflowed;
+      showNotification(`${n} mermaid diagram${n > 1 ? "s" : ""} too wide — showing source`, 3000);
+    }
+  };
+
+  // Initial notifications: tool missing or oversized diagrams.
+  if (mermaidToolWasMissing) {
+    showNotification("mermaid-ascii not installed — showing source", 3000);
+  } else if (mermaidInitialOverflow > 0) {
+    const n = mermaidInitialOverflow;
+    showNotification(`${n} mermaid diagram${n > 1 ? "s" : ""} too wide — showing source`, 3000);
   }
 
-  appRow.add(sidebar.sidebarBox);
-  appRow.add(container);
-  renderer.root.add(appRow);
+  // =============================================================================
+  // UI Assembly
+  // =============================================================================
 
-  // Update status bar help text based on pane focus
-  focusManager.onFocusChange((pane) => {
-    if (pane === "sidebar") {
-      showNotification("SIDEBAR: j/k navigate, Enter open, Tab/Esc back", 1500);
+  container.add(statusBar);
+
+  if (isDirectory && fileTree) {
+    // Directory mode: sidebar + content in a row layout
+    const appRow = new BoxRenderable(renderer, {
+      id: "app-row",
+      flexDirection: "row",
+      flexGrow: 1,
+    });
+
+    const focusManager = createFocusManager("content");
+
+    // Track the currently viewed file for watch-mode reloads
+    let currentFilePath = fileTree.entries[0]!.path;
+
+    // Reload content when a file is opened from the sidebar
+    const onOpenFile = async (filePath: string) => {
+      try {
+        const newContent = await readContent(filePath);
+        currentContent = newContent;
+        currentContentLines = newContent.split("\n");
+        currentFilePath = filePath;
+
+        // Refresh mermaid pre-pass and load any new fence langs before swapping.
+        await refreshMermaidRenders(newContent);
+        await loadLangsForContent(highlighterInstance, newContent);
+
+        ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
+
+        // Reset cursor and search for new content
+        cursor.reset(currentContentLines.length);
+        search.clear();
+
+        // Update status bar
+        setFileName(basename(filePath));
+        setTotalLines(currentContentLines.length);
+
+        // Re-setup mouse handler for new content
+        if (!args.noMouse) {
+          setupMouseHandler({
+            scrollBox,
+            cursor,
+            contentLines: currentContentLines,
+            showNotification,
+            getLinePosition,
+          });
+        }
+
+        statusBarUpdate();
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        showNotification(`Error: ${msg}`);
+      }
+    };
+
+    const sidebar = createSidebar(renderer, fileTree, themeColors, async (filePath: string) => {
+      sidebar.clearChanged(filePath);
+      await onOpenFile(filePath);
+    });
+    sidebar.highlightEntry(fileTree.entries[0]!.path);
+
+    // Watch directory for file changes
+    if (args.watch) {
+      const knownPaths = new Set(fileTree.entries.map((e) => e.path));
+      let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+      const DEBOUNCE_MS = 150;
+
+      watch(fileTree.rootDir, { recursive: true }, (_eventType, filename) => {
+        if (!filename || !filename.endsWith(".md")) return;
+
+        const fullPath = resolve(fileTree.rootDir, filename);
+        if (!knownPaths.has(fullPath)) return;
+
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+          // Mark file as changed in sidebar
+          if (fullPath !== currentFilePath) {
+            sidebar.markChanged(fullPath);
+            return;
+          }
+
+          // Reload the currently viewed file
+          try {
+            showNotification("Reloading...", 500);
+            await new Promise((r) => setTimeout(r, 80));
+
+            const newContent = await readContent(fullPath);
+            if (newContent === currentContent) return;
+
+            currentContent = newContent;
+            currentContentLines = newContent.split("\n");
+
+            // Refresh mermaid pre-pass and load any new fence langs.
+            await refreshMermaidRenders(newContent);
+            await loadLangsForContent(highlighterInstance, newContent);
+
+            ({ getLinePosition, getContentLineY } = reloadContent(
+              currentContent,
+              currentContentLines,
+            ));
+
+            cursor.reset(
+              currentContentLines.length,
+              Math.min(cursor.cursorLine, currentContentLines.length - 1),
+            );
+            search.clear();
+            setTotalLines(currentContentLines.length);
+
+            if (!args.noMouse) {
+              setupMouseHandler({
+                scrollBox,
+                cursor,
+                contentLines: currentContentLines,
+                showNotification,
+                getLinePosition,
+              });
+            }
+
+            statusBarUpdate();
+            showNotification("File reloaded", 1500);
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            showNotification(`Reload error: ${msg}`);
+          }
+        }, DEBOUNCE_MS);
+      });
     }
-  });
 
-  // Pane-aware keyboard handler
-  setupPaneKeyboardHandler({
-    renderer,
-    focusManager,
-    sidebar,
-    sidebarSearch: sidebar.search,
-    contentOptions: {
+    appRow.add(sidebar.sidebarBox);
+    appRow.add(container);
+    renderer.root.add(appRow);
+
+    // Update status bar help text based on pane focus
+    focusManager.onFocusChange((pane) => {
+      if (pane === "sidebar") {
+        showNotification("SIDEBAR: j/k navigate, Enter open, Tab/Esc back", 1500);
+      }
+    });
+
+    // Pane-aware keyboard handler
+    setupPaneKeyboardHandler({
+      renderer,
+      focusManager,
+      sidebar,
+      sidebarSearch: sidebar.search,
+      contentOptions: {
+        renderer,
+        scrollBox,
+        cursor,
+        content: currentContent,
+        contentLines: currentContentLines,
+        showNotification,
+        search,
+        onSearchUpdate,
+        get getContentLineY() {
+          return getContentLineY;
+        },
+      },
+    });
+  } else {
+    // Single-file mode (unchanged)
+    renderer.root.add(container);
+
+    setupKeyboardHandler({
       renderer,
       scrollBox,
       cursor,
@@ -477,153 +501,134 @@ if (isDirectory && fileTree) {
       showNotification,
       search,
       onSearchUpdate,
-      get getContentLineY() {
-        return getContentLineY;
-      },
-    },
-  });
-} else {
-  // Single-file mode (unchanged)
-  renderer.root.add(container);
-
-  setupKeyboardHandler({
-    renderer,
-    scrollBox,
-    cursor,
-    content: currentContent,
-    contentLines: currentContentLines,
-    showNotification,
-    search,
-    onSearchUpdate,
-    getContentLineY,
-  });
-}
-
-// Initial status bar update
-statusBarUpdate();
-
-// =============================================================================
-// Perf Overlay (Ctrl-G)
-// =============================================================================
-
-// Global toggle that runs ahead of pane dispatch so it works regardless of
-// which pane has focus.
-const perfOverlay = createPerfOverlay(renderer, themeColors);
-renderer.keyInput.on("keypress", (event) => {
-  if (event.ctrl && event.name === "g") {
-    const on = perfOverlay.toggle();
-    showNotification(on ? "Perf overlay on" : "Perf overlay off", 1200);
+      getContentLineY,
+    });
   }
-});
 
-// =============================================================================
-// Mouse Handling
-// =============================================================================
+  // Initial status bar update
+  statusBarUpdate();
 
-if (!args.noMouse) {
-  setupMouseHandler({
-    scrollBox,
-    cursor,
-    contentLines: currentContentLines,
-    showNotification,
-    getLinePosition,
+  // =============================================================================
+  // Perf Overlay (Ctrl-G)
+  // =============================================================================
+
+  // Global toggle that runs ahead of pane dispatch so it works regardless of
+  // which pane has focus.
+  const perfOverlay = createPerfOverlay(renderer, themeColors);
+  renderer.keyInput.on("keypress", (event) => {
+    if (event.ctrl && event.name === "g") {
+      const on = perfOverlay.toggle();
+      showNotification(on ? "Perf overlay on" : "Perf overlay off", 1200);
+    }
   });
 
   // =============================================================================
-  // Native Selection Event (character-level click/drag on text)
+  // Mouse Handling
   // =============================================================================
 
-  renderer.on("selection", (selection) => {
-    const line = mouseYToLine(
-      selection.anchor.y,
-      scrollBox.viewport.y,
-      scrollBox.scrollTop,
-      scrollBox.scrollHeight,
-      currentContentLines.length,
+  if (!args.noMouse) {
+    setupMouseHandler({
+      scrollBox,
+      cursor,
+      contentLines: currentContentLines,
+      showNotification,
       getLinePosition,
-    );
-    if (cursor.mode === "visual") {
-      cursor.exitVisual();
-    }
-    cursor.setCursor(line);
-    statusBarUpdate();
-  });
-}
+    });
 
-// =============================================================================
-// File Watching (--watch mode)
-// =============================================================================
+    // =============================================================================
+    // Native Selection Event (character-level click/drag on text)
+    // =============================================================================
 
-if (args.watch && !isStdin && !isDirectory && args.filePath) {
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  const DEBOUNCE_MS = 150;
-  const watchPath = args.filePath;
-
-  const reloadFile = async () => {
-    try {
-      showNotification("Reloading...", 500);
-
-      // Brief delay so the "Reloading..." notification is visible
-      await new Promise((r) => setTimeout(r, 80));
-
-      const newContent = await readContent(watchPath);
-
-      // Skip reload if content hasn't actually changed
-      if (newContent === currentContent) return;
-
-      currentContent = newContent;
-      currentContentLines = newContent.split("\n");
-
-      // Refresh mermaid pre-pass and load any new fence langs.
-      await refreshMermaidRenders(newContent);
-      await loadLangsForContent(highlighterInstance, newContent);
-
-      ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
-
-      // Clamp cursor to new content bounds (don't reset to top)
-      cursor.reset(
+    renderer.on("selection", (selection) => {
+      const line = mouseYToLine(
+        selection.anchor.y,
+        scrollBox.viewport.y,
+        scrollBox.scrollTop,
+        scrollBox.scrollHeight,
         currentContentLines.length,
-        Math.min(cursor.cursorLine, currentContentLines.length - 1),
+        getLinePosition,
       );
-      search.clear();
-      setTotalLines(currentContentLines.length);
-
-      if (!args.noMouse) {
-        setupMouseHandler({
-          scrollBox,
-          cursor,
-          contentLines: currentContentLines,
-          showNotification,
-          getLinePosition,
-        });
+      if (cursor.mode === "visual") {
+        cursor.exitVisual();
       }
-
+      cursor.setCursor(line);
       statusBarUpdate();
-      showNotification("File reloaded", 1500);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      showNotification(`Reload error: ${msg}`);
-    }
-  };
-
-  const startWatcher = () => {
-    const watcher = watch(watchPath, () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(reloadFile, DEBOUNCE_MS);
     });
+  }
 
-    // Re-establish watcher if it closes (happens on macOS rename-based saves)
-    watcher.on("close", () => {
-      setTimeout(startWatcher, 100);
-    });
-  };
+  // =============================================================================
+  // File Watching (--watch mode)
+  // =============================================================================
 
-  startWatcher();
+  if (args.watch && !isStdin && !isDirectory && args.filePath) {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const DEBOUNCE_MS = 150;
+    const watchPath = args.filePath;
+
+    const reloadFile = async () => {
+      try {
+        showNotification("Reloading...", 500);
+
+        // Brief delay so the "Reloading..." notification is visible
+        await new Promise((r) => setTimeout(r, 80));
+
+        const newContent = await readContent(watchPath);
+
+        // Skip reload if content hasn't actually changed
+        if (newContent === currentContent) return;
+
+        currentContent = newContent;
+        currentContentLines = newContent.split("\n");
+
+        // Refresh mermaid pre-pass and load any new fence langs.
+        await refreshMermaidRenders(newContent);
+        await loadLangsForContent(highlighterInstance, newContent);
+
+        ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
+
+        // Clamp cursor to new content bounds (don't reset to top)
+        cursor.reset(
+          currentContentLines.length,
+          Math.min(cursor.cursorLine, currentContentLines.length - 1),
+        );
+        search.clear();
+        setTotalLines(currentContentLines.length);
+
+        if (!args.noMouse) {
+          setupMouseHandler({
+            scrollBox,
+            cursor,
+            contentLines: currentContentLines,
+            showNotification,
+            getLinePosition,
+          });
+        }
+
+        statusBarUpdate();
+        showNotification("File reloaded", 1500);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        showNotification(`Reload error: ${msg}`);
+      }
+    };
+
+    const startWatcher = () => {
+      const watcher = watch(watchPath, () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(reloadFile, DEBOUNCE_MS);
+      });
+
+      // Re-establish watcher if it closes (happens on macOS rename-based saves)
+      watcher.on("close", () => {
+        setTimeout(startWatcher, 100);
+      });
+    };
+
+    startWatcher();
+  }
+
+  // Initialize cursor position and scroll
+  scrollToCursor(scrollBox, cursor.cursorLine, currentContentLines.length, true, getContentLineY);
+
+  dumpPhases("[perf:startup]");
 }
-
-// Initialize cursor position and scroll
-scrollToCursor(scrollBox, cursor.cursorLine, currentContentLines.length, true, getContentLineY);
-
-dumpPhases("[perf:startup]");
-}
-

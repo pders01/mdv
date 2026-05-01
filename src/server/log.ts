@@ -28,7 +28,9 @@ export function printBanner(opts: BannerOptions): void {
   lines.push(`  ${bold("mdv")} ${dim("·")} ${cyan(opts.url)}`);
   lines.push("");
   lines.push(field("path", opts.rootDir));
-  lines.push(field("mode", opts.rootIsDirectory ? `directory · ${opts.fileCount} files` : "single file"));
+  lines.push(
+    field("mode", opts.rootIsDirectory ? `directory · ${opts.fileCount} files` : "single file"),
+  );
   lines.push(field("theme", opts.theme));
   lines.push(field("mermaid", opts.mermaid ? "on" : "off"));
   lines.push("");

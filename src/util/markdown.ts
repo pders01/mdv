@@ -27,7 +27,13 @@ function getProcessor(): Processor<Root, Root, Root, Root, string> {
     sharedProcessor = unified()
       .use(remarkParse)
       .use(remarkFrontmatter, ["yaml", "toml"])
-      .use(remarkGfm, { singleTilde: false }) as unknown as Processor<Root, Root, Root, Root, string>;
+      .use(remarkGfm, { singleTilde: false }) as unknown as Processor<
+      Root,
+      Root,
+      Root,
+      Root,
+      string
+    >;
   }
   return sharedProcessor;
 }
@@ -46,7 +52,10 @@ export function walkCodeFences(content: string, callback: (block: CodeBlock) => 
   visit(tree as { children?: unknown[] }, callback);
 }
 
-function visit(node: { type?: string; children?: unknown[]; lang?: string | null; value?: string }, cb: (block: CodeBlock) => void): void {
+function visit(
+  node: { type?: string; children?: unknown[]; lang?: string | null; value?: string },
+  cb: (block: CodeBlock) => void,
+): void {
   if (node.type === "code") {
     cb({ lang: node.lang ?? "", text: node.value ?? "" });
   }

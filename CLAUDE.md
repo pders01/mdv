@@ -128,7 +128,7 @@ Custom markdown token renderers in `src/rendering/`:
 
 ### Cursor Highlight (color compositing)
 
-- OpenTUI's `fillRect` blends alpha against the *empty* cell buffer (which counts as transparent), so `RGBA.fromHex(c); rgba.a = 0.2` renders as 20% color on black, not 20% color on theme bg
+- OpenTUI's `fillRect` blends alpha against the _empty_ cell buffer (which counts as transparent), so `RGBA.fromHex(c); rgba.a = 0.2` renders as 20% color on black, not 20% color on theme bg
 - `blendOver(fg, bg, alpha)` in `container.ts` pre-computes the visible tint as a fully opaque RGBA so the result matches "color over bg" on any theme
 - Cursor row uses `themeColors.cyan` blended at 22%; visual selection uses `themeColors.yellow` at 28%; same accent in sidebar via `colors.cyan`
 

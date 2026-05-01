@@ -43,40 +43,42 @@ import { escapeHtml } from "../util/escape.js";
 type MarkdownProcessor = Processor<undefined, undefined, undefined, undefined, string>;
 
 export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor {
-  return unified()
-    .use(remarkParse)
-    .use(remarkFrontmatter, ["yaml", "toml"])
-    // singleTilde:false reserves `~text~` for remark-supersub (subscript)
-    // — GFM strikethrough still works as `~~text~~`.
-    .use(remarkGfm, { singleTilde: false })
-    .use(remarkMath)
-    .use(wikiLink, { aliasDivider: "|" })
-    .use(remarkDeflist)
-    .use(remarkDirective)
-    .use(remarkMarkers)
-    .use(remarkSupersub)
-    .use(remarkAlert)
-    .use(remarkRehype, {
-      allowDangerousHtml: true,
-      handlers: {
-        code(_state, node: Code) {
-          const lang = (node.lang ?? "").trim();
-          const adapter = registry.resolve(lang);
-          const html = adapter
-            ? adapter.render(node.value, lang)
-            : `<pre><code>${escapeHtml(node.value)}</code></pre>`;
-          return { type: "raw", value: html };
+  return (
+    unified()
+      .use(remarkParse)
+      .use(remarkFrontmatter, ["yaml", "toml"])
+      // singleTilde:false reserves `~text~` for remark-supersub (subscript)
+      // — GFM strikethrough still works as `~~text~~`.
+      .use(remarkGfm, { singleTilde: false })
+      .use(remarkMath)
+      .use(wikiLink, { aliasDivider: "|" })
+      .use(remarkDeflist)
+      .use(remarkDirective)
+      .use(remarkMarkers)
+      .use(remarkSupersub)
+      .use(remarkAlert)
+      .use(remarkRehype, {
+        allowDangerousHtml: true,
+        handlers: {
+          code(_state, node: Code) {
+            const lang = (node.lang ?? "").trim();
+            const adapter = registry.resolve(lang);
+            const html = adapter
+              ? adapter.render(node.value, lang)
+              : `<pre><code>${escapeHtml(node.value)}</code></pre>`;
+            return { type: "raw", value: html };
+          },
         },
-      },
-    })
-    .use(rehypeKatex)
-    .use(rehypeStringify, {
-      allowDangerousHtml: true,
-      // Conventional HTML output uses named refs (`&lt;`, `&gt;`, `&amp;`).
-      // Default hex refs (`&#x3C;`) are equivalent to browsers but break
-      // toContain-style assertions that expect the readable form.
-      characterReferences: { useNamedReferences: true },
-    }) as MarkdownProcessor;
+      })
+      .use(rehypeKatex)
+      .use(rehypeStringify, {
+        allowDangerousHtml: true,
+        // Conventional HTML output uses named refs (`&lt;`, `&gt;`, `&amp;`).
+        // Default hex refs (`&#x3C;`) are equivalent to browsers but break
+        // toContain-style assertions that expect the readable form.
+        characterReferences: { useNamedReferences: true },
+      }) as MarkdownProcessor
+  );
 }
 
 export function renderMarkdown(registry: CodeAdapterRegistry, source: string): string {

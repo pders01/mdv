@@ -104,7 +104,9 @@ function collectDefinitions(root: Root): DefMap {
   return map;
 }
 
-function* walk(nodes: readonly { type: string; children?: unknown }[]): Generator<{ type: string }> {
+function* walk(
+  nodes: readonly { type: string; children?: unknown }[],
+): Generator<{ type: string }> {
   for (const n of nodes) {
     yield n;
     const kids = (n as { children?: unknown[] }).children;
@@ -203,9 +205,7 @@ function listItemToken(node: ListItem, ctx: ConvertContext, parentSpread: boolea
     const p = blockChildren[0] as Paragraph;
     tokens = p.children.map((c) => convertInline(c, ctx));
   } else {
-    tokens = blockChildren
-      .map((c) => convertBlock(c, ctx))
-      .filter((t): t is Token => t !== null);
+    tokens = blockChildren.map((c) => convertBlock(c, ctx)).filter((t): t is Token => t !== null);
   }
   const text = tokens.map((t) => extractText(t)).join("");
   const task = typeof node.checked === "boolean";
@@ -523,9 +523,7 @@ function footnoteDefinitionToken(node: FootnoteDefinition, ctx: ConvertContext):
   // Inline children of the first paragraph (footnotes are nearly always
   // single-paragraph in practice).
   const firstPara = node.children[0];
-  const tokens: Token[] = [
-    { type: "text", raw: prefix, text: prefix } as unknown as Token,
-  ];
+  const tokens: Token[] = [{ type: "text", raw: prefix, text: prefix } as unknown as Token];
   if (firstPara && firstPara.type === "paragraph") {
     for (const child of firstPara.children) {
       tokens.push(convertInline(child, ctx));
@@ -589,9 +587,9 @@ function descriptionListToken(node: { children: unknown[] }, ctx: ConvertContext
  * blockquote (the name appears as a bold header above the body).
  */
 function directiveToken(node: DirectiveNode, ctx: ConvertContext): Token {
-  const alertKind = (
-    ["note", "tip", "important", "warning", "caution"] as const
-  ).find((k) => k === node.name.toLowerCase());
+  const alertKind = (["note", "tip", "important", "warning", "caution"] as const).find(
+    (k) => k === node.name.toLowerCase(),
+  );
 
   const tokens = (node.children ?? [])
     .map((c) => convertBlock(c as RootContent, ctx))
@@ -614,7 +612,12 @@ function directiveToken(node: DirectiveNode, ctx: ConvertContext): Token {
     raw: "",
     text: node.name,
     tokens: [
-      { type: "strong", raw: "", text: node.name, tokens: [{ type: "text", raw: node.name, text: node.name }] },
+      {
+        type: "strong",
+        raw: "",
+        text: node.name,
+        tokens: [{ type: "text", raw: node.name, text: node.name }],
+      },
     ],
   } as unknown as Token;
 

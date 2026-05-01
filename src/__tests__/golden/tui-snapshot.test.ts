@@ -13,11 +13,7 @@
  */
 
 import { describe, test, expect, beforeAll } from "bun:test";
-import {
-  listGoldenInputs,
-  readExpectedTui,
-  readInput,
-} from "./helper.js";
+import { listGoldenInputs, readExpectedTui, readInput } from "./helper.js";
 import { getSharedHighlighter, renderTuiSnapshot } from "./tui-helper.js";
 
 describe("golden TUI snapshots", () => {

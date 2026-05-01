@@ -160,9 +160,7 @@ describe("buildFileTree", () => {
 
   test("handles a single root file", () => {
     const out = buildFileTree([file("README.md")]);
-    expect(out).toEqual([
-      { type: "file", name: "README.md", entry: file("README.md") },
-    ]);
+    expect(out).toEqual([{ type: "file", name: "README.md", entry: file("README.md") }]);
   });
 
   test("handles deeply nested paths without intermediate files", () => {

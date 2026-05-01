@@ -57,4 +57,3 @@ describe("walkCodeFences", () => {
     expect(blocks.map((b) => b.lang)).toEqual(["a", "b", "c"]);
   });
 });
-

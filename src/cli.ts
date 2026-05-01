@@ -42,22 +42,92 @@ const DEFAULT_HOST = "localhost";
 
 const OPTIONS: readonly OptionDef[] = [
   // general
-  { name: "theme", short: "t", type: "string", default: DEFAULT_THEME, valueDesc: "<name>", description: "Set syntax highlighting theme (default: auto, follows system light/dark)", group: "general" },
-  { name: "list-themes", short: "T", type: "boolean", description: "List available themes", group: "general" },
-  { name: "no-mouse", type: "boolean", description: "Disable mouse input (TUI only)", group: "general" },
-  { name: "no-mermaid", type: "boolean", description: "Disable mermaid diagram rendering", group: "general" },
-  { name: "watch", short: "w", type: "boolean", description: "Live reload on file changes", group: "general" },
-  { name: "exclude", short: "e", type: "string", multiple: true, valueDesc: "<dir>", description: "Exclude directory from scan (repeatable)", group: "general" },
+  {
+    name: "theme",
+    short: "t",
+    type: "string",
+    default: DEFAULT_THEME,
+    valueDesc: "<name>",
+    description: "Set syntax highlighting theme (default: auto, follows system light/dark)",
+    group: "general",
+  },
+  {
+    name: "list-themes",
+    short: "T",
+    type: "boolean",
+    description: "List available themes",
+    group: "general",
+  },
+  {
+    name: "no-mouse",
+    type: "boolean",
+    description: "Disable mouse input (TUI only)",
+    group: "general",
+  },
+  {
+    name: "no-mermaid",
+    type: "boolean",
+    description: "Disable mermaid diagram rendering",
+    group: "general",
+  },
+  {
+    name: "watch",
+    short: "w",
+    type: "boolean",
+    description: "Live reload on file changes",
+    group: "general",
+  },
+  {
+    name: "exclude",
+    short: "e",
+    type: "string",
+    multiple: true,
+    valueDesc: "<dir>",
+    description: "Exclude directory from scan (repeatable)",
+    group: "general",
+  },
   { name: "debug", type: "boolean", description: "Enable debug logging", group: "general" },
   { name: "version", short: "v", type: "boolean", description: "Show version", group: "general" },
   { name: "help", short: "h", type: "boolean", description: "Show this help", group: "general" },
 
   // serve
-  { name: "serve", type: "boolean", description: "Serve over HTTP instead of TUI (or use the `serve` subcommand)", group: "serve" },
-  { name: "port", short: "p", type: "string", default: String(DEFAULT_PORT), valueDesc: "<port>", description: "Port to bind", group: "serve" },
-  { name: "host", type: "string", default: DEFAULT_HOST, valueDesc: "<host>", description: "Host to bind", group: "serve" },
-  { name: "open", short: "o", type: "boolean", description: "Open the URL in the default browser", group: "serve" },
-  { name: "quiet", short: "q", type: "boolean", description: "Suppress banner and access log", group: "serve" },
+  {
+    name: "serve",
+    type: "boolean",
+    description: "Serve over HTTP instead of TUI (or use the `serve` subcommand)",
+    group: "serve",
+  },
+  {
+    name: "port",
+    short: "p",
+    type: "string",
+    default: String(DEFAULT_PORT),
+    valueDesc: "<port>",
+    description: "Port to bind",
+    group: "serve",
+  },
+  {
+    name: "host",
+    type: "string",
+    default: DEFAULT_HOST,
+    valueDesc: "<host>",
+    description: "Host to bind",
+    group: "serve",
+  },
+  {
+    name: "open",
+    short: "o",
+    type: "boolean",
+    description: "Open the URL in the default browser",
+    group: "serve",
+  },
+  {
+    name: "quiet",
+    short: "q",
+    type: "boolean",
+    description: "Suppress banner and access log",
+    group: "serve",
+  },
 ] as const;
 
 const GROUP_TITLES: Record<HelpGroup, string> = {
@@ -209,7 +279,13 @@ export function buildHelp(): string {
     ...TUI_KEYS.map(([k, desc]) => `  ${k.padEnd(leftWidth)}  ${desc}`),
   ];
 
-  return [USAGE.join("\n"), "", sections.map((s) => s.join("\n")).join("\n\n"), "", tail.join("\n")].join("\n");
+  return [
+    USAGE.join("\n"),
+    "",
+    sections.map((s) => s.join("\n")).join("\n\n"),
+    "",
+    tail.join("\n"),
+  ].join("\n");
 }
 
 export function showHelp(): void {

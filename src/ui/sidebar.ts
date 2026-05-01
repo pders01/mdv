@@ -58,9 +58,7 @@ function truncateEnd(s: string, max: number): string {
   return s.slice(0, max - 1) + "…";
 }
 
-type DisplayRow =
-  | { kind: "dir"; text: string }
-  | { kind: "file"; text: string; entry: FileEntry };
+type DisplayRow = { kind: "dir"; text: string } | { kind: "file"; text: string; entry: FileEntry };
 
 /**
  * Walk the tree depth-first, emitting one DisplayRow per node. Directories

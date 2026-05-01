@@ -142,7 +142,10 @@ async function main(): Promise<void> {
   summarize("mutate", mutateSamples);
   const speedup =
     constructSamples.reduce((a, b) => a + b, 0) /
-    Math.max(0.001, mutateSamples.reduce((a, b) => a + b, 0));
+    Math.max(
+      0.001,
+      mutateSamples.reduce((a, b) => a + b, 0),
+    );
   console.log("");
   console.log(`  speedup     ${speedup.toFixed(1)}x  (mutate vs construct on the same content)`);
   console.log("");

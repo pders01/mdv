@@ -119,7 +119,7 @@ Scroll position, sidebar cursor, and pane focus are preserved across reloads via
 
 ### Mermaid diagrams
 
-Fenced ```` ```mermaid ```` blocks render client-side from a locally-vendored mermaid bundle. The bundle is lazy-loaded only when a page actually contains a mermaid fence, so docs without diagrams pay zero bytes. Pass `--no-mermaid` to skip it; fences then render as plain code blocks.
+Fenced ` ```mermaid ` blocks render client-side from a locally-vendored mermaid bundle. The bundle is lazy-loaded only when a page actually contains a mermaid fence, so docs without diagrams pay zero bytes. Pass `--no-mermaid` to skip it; fences then render as plain code blocks.
 
 ### Serve options
 
@@ -230,20 +230,20 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 
 ### Markdown formats supported
 
-| Format | TUI render | Web render |
-| --- | --- | --- |
-| CommonMark | full | full |
-| GFM (tables, task lists, strikethrough, autolinks) | full | full |
-| Frontmatter (YAML / TOML) | hidden | hidden |
-| GitHub-style alerts (`> [!NOTE]` etc) | colored bar + icon + label | styled `<div class=markdown-alert>` |
-| Footnotes (`[^N]` + definitions) | `[N]` refs + numbered defs at bottom | `<section>` with backrefs |
-| Math (`$inline$` and `$$block$$`) | LaTeX source preserved | KaTeX rendered |
-| Wiki links (`[[Page]]`, `[[Page\|Label]]`) | link to `#/page/slug` | `<a class="internal new">` |
-| Definition lists (`term\n: def`) | indented stack | `<dl><dt><dd>` |
-| Container directives (`:::name`) | alert (if name matches) or labelled blockquote | hast tree via `remark-directive` |
-| Highlight (`==text==`) | yellow bold | `<mark>` |
-| Subscript / superscript (`H~2~O`, `x^2^`) | unicode `₂` `²` | `<sub>` / `<sup>` |
-| Mermaid diagrams | pre-rendered ASCII | client-side SVG (locally bundled, no CDN) |
+| Format                                             | TUI render                                     | Web render                                |
+| -------------------------------------------------- | ---------------------------------------------- | ----------------------------------------- |
+| CommonMark                                         | full                                           | full                                      |
+| GFM (tables, task lists, strikethrough, autolinks) | full                                           | full                                      |
+| Frontmatter (YAML / TOML)                          | hidden                                         | hidden                                    |
+| GitHub-style alerts (`> [!NOTE]` etc)              | colored bar + icon + label                     | styled `<div class=markdown-alert>`       |
+| Footnotes (`[^N]` + definitions)                   | `[N]` refs + numbered defs at bottom           | `<section>` with backrefs                 |
+| Math (`$inline$` and `$$block$$`)                  | LaTeX source preserved                         | KaTeX rendered                            |
+| Wiki links (`[[Page]]`, `[[Page\|Label]]`)         | link to `#/page/slug`                          | `<a class="internal new">`                |
+| Definition lists (`term\n: def`)                   | indented stack                                 | `<dl><dt><dd>`                            |
+| Container directives (`:::name`)                   | alert (if name matches) or labelled blockquote | hast tree via `remark-directive`          |
+| Highlight (`==text==`)                             | yellow bold                                    | `<mark>`                                  |
+| Subscript / superscript (`H~2~O`, `x^2^`)          | unicode `₂` `²`                                | `<sub>` / `<sup>`                         |
+| Mermaid diagrams                                   | pre-rendered ASCII                             | client-side SVG (locally bundled, no CDN) |
 
 ## Options
 

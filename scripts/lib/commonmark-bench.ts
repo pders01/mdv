@@ -59,33 +59,47 @@ export async function loadSpec(): Promise<SpecExample[]> {
  * attribute order) doesn't count as a conformance failure.
  */
 export function normalizeHtml(html: string): string {
-  return html
-    .replace(/\r\n?/g, "\n")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/\s+(?=<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|hr|table|thead|tbody|tr|td|th|div)\b)/gi, "")
-    .replace(/(<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|hr|table|thead|tbody|tr|td|th|div)\b[^>]*>)\s+/gi, "$1")
-    .replace(/<(\/?)([A-Za-z][A-Za-z0-9]*)/g, (_m, slash, name) => `<${slash}${name.toLowerCase()}`)
-    // HTML5 void tags: `<br />` and `<br>` are equivalent — collapse to bare form
-    .replace(/<(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)([^>]*?)\s*\/?>/gi,
-      (_m, tag, attrs) => `<${tag.toLowerCase()}${attrs.replace(/\s+/g, " ").replace(/\s+$/, "")}>`)
-    .replace(/[ \t]+\n/g, "\n")
-    // Spec emits `<br>\n`; some renderers drop the trailing newline. Equivalent.
-    .replace(/<br>\s*/g, "<br>\n")
-    // `'` ↔ `&#39;` ↔ `&apos;` — all browser-equivalent. Spec uses bare `'`.
-    .replace(/&#39;|&apos;/g, "'")
-    // `&gt;` ↔ `>` in text content — both render identically in HTML body.
-    // rehype-stringify defaults to bare `>` (HTML5 says it's optional in
-    // body text), spec uses `&gt;`. Collapse here so the bench measures
-    // parser semantics, not escape-style preferences.
-    .replace(/&gt;/g, ">")
-    // `&quot;` ↔ `"` in body text — both render identically. Spec uses
-    // `&quot;` aggressively; rehype-stringify only escapes inside attrs.
-    .replace(/&quot;/g, '"')
-    // Empty fenced code: marked emits `<pre><code>\n</code></pre>`; spec emits `<pre><code></code></pre>`.
-    // Both render identically.
-    .replace(/<pre><code([^>]*)>\n<\/code><\/pre>/g, "<pre><code$1></code></pre>")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return (
+    html
+      .replace(/\r\n?/g, "\n")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(
+        /\s+(?=<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|hr|table|thead|tbody|tr|td|th|div)\b)/gi,
+        "",
+      )
+      .replace(
+        /(<\/?(p|h[1-6]|ul|ol|li|blockquote|pre|hr|table|thead|tbody|tr|td|th|div)\b[^>]*>)\s+/gi,
+        "$1",
+      )
+      .replace(
+        /<(\/?)([A-Za-z][A-Za-z0-9]*)/g,
+        (_m, slash, name) => `<${slash}${name.toLowerCase()}`,
+      )
+      // HTML5 void tags: `<br />` and `<br>` are equivalent — collapse to bare form
+      .replace(
+        /<(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)([^>]*?)\s*\/?>/gi,
+        (_m, tag, attrs) =>
+          `<${tag.toLowerCase()}${attrs.replace(/\s+/g, " ").replace(/\s+$/, "")}>`,
+      )
+      .replace(/[ \t]+\n/g, "\n")
+      // Spec emits `<br>\n`; some renderers drop the trailing newline. Equivalent.
+      .replace(/<br>\s*/g, "<br>\n")
+      // `'` ↔ `&#39;` ↔ `&apos;` — all browser-equivalent. Spec uses bare `'`.
+      .replace(/&#39;|&apos;/g, "'")
+      // `&gt;` ↔ `>` in text content — both render identically in HTML body.
+      // rehype-stringify defaults to bare `>` (HTML5 says it's optional in
+      // body text), spec uses `&gt;`. Collapse here so the bench measures
+      // parser semantics, not escape-style preferences.
+      .replace(/&gt;/g, ">")
+      // `&quot;` ↔ `"` in body text — both render identically. Spec uses
+      // `&quot;` aggressively; rehype-stringify only escapes inside attrs.
+      .replace(/&quot;/g, '"')
+      // Empty fenced code: marked emits `<pre><code>\n</code></pre>`; spec emits `<pre><code></code></pre>`.
+      // Both render identically.
+      .replace(/<pre><code([^>]*)>\n<\/code><\/pre>/g, "<pre><code$1></code></pre>")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  );
 }
 
 export interface RunOptions {
