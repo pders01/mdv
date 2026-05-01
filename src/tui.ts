@@ -154,10 +154,16 @@ await phase("shiki:load-langs", () => loadLangsForContent(highlighterInstance, c
 // OpenTUI Setup
 // =============================================================================
 
+// targetFps/maxFps lifted from OpenTUI defaults (30/60). The j-key handler
+// runs in <2 ms per press; the previous 30 fps cap meant input feedback
+// was paced to ~33 ms regardless, so holding j felt jerky. Frame work has
+// plenty of headroom for 120 fps even on a 7K-line file (max frame ~13 ms).
 const renderer = await phase("renderer:create", () =>
   createCliRenderer({
     exitOnCtrlC: false,
     useMouse: !args.noMouse,
+    targetFps: 60,
+    maxFps: 120,
   }),
 );
 
