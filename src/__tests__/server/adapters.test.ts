@@ -124,6 +124,54 @@ describe("MermaidAdapter", () => {
     const adapter = createMermaidAdapter({ themeName: "github-dark" });
     expect(adapter.bodyAssets).toContain('document.querySelector("pre.mermaid")');
   });
+
+  test("dual mode picks theme from prefers-color-scheme on the client", () => {
+    const adapter = createMermaidAdapter({ themeName: "github-dark", dual: true });
+    // Loader must defer theme choice to the browser, not bake one in.
+    expect(adapter.bodyAssets).toContain('matchMedia("(prefers-color-scheme: dark)")');
+    expect(adapter.bodyAssets).toContain('mq.matches ? "dark" : "default"');
+    // And re-render on system preference flips so SVGs don't go stale.
+    expect(adapter.bodyAssets).toContain('mq.addEventListener("change"');
+  });
+
+  test("dual mode does not bake a fixed theme name into the loader", () => {
+    const adapter = createMermaidAdapter({ themeName: "github-dark", dual: true });
+    // Single-mode bakes `theme: "dark"` / `"default"`. Dual must not.
+    expect(adapter.bodyAssets).not.toMatch(/theme:\s*"(dark|default)"/);
+  });
+});
+
+describe("createShikiAdapter dual mode", () => {
+  let dualHl: HighlighterInstance;
+
+  beforeAll(async () => {
+    dualHl = await createHighlighterInstance(["github-light", "github-dark"]);
+  });
+
+  test("emits both light and dark CSS vars per token in dual mode", () => {
+    const adapter = createShikiAdapter(dualHl, {
+      dual: { light: "github-light", dark: "github-dark" },
+    });
+    const html = adapter.render("const x = 1;", "typescript");
+    // Shiki marks dual output with these classes.
+    expect(html).toContain("shiki-themes");
+    expect(html).toContain("github-light");
+    expect(html).toContain("github-dark");
+    // Each token style block carries both vars.
+    expect(html).toContain("--shiki-light:");
+    expect(html).toContain("--shiki-dark:");
+    // No fixed color/background-color was inlined as the default — the
+    // browser picks via the @media stylesheet.
+    expect(html).not.toMatch(/style="[^"]*\bcolor:\s*#/);
+  });
+
+  test("single-mode (no opts) keeps inline colors, no dual vars", () => {
+    const adapter = createShikiAdapter(highlighter);
+    const html = adapter.render("const x = 1;", "typescript");
+    expect(html).not.toContain("--shiki-light");
+    expect(html).not.toContain("--shiki-dark");
+    expect(html).toMatch(/style="[^"]*color:#/);
+  });
 });
 
 describe("Skipping mermaid (--no-mermaid)", () => {

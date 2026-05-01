@@ -22,14 +22,22 @@ import { escapeHtml } from "../../util/escape.js";
 export interface MermaidAdapterOptions {
   /** Shiki theme name; used to pick a matching mermaid theme. */
   themeName: string;
+  /**
+   * When set, the loader picks the mermaid theme on the client based on
+   * `prefers-color-scheme` and re-renders if the system preference flips.
+   * `themeName` is ignored in dual mode.
+   */
+  dual?: boolean;
 }
+
+type MermaidTheme = "dark" | "default";
 
 /**
  * Map a Shiki theme name to a mermaid theme key. Mermaid only ships a few
  * named themes, so we collapse the long tail of Shiki themes into "dark"
  * (anything mentioning "dark", "night", "dracula", etc.) or "default".
  */
-function pickMermaidTheme(themeName: string): "dark" | "default" {
+function pickMermaidTheme(themeName: string): MermaidTheme {
   const lower = themeName.toLowerCase();
   if (lower.includes("light") || lower.includes("day")) return "default";
   if (
@@ -47,24 +55,50 @@ function pickMermaidTheme(themeName: string): "dark" | "default" {
 
 export const MERMAID_BUNDLE_URL = "/_static/vendor/mermaid.bundle.mjs";
 
-export function createMermaidAdapter(opts: MermaidAdapterOptions): CodeAdapter {
-  const mermaidTheme = pickMermaidTheme(opts.themeName);
+/**
+ * Build the loader script. In dual mode the client decides the theme via
+ * `matchMedia("(prefers-color-scheme: dark)")` and re-renders on changes —
+ * mermaid SVGs are static, so toggling appearance otherwise leaves stale
+ * dark diagrams on a light page.
+ */
+function buildLoader(staticTheme: MermaidTheme | null): string {
+  const initLogic = staticTheme
+    ? `
+    const theme = ${JSON.stringify(staticTheme)};
+    mermaid.initialize({ startOnLoad: false, theme, securityLevel: "strict" });
+    await mermaid.run({ querySelector: "pre.mermaid" });`
+    : `
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const pickTheme = () => mq.matches ? "dark" : "default";
+    // Cache original sources before first render — mermaid.run() replaces
+    // the <pre>'s contents with an SVG, so re-renders need the source back.
+    const blocks = Array.from(document.querySelectorAll("pre.mermaid"));
+    const sources = blocks.map((el) => el.textContent);
+    const render = async () => {
+      mermaid.initialize({ startOnLoad: false, theme: pickTheme(), securityLevel: "strict" });
+      blocks.forEach((el, i) => {
+        el.removeAttribute("data-processed");
+        el.textContent = sources[i] ?? "";
+      });
+      await mermaid.run({ nodes: blocks });
+    };
+    await render();
+    mq.addEventListener("change", () => { render().catch((err) => console.warn("[mdv] mermaid re-render failed:", err)); });`;
 
-  // Loader script: dynamic-imported only if a page actually has mermaid
-  // blocks. Errors are caught so a load failure leaves the source visible
-  // in the existing <pre> rather than disappearing the content.
-  const loader = `
+  return `
 <script type="module">
   if (document.querySelector("pre.mermaid")) {
     try {
-      const mermaid = (await import(${JSON.stringify(MERMAID_BUNDLE_URL)})).default;
-      mermaid.initialize({ startOnLoad: false, theme: ${JSON.stringify(mermaidTheme)}, securityLevel: "strict" });
-      await mermaid.run({ querySelector: "pre.mermaid" });
+      const mermaid = (await import(${JSON.stringify(MERMAID_BUNDLE_URL)})).default;${initLogic}
     } catch (err) {
       console.warn("[mdv] mermaid render failed:", err);
     }
   }
 </script>`.trim();
+}
+
+export function createMermaidAdapter(opts: MermaidAdapterOptions): CodeAdapter {
+  const loader = opts.dual ? buildLoader(null) : buildLoader(pickMermaidTheme(opts.themeName));
 
   return {
     langs: ["mermaid"],

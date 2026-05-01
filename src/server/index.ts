@@ -18,11 +18,11 @@ import type { BundledTheme } from "shiki";
 import type { CliArgs } from "../cli.js";
 import { scanDirectory, makeExclusionFilter, type FileTree } from "../fs/tree.js";
 import { createHighlighterInstance, type HighlighterInstance } from "../highlighting/shiki.js";
-import { extractThemeColors, resolveTheme } from "../theme/index.js";
+import { extractThemeColors, resolveThemeSpec } from "../theme/index.js";
 
 import { createMarkdown } from "./html.js";
 import { renderSidebar } from "./sidebar.js";
-import { themeColorsToCss } from "./theme-vars.js";
+import { themeColorsToCss, themeColorsToCssDual } from "./theme-vars.js";
 import { CodeAdapterRegistry } from "./adapters/index.js";
 import { createShikiAdapter } from "./adapters/shiki.js";
 import { createMermaidAdapter } from "./adapters/mermaid.js";
@@ -95,19 +95,45 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
   const rootDir = rootIsDirectory ? targetPath : dirname(targetPath);
   const singleFilePath = rootIsDirectory ? null : targetPath;
 
-  const resolvedTheme = resolveTheme(args.theme);
-  const highlighter = await createHighlighterInstance(resolvedTheme);
-  const themeColors = extractThemeColors(highlighter.highlighter, resolvedTheme as BundledTheme);
-  highlighter.colors = themeColors;
-  const themeCss = themeColorsToCss(themeColors);
+  // Web UI supports dual-theme: when --theme=auto, ship both light and dark
+  // and let the browser pick via prefers-color-scheme. Independent of the
+  // host OS the server runs on — important for `--host 0.0.0.0` use.
+  const themeSpec = resolveThemeSpec(args.theme);
+  const isDual = themeSpec.kind === "dual";
+  const themesToLoad =
+    themeSpec.kind === "single" ? [themeSpec.name] : [themeSpec.light, themeSpec.dark];
+  const primaryThemeName = themesToLoad[0]!;
+
+  const highlighter = await createHighlighterInstance(themesToLoad);
+  const primaryColors = extractThemeColors(
+    highlighter.highlighter,
+    primaryThemeName as BundledTheme,
+  );
+  highlighter.colors = primaryColors;
+
+  const themeCss = isDual
+    ? themeColorsToCssDual(
+        primaryColors,
+        extractThemeColors(highlighter.highlighter, themeSpec.dark as BundledTheme),
+      )
+    : themeColorsToCss(primaryColors);
 
   // Order matters: specific-language adapters register first so they win
   // over the default Shiki adapter when a fence claims their lang.
   const registry = new CodeAdapterRegistry();
   if (!args.noMermaid) {
-    registry.register(createMermaidAdapter({ themeName: resolvedTheme }));
+    registry.register(
+      createMermaidAdapter(
+        isDual ? { themeName: primaryThemeName, dual: true } : { themeName: primaryThemeName },
+      ),
+    );
   }
-  registry.register(createShikiAdapter(highlighter));
+  registry.register(
+    createShikiAdapter(
+      highlighter,
+      isDual ? { dual: { light: themeSpec.light, dark: themeSpec.dark } } : {},
+    ),
+  );
 
   const [template, appCss, clientJs] = await Promise.all([
     Bun.file(templatePath).text(),
@@ -194,7 +220,7 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
       rootDir,
       rootIsDirectory,
       fileCount: initialFileCount,
-      theme: args.theme === "auto" ? `auto (${resolvedTheme})` : resolvedTheme,
+      theme: isDual ? `auto (${themeSpec.light} / ${themeSpec.dark})` : primaryThemeName,
       mermaid: !args.noMermaid,
     });
   }

@@ -63,23 +63,35 @@ export const langAliases: Record<string, string> = {
  * highlighter through `extractThemeColors`. It's `undefined` until then —
  * Shiki's own highlighting paths (codeToHtml, codeToTokens) don't need it,
  * only the TUI chunk converter does.
+ *
+ * `theme` is the primary theme — used for `codeToTokens` (TUI) and as the
+ * single-theme HTML target. `themes` lists every theme actually loaded so
+ * dual-theme HTML rendering can verify both names are available.
  */
 export interface HighlighterInstance {
   highlighter: Highlighter;
   theme: string;
+  themes: string[];
   colors: ThemeColors | undefined;
 }
 
 /**
  * Create a Shiki highlighter instance.
+ *
+ * Pass an array to load multiple themes at once — the first is the primary
+ * (used by the TUI chunk converter and `shikiToHtml`); the rest are
+ * available to `shikiToHtmlDual` for `prefers-color-scheme` rendering.
  */
-export async function createHighlighterInstance(theme: string): Promise<HighlighterInstance> {
+export async function createHighlighterInstance(
+  theme: string | string[],
+): Promise<HighlighterInstance> {
+  const themes = Array.isArray(theme) ? theme : [theme];
   const highlighter = await createHighlighter({
-    themes: [theme as BundledTheme],
+    themes: themes as BundledTheme[],
     langs: shikiLangs,
   });
 
-  return { highlighter, theme, colors: undefined };
+  return { highlighter, theme: themes[0]!, themes, colors: undefined };
 }
 
 // =============================================================================
@@ -180,6 +192,40 @@ export function shikiToHtml(instance: HighlighterInstance, code: string, lang: s
 
   try {
     return highlighter.codeToHtml(code, { lang: resolved as BundledLanguage, theme });
+  } catch {
+    return `<pre class="shiki"><code>${escapeHtml(code)}</code></pre>`;
+  }
+}
+
+/**
+ * Render a code block with both light and dark themes inlined as CSS vars.
+ *
+ * Output uses `--shiki-light` and `--shiki-dark` custom properties; the page
+ * stylesheet picks one based on `prefers-color-scheme`. `defaultColor: false`
+ * disables Shiki's default-theme injection so neither variant wins until the
+ * stylesheet decides — that's what lets the browser drive the swap without
+ * a server roundtrip.
+ */
+export function shikiToHtmlDual(
+  instance: HighlighterInstance,
+  code: string,
+  lang: string,
+  themes: { light: string; dark: string },
+): string {
+  const { highlighter } = instance;
+  const resolved = resolveLanguage(lang);
+  const supportedLangs = highlighter.getLoadedLanguages();
+
+  if (!resolved || !supportedLangs.includes(resolved as BundledLanguage)) {
+    return `<pre class="shiki"><code>${escapeHtml(code)}</code></pre>`;
+  }
+
+  try {
+    return highlighter.codeToHtml(code, {
+      lang: resolved as BundledLanguage,
+      themes,
+      defaultColor: false,
+    });
   } catch {
     return `<pre class="shiki"><code>${escapeHtml(code)}</code></pre>`;
   }

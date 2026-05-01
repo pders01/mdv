@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { detectSystemAppearance, resolveTheme } from "../theme/system.js";
+import { detectSystemAppearance, resolveTheme, resolveThemeSpec } from "../theme/system.js";
 
 const originalAppearance = process.env.MDV_APPEARANCE;
 const originalColorfgbg = process.env.COLORFGBG;
@@ -87,5 +87,17 @@ describe("resolveTheme", () => {
   test("resolves auto -> github-light when system is light", () => {
     process.env.MDV_APPEARANCE = "light";
     expect(resolveTheme("auto")).toBe("github-light");
+  });
+});
+
+describe("resolveThemeSpec", () => {
+  test("auto -> dual spec with both themes", () => {
+    const spec = resolveThemeSpec("auto");
+    expect(spec).toEqual({ kind: "dual", light: "github-light", dark: "github-dark" });
+  });
+
+  test("explicit theme -> single spec, never dual", () => {
+    expect(resolveThemeSpec("nord")).toEqual({ kind: "single", name: "nord" });
+    expect(resolveThemeSpec("github-light")).toEqual({ kind: "single", name: "github-light" });
   });
 });

@@ -71,3 +71,19 @@ export function resolveTheme(themeArg: string): string {
   if (themeArg !== "auto") return themeArg;
   return detectSystemAppearance() === "light" ? LIGHT_THEME : DARK_THEME;
 }
+
+/**
+ * Theme spec for contexts that can serve both variants at once (the web UI).
+ *
+ * `auto` becomes a `dual` spec so the page can swap themes via
+ * `prefers-color-scheme` on the client — independent of the host OS the
+ * server runs on. Any explicit theme stays single.
+ */
+export type ThemeSpec =
+  | { kind: "single"; name: string }
+  | { kind: "dual"; light: string; dark: string };
+
+export function resolveThemeSpec(themeArg: string): ThemeSpec {
+  if (themeArg === "auto") return { kind: "dual", light: LIGHT_THEME, dark: DARK_THEME };
+  return { kind: "single", name: themeArg };
+}
