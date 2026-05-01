@@ -17,6 +17,8 @@
     "build:all": "bun run build:darwin-arm64 && bun run build:darwin-x64 && bun run build:linux-x64",
     "install-global": "bun run build && sudo mv mdv /usr/local/bin/",
     "bundle:mermaid": "bun run scripts/bundle-mermaid.ts",
+    "bench:scroll": "bun run scripts/bench-scroll.ts",
+    "bench:gen-fixture": "bun run scripts/gen-bench-fixture.ts",
     "test": "bun test",
     "lint": "oxlint --ignore-path .oxlintignore",
     "lint:fix": "oxlint --ignore-path .oxlintignore --fix",

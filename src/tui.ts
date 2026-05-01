@@ -31,6 +31,8 @@ import { scanDirectory } from "./fs/tree.js";
 import { createSidebar } from "./ui/sidebar.js";
 import { createFocusManager } from "./input/focus.js";
 import { setupPaneKeyboardHandler } from "./input/pane-keyboard.js";
+import { createPerfOverlay } from "./perf/overlay.js";
+import { phase, phaseSync, setPhaseEnabled, dumpPhases } from "./perf/phase.js";
 
 /**
  * Start the TUI viewer. The entry dispatcher in src/index.ts handles
@@ -129,25 +131,33 @@ if (args.debug) {
   console.error("[debug] mouse:", args.noMouse ? "disabled" : "enabled");
 }
 
+setPhaseEnabled(args.debug);
+
 // =============================================================================
 // Shiki Syntax Highlighter
 // =============================================================================
 
-const highlighterInstance = await createHighlighterInstance(resolvedTheme);
-const themeColors = extractThemeColors(highlighterInstance.highlighter, resolvedTheme as BundledTheme);
+const highlighterInstance = await phase("shiki:create", () =>
+  createHighlighterInstance(resolvedTheme),
+);
+const themeColors = phaseSync("theme:extract", () =>
+  extractThemeColors(highlighterInstance.highlighter, resolvedTheme as BundledTheme),
+);
 highlighterInstance.colors = themeColors;
 
 // =============================================================================
 // OpenTUI Setup
 // =============================================================================
 
-const renderer = await createCliRenderer({
-  exitOnCtrlC: false,
-  useMouse: !args.noMouse,
-});
+const renderer = await phase("renderer:create", () =>
+  createCliRenderer({
+    exitOnCtrlC: false,
+    useMouse: !args.noMouse,
+  }),
+);
 
 // Create syntax style from theme colors
-const syntaxStyle = createSyntaxStyle(themeColors);
+const syntaxStyle = phaseSync("theme:syntax-style", () => createSyntaxStyle(themeColors));
 
 // =============================================================================
 // Cursor Manager Setup
@@ -169,9 +179,9 @@ const search = new SearchManager();
 // =============================================================================
 
 // Create container and scroll box
-const { container, scrollBox, setupHighlighting, reloadMarkdown } = createMainContainer(
-  renderer,
-  currentContentLines,
+const { container, scrollBox, setupHighlighting, reloadMarkdown } = phaseSync(
+  "container:create",
+  () => createMainContainer(renderer, currentContentLines),
 );
 
 // Create render node callback
@@ -188,48 +198,52 @@ const mermaidRenders = new Map<string, string>();
 let mermaidToolWasMissing = false;
 let mermaidInitialOverflow = 0;
 {
-  const result = await prerenderMermaid(currentContent, {
-    disabled: args.noMermaid,
-    availableWidth: mermaidWidth,
-  });
+  const result = await phase("mermaid:prerender", () =>
+    prerenderMermaid(currentContent, {
+      disabled: args.noMermaid,
+      availableWidth: mermaidWidth,
+    }),
+  );
   for (const [k, v] of result.renders) mermaidRenders.set(k, v);
   mermaidToolWasMissing = result.toolMissing;
   mermaidInitialOverflow = result.overflowed;
 }
 
-const renderNode = createRenderNode(
-  renderer,
-  themeColors,
-  highlighterInstance,
-  contentWidth,
-  mermaidRenders,
+const renderNode = phaseSync("render-node:create", () =>
+  createRenderNode(renderer, themeColors, highlighterInstance, contentWidth, mermaidRenders),
 );
 
 // Create markdown renderable
-let markdown = new MarkdownRenderable(renderer, {
-  id: "markdown-content",
-  content: currentContent,
-  syntaxStyle,
-  conceal: true,
-  renderNode,
-});
+let markdown = phaseSync(
+  "markdown:construct",
+  () =>
+    new MarkdownRenderable(renderer, {
+      id: "markdown-content",
+      content: currentContent,
+      syntaxStyle,
+      conceal: true,
+      renderNode,
+    }),
+);
 scrollBox.add(markdown);
 
 // Setup cursor and selection highlighting (AFTER markdown is added to scrollBox)
 // Pass markdown instance to access actual rendered positions via _blockStates
-let { getLinePosition, getContentLineY } = setupHighlighting(
-  () => ({
-    mode: cursor.mode,
-    cursorLine: cursor.cursorLine,
-    selectionStart: cursor.selectionStart,
-    selectionEnd: cursor.selectionEnd,
-    searchMatches: search.matches,
-  }),
-  themeColors.cyan, // Cursor color (subtle)
-  themeColors.yellow, // Selection color
-  themeColors.codeBg, // Code block background
-  themeColors.orange, // Search highlight color
-  markdown, // For actual rendered positions
+let { getLinePosition, getContentLineY } = phaseSync("highlighting:setup", () =>
+  setupHighlighting(
+    () => ({
+      mode: cursor.mode,
+      cursorLine: cursor.cursorLine,
+      selectionStart: cursor.selectionStart,
+      selectionEnd: cursor.selectionEnd,
+      searchMatches: search.matches,
+    }),
+    themeColors.cyan, // Cursor color (subtle)
+    themeColors.yellow, // Selection color
+    themeColors.codeBg, // Code block background
+    themeColors.orange, // Search highlight color
+    markdown, // For actual rendered positions
+  ),
 );
 
 // Create status bar
@@ -485,6 +499,20 @@ if (isDirectory && fileTree) {
 statusBarUpdate();
 
 // =============================================================================
+// Perf Overlay (Ctrl-G)
+// =============================================================================
+
+// Global toggle that runs ahead of pane dispatch so it works regardless of
+// which pane has focus.
+const perfOverlay = createPerfOverlay(renderer, themeColors);
+renderer.keyInput.on("keypress", (event) => {
+  if (event.ctrl && event.name === "g") {
+    const on = perfOverlay.toggle();
+    showNotification(on ? "Perf overlay on" : "Perf overlay off", 1200);
+  }
+});
+
+// =============================================================================
 // Mouse Handling
 // =============================================================================
 
@@ -599,5 +627,7 @@ if (args.watch && !isStdin && !isDirectory && args.filePath) {
 
 // Initialize cursor position and scroll
 scrollToCursor(scrollBox, cursor.cursorLine, currentContentLines.length, true, getContentLineY);
+
+dumpPhases("[perf:startup]");
 }
 
