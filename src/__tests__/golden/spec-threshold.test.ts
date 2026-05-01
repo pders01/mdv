@@ -14,7 +14,13 @@
 import { test, expect } from "bun:test";
 import { runBench } from "../../../scripts/lib/commonmark-bench.js";
 
-const THRESHOLD = 645;
+// 644 reflects two intentional conflicts with the strict spec:
+// - `---\nFoo\n---\nBar\n---` and `---\n---` get consumed by
+//   `remark-frontmatter` as YAML frontmatter even though the spec parses
+//   them as thematic breaks + setext heading. Frontmatter at doc-start is
+//   far more common in real-world markdown (Obsidian, Hugo, Jekyll), so
+//   the trade-off is the right one.
+const THRESHOLD = 644;
 const TOTAL = 652;
 
 test(

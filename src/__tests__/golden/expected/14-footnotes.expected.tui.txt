@@ -1,0 +1,40 @@
+                                                                                
+                                                                                
+                                                                                
+ Footnotes                                                                      
+                                                                                
+ A paragraph with a single footnote[1] in the middle.                           
+                                                                                
+ A second paragraph with two[2] footnotes[3] in it.                             
+                                                                                
+ Repeat references work too: see [1] again.                                     
+                                                                                
+                                                                                
+                                                                                
+ Definitions                                                                    
+                                                                                
+ [1] First footnote — short.                                                    
+                                                                                
+ [2] Second one.                                                                
+                                                                                
+ [3] Third footnote with inline formatting and a link (https://example.com).    
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

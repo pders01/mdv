@@ -247,6 +247,30 @@ body.mdv--sidebar .mdv-sidebar__node[data-match][data-cursor] > .mdv-sidebar__en
   background: color-mix(in srgb, var(--mdv-purple) 6%, transparent);
 }
 
+/* GitHub-flavored alerts via remark-github-blockquote-alert */
+.mdv-prose .markdown-alert {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 3px solid var(--alert-color, var(--mdv-purple));
+  background: color-mix(in srgb, var(--alert-color, var(--mdv-purple)) 6%, transparent);
+  color: color-mix(in srgb, var(--mdv-fg) 80%, var(--mdv-bg));
+}
+.mdv-prose .markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin: 0 0 0.4em;
+  font-weight: 600;
+  color: var(--alert-color, var(--mdv-purple));
+}
+.mdv-prose .markdown-alert-title .octicon { fill: currentColor; }
+.mdv-prose .markdown-alert > p:last-child { margin-bottom: 0; }
+.mdv-prose .markdown-alert-note      { --alert-color: var(--mdv-blue); }
+.mdv-prose .markdown-alert-tip       { --alert-color: var(--mdv-green); }
+.mdv-prose .markdown-alert-important { --alert-color: var(--mdv-purple); }
+.mdv-prose .markdown-alert-warning   { --alert-color: var(--mdv-yellow); }
+.mdv-prose .markdown-alert-caution   { --alert-color: var(--mdv-red); }
+
 .mdv-prose ul, .mdv-prose ol { margin: 0.8em 0; padding-left: 1.6em; }
 .mdv-prose li { margin: 0.25em 0; }
 .mdv-prose ul > li::marker { color: var(--mdv-cyan); }

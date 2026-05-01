@@ -25,6 +25,8 @@
 import { unified, type Processor } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
+import remarkFrontmatter from "remark-frontmatter";
+import remarkAlert from "remark-github-blockquote-alert";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 import type { Code } from "mdast";
@@ -36,7 +38,9 @@ type MarkdownProcessor = Processor<undefined, undefined, undefined, undefined, s
 export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor {
   return unified()
     .use(remarkParse)
+    .use(remarkFrontmatter, ["yaml", "toml"])
     .use(remarkGfm)
+    .use(remarkAlert)
     .use(remarkRehype, {
       allowDangerousHtml: true,
       handlers: {

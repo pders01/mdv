@@ -1,0 +1,40 @@
+                                                                                
+                                                                                
+                                                                                
+ Body content                                                                   
+                                                                                
+ The frontmatter above should not appear in the rendered output.                
+                                                                                
+                                                                                
+                                                                                
+ Section                                                                        
+                                                                                
+ Regular content follows.                                                       
+                                                                                
+                                                                                
+ • Item one                                                                     
+ • Item two                                                                     
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

@@ -46,6 +46,8 @@ import type {
   LinkReference,
   ImageReference,
   Break,
+  FootnoteReference,
+  FootnoteDefinition,
 } from "mdast";
 import type { Token } from "marked";
 
@@ -62,9 +64,33 @@ interface MarkedListItem {
 /** Definition lookup table keyed by normalized identifier (mdast convention). */
 type DefMap = Map<string, { url: string; title?: string }>;
 
+/** Footnote identifier → 1-based index in source order, used to render
+ *  references as `[N]` and definitions as `[N]: ...` without hash links. */
+type FootnoteMap = Map<string, number>;
+
+export interface ConvertContext {
+  defs: DefMap;
+  footnotes: FootnoteMap;
+}
+
 export function mdastRootToTokens(root: Root): Token[] {
-  const defs = collectDefinitions(root);
-  return root.children.map((node) => convertBlock(node, defs)).filter((t): t is Token => t !== null);
+  const ctx: ConvertContext = {
+    defs: collectDefinitions(root),
+    footnotes: collectFootnoteIndex(root),
+  };
+  return root.children.map((node) => convertBlock(node, ctx)).filter((t): t is Token => t !== null);
+}
+
+function collectFootnoteIndex(root: Root): FootnoteMap {
+  const map: FootnoteMap = new Map();
+  let n = 1;
+  for (const node of walk(root.children)) {
+    if (node.type === "footnoteDefinition") {
+      const id = (node as FootnoteDefinition).identifier;
+      if (!map.has(id)) map.set(id, n++);
+    }
+  }
+  return map;
 }
 
 function collectDefinitions(root: Root): DefMap {
@@ -86,33 +112,35 @@ function* walk(nodes: readonly { type: string; children?: unknown }[]): Generato
   }
 }
 
-function convertBlock(node: RootContent, defs: DefMap): Token | null {
+function convertBlock(node: RootContent, ctx: ConvertContext): Token | null {
   switch (node.type) {
     case "heading":
-      return headingToken(node as Heading, defs);
+      return headingToken(node as Heading, ctx);
     case "paragraph":
-      return paragraphToken(node as Paragraph, defs);
+      return paragraphToken(node as Paragraph, ctx);
     case "list":
-      return listToken(node as List, defs);
+      return listToken(node as List, ctx);
     case "code":
       return codeToken(node as Code);
     case "blockquote":
-      return blockquoteToken(node as Blockquote, defs);
+      return blockquoteToken(node as Blockquote, ctx);
     case "table":
-      return tableToken(node as Table, defs);
+      return tableToken(node as Table, ctx);
     case "thematicBreak":
       return { type: "hr", raw: "---\n" } as unknown as Token;
     case "html":
       return htmlToken(node as Html);
     case "definition":
       return definitionToken(node as Definition);
+    case "footnoteDefinition":
+      return footnoteDefinitionToken(node as FootnoteDefinition, ctx);
     default:
       return null;
   }
 }
 
-function headingToken(node: Heading, defs: DefMap): Token {
-  const tokens = node.children.map((c) => convertInline(c, defs));
+function headingToken(node: Heading, ctx: ConvertContext): Token {
+  const tokens = node.children.map((c) => convertInline(c, ctx));
   const text = tokens.map((t) => extractText(t)).join("");
   return {
     type: "heading",
@@ -123,8 +151,8 @@ function headingToken(node: Heading, defs: DefMap): Token {
   } as unknown as Token;
 }
 
-function paragraphToken(node: Paragraph, defs: DefMap): Token {
-  const tokens = node.children.map((c) => convertInline(c, defs));
+function paragraphToken(node: Paragraph, ctx: ConvertContext): Token {
+  const tokens = node.children.map((c) => convertInline(c, ctx));
   const text = tokens.map((t) => extractText(t)).join("");
   return {
     type: "paragraph",
@@ -134,8 +162,8 @@ function paragraphToken(node: Paragraph, defs: DefMap): Token {
   } as unknown as Token;
 }
 
-function listToken(node: List, defs: DefMap): Token {
-  const items: MarkedListItem[] = node.children.map((li) => listItemToken(li, defs, !!node.spread));
+function listToken(node: List, ctx: ConvertContext): Token {
+  const items: MarkedListItem[] = node.children.map((li) => listItemToken(li, ctx, !!node.spread));
   return {
     type: "list",
     raw: "",
@@ -146,7 +174,7 @@ function listToken(node: List, defs: DefMap): Token {
   } as unknown as Token;
 }
 
-function listItemToken(node: ListItem, defs: DefMap, parentSpread: boolean): MarkedListItem {
+function listItemToken(node: ListItem, ctx: ConvertContext, parentSpread: boolean): MarkedListItem {
   // mdast list items have block children. Marked's list-item.tokens flattens
   // a single-paragraph child into inline tokens; multi-block items keep
   // block tokens. Mirror that.
@@ -159,10 +187,10 @@ function listItemToken(node: ListItem, defs: DefMap, parentSpread: boolean): Mar
     blockChildren[0]!.type === "paragraph"
   ) {
     const p = blockChildren[0] as Paragraph;
-    tokens = p.children.map((c) => convertInline(c, defs));
+    tokens = p.children.map((c) => convertInline(c, ctx));
   } else {
     tokens = blockChildren
-      .map((c) => convertBlock(c, defs))
+      .map((c) => convertBlock(c, ctx))
       .filter((t): t is Token => t !== null);
   }
   const text = tokens.map((t) => extractText(t)).join("");
@@ -188,9 +216,11 @@ function codeToken(node: Code): Token {
   } as unknown as Token;
 }
 
-function blockquoteToken(node: Blockquote, defs: DefMap): Token {
+function blockquoteToken(node: Blockquote, ctx: ConvertContext): Token {
+  const alertKind = detectAlertKind(node);
+  if (alertKind) stripAlertMarker(node);
   const tokens = node.children
-    .map((c) => convertBlock(c, defs))
+    .map((c) => convertBlock(c, ctx))
     .filter((t): t is Token => t !== null);
   const text = tokens.map((t) => extractText(t)).join("\n");
   return {
@@ -198,23 +228,64 @@ function blockquoteToken(node: Blockquote, defs: DefMap): Token {
     raw: "",
     text,
     tokens,
+    ...(alertKind ? { alertKind } : {}),
   } as unknown as Token;
 }
 
-function tableToken(node: Table, defs: DefMap): Token {
+/** Recognized GitHub alert kinds. Lower-case for renderer dispatch. */
+export type AlertKind = "note" | "tip" | "important" | "warning" | "caution";
+
+/**
+ * GitHub-flavored alert syntax: a blockquote whose first child paragraph
+ * starts with `[!KIND]` (and optionally a newline before the body). Detect
+ * here so the renderer can ditch the literal `[!NOTE]` line and pick a
+ * color/icon by kind.
+ */
+function detectAlertKind(node: Blockquote): AlertKind | null {
+  const firstBlock = node.children[0];
+  if (!firstBlock || firstBlock.type !== "paragraph") return null;
+  const firstInline = firstBlock.children[0];
+  if (!firstInline || firstInline.type !== "text") return null;
+  const m = (firstInline.value ?? "").match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s|$)/);
+  if (!m) return null;
+  return m[1]!.toLowerCase() as AlertKind;
+}
+
+/**
+ * Removes the `[!KIND]` marker (and the immediately following newline) from
+ * the blockquote's first text node. If the resulting text is empty, drop
+ * the text node entirely so the renderer doesn't emit a leading blank line.
+ */
+function stripAlertMarker(node: Blockquote): void {
+  const firstBlock = node.children[0];
+  if (!firstBlock || firstBlock.type !== "paragraph") return;
+  const firstInline = firstBlock.children[0];
+  if (!firstInline || firstInline.type !== "text") return;
+  const stripped = firstInline.value.replace(
+    /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\r?\n)?/,
+    "",
+  );
+  if (stripped === "") {
+    firstBlock.children.shift();
+  } else {
+    firstInline.value = stripped;
+  }
+}
+
+function tableToken(node: Table, ctx: ConvertContext): Token {
   const align = (node.align ?? []).map((a) => (a === null ? null : a));
   const headerRow = node.children[0] as TableRow | undefined;
   const bodyRows = node.children.slice(1) as TableRow[];
   const header = headerRow
     ? headerRow.children.map((cell) => ({
-        text: cell.children.map((c) => extractText(convertInline(c, defs))).join(""),
-        tokens: cell.children.map((c) => convertInline(c, defs)),
+        text: cell.children.map((c) => extractText(convertInline(c, ctx))).join(""),
+        tokens: cell.children.map((c) => convertInline(c, ctx)),
       }))
     : [];
   const rows = bodyRows.map((row) =>
     row.children.map((cell) => ({
-      text: cell.children.map((c) => extractText(convertInline(c, defs))).join(""),
-      tokens: cell.children.map((c) => convertInline(c, defs)),
+      text: cell.children.map((c) => extractText(convertInline(c, ctx))).join(""),
+      tokens: cell.children.map((c) => convertInline(c, ctx)),
     })),
   );
   return {
@@ -245,7 +316,7 @@ function definitionToken(node: Definition): Token {
   } as unknown as Token;
 }
 
-function convertInline(node: PhrasingContent, defs: DefMap): Token {
+function convertInline(node: PhrasingContent, ctx: ConvertContext): Token {
   switch (node.type) {
     case "text":
       return {
@@ -255,7 +326,7 @@ function convertInline(node: PhrasingContent, defs: DefMap): Token {
       } as unknown as Token;
     case "emphasis": {
       const e = node as Emphasis;
-      const tokens = e.children.map((c) => convertInline(c, defs));
+      const tokens = e.children.map((c) => convertInline(c, ctx));
       return {
         type: "em",
         raw: "",
@@ -265,7 +336,7 @@ function convertInline(node: PhrasingContent, defs: DefMap): Token {
     }
     case "strong": {
       const s = node as Strong;
-      const tokens = s.children.map((c) => convertInline(c, defs));
+      const tokens = s.children.map((c) => convertInline(c, ctx));
       return {
         type: "strong",
         raw: "",
@@ -275,7 +346,7 @@ function convertInline(node: PhrasingContent, defs: DefMap): Token {
     }
     case "delete": {
       const d = node as Delete;
-      const tokens = d.children.map((c) => convertInline(c, defs));
+      const tokens = d.children.map((c) => convertInline(c, ctx));
       return {
         type: "del",
         raw: "",
@@ -293,7 +364,7 @@ function convertInline(node: PhrasingContent, defs: DefMap): Token {
     }
     case "link": {
       const l = node as Link;
-      const tokens = l.children.map((c) => convertInline(c, defs));
+      const tokens = l.children.map((c) => convertInline(c, ctx));
       return {
         type: "link",
         raw: "",
@@ -315,8 +386,8 @@ function convertInline(node: PhrasingContent, defs: DefMap): Token {
     }
     case "linkReference": {
       const lr = node as LinkReference;
-      const def = defs.get(lr.identifier);
-      const tokens = lr.children.map((c) => convertInline(c, defs));
+      const def = ctx.defs.get(lr.identifier);
+      const tokens = lr.children.map((c) => convertInline(c, ctx));
       const text = tokens.map(extractText).join("");
       if (!def) {
         // Unresolved ref → treat as plain text (label kept literal).
@@ -333,7 +404,7 @@ function convertInline(node: PhrasingContent, defs: DefMap): Token {
     }
     case "imageReference": {
       const ir = node as ImageReference;
-      const def = defs.get(ir.identifier);
+      const def = ctx.defs.get(ir.identifier);
       if (!def) {
         return { type: "text", raw: ir.alt ?? "", text: ir.alt ?? "" } as unknown as Token;
       }
@@ -355,6 +426,12 @@ function convertInline(node: PhrasingContent, defs: DefMap): Token {
         block: false,
         text: (node as Html).value,
       } as unknown as Token;
+    case "footnoteReference": {
+      const fr = node as FootnoteReference;
+      const n = ctx.footnotes.get(fr.identifier);
+      const label = n != null ? `[${n}]` : `[^${fr.identifier}]`;
+      return { type: "text", raw: label, text: label } as unknown as Token;
+    }
     default:
       return {
         type: "text",
@@ -362,6 +439,35 @@ function convertInline(node: PhrasingContent, defs: DefMap): Token {
         text: "",
       } as unknown as Token;
   }
+}
+
+/**
+ * Render a footnote definition as a paragraph prefixed with `[N] `. The
+ * server's HTML output gets a proper `<section>` with backrefs via
+ * remark-gfm; the TUI fallback is a plain bottom-of-page paragraph since
+ * terminal rendering has no concept of intra-document anchors.
+ */
+function footnoteDefinitionToken(node: FootnoteDefinition, ctx: ConvertContext): Token {
+  const n = ctx.footnotes.get(node.identifier);
+  const prefix = n != null ? `[${n}] ` : `[^${node.identifier}] `;
+  // Inline children of the first paragraph (footnotes are nearly always
+  // single-paragraph in practice).
+  const firstPara = node.children[0];
+  const tokens: Token[] = [
+    { type: "text", raw: prefix, text: prefix } as unknown as Token,
+  ];
+  if (firstPara && firstPara.type === "paragraph") {
+    for (const child of firstPara.children) {
+      tokens.push(convertInline(child, ctx));
+    }
+  }
+  const text = tokens.map(extractText).join("");
+  return {
+    type: "paragraph",
+    raw: "",
+    text,
+    tokens,
+  } as unknown as Token;
 }
 
 function extractText(token: Token): string {

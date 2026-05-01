@@ -31,6 +31,7 @@ import type { Token } from "marked";
 import { unified, type Processor } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
+import remarkFrontmatter from "remark-frontmatter";
 import type { Root } from "mdast";
 import { mdastRootToTokens } from "../util/mdast-to-marked.js";
 
@@ -72,13 +73,10 @@ export interface MdvMarkdownOptions extends BoxOptions {
 let sharedProcessor: Processor<Root, Root, Root, Root, string> | null = null;
 function getProcessor(): Processor<Root, Root, Root, Root, string> {
   if (!sharedProcessor) {
-    sharedProcessor = unified().use(remarkParse).use(remarkGfm) as unknown as Processor<
-      Root,
-      Root,
-      Root,
-      Root,
-      string
-    >;
+    sharedProcessor = unified()
+      .use(remarkParse)
+      .use(remarkFrontmatter, ["yaml", "toml"])
+      .use(remarkGfm) as unknown as Processor<Root, Root, Root, Root, string>;
   }
   return sharedProcessor;
 }
