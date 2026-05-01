@@ -7,17 +7,19 @@
  *     → remark-parse           (mdast tree)
  *     → remark-gfm             (tables, task lists, strikethrough, autolinks)
  *     → remark-rehype          (mdast → hast, with custom code handler)
- *     → rehype-raw             (re-parse adapter-emitted raw HTML strings)
- *     → rehype-stringify       (hast → HTML)
+ *     → rehype-stringify       (hast → HTML, raw nodes pass through)
  *
  * The custom `code` handler is where `CodeAdapterRegistry` plugs in. Each
  * fenced code block routes to the adapter that claims its language (Shiki
  * by default, mermaid for `mermaid` blocks). Adapters return ready-to-emit
- * HTML, which we wrap in a `raw` hast node so `rehype-raw` later splices it
- * back into the tree as real HTML rather than escaping it.
+ * HTML, which we wrap in a `raw` hast node — `rehype-stringify` with
+ * `allowDangerousHtml` writes those out verbatim. Skipping `rehype-raw`
+ * (would re-parse them into the tree) preserves CommonMark's "raw HTML
+ * passes through unchanged" rule for both code-adapter output and the
+ * markdown's own HTML blocks.
  *
  * Migrated from `marked` in 2026-05 — see commit history for the rationale
- * (CommonMark conformance jumped 96.8% → 99.4%, plugin ecosystem unlocked).
+ * (CommonMark conformance jumped 96.8% → 99.1%, plugin ecosystem unlocked).
  */
 
 import { unified, type Processor } from "unified";
@@ -48,10 +50,6 @@ export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor
         },
       },
     })
-    // No rehype-raw: code-adapter HTML and markdown's own raw HTML blocks
-    // both want to pass through verbatim, not be re-parsed into the hast
-    // tree. `rehype-stringify` + `allowDangerousHtml` emits `raw` nodes
-    // as-is, which is the CommonMark-conformant behavior.
     .use(rehypeStringify, {
       allowDangerousHtml: true,
       // Conventional HTML output uses named refs (`&lt;`, `&gt;`, `&amp;`).

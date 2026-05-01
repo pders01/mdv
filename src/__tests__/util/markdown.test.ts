@@ -8,7 +8,7 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { walkCodeFences, createMarkedOptions, type CodeBlock } from "../../util/markdown.js";
+import { walkCodeFences, type CodeBlock } from "../../util/markdown.js";
 
 function collect(content: string): CodeBlock[] {
   const out: CodeBlock[] = [];
@@ -58,17 +58,3 @@ describe("walkCodeFences", () => {
   });
 });
 
-describe("createMarkedOptions", () => {
-  test("returns gfm:true and breaks:false (matches marked v15 defaults explicitly)", () => {
-    const opts = createMarkedOptions();
-    expect(opts.gfm).toBe(true);
-    expect(opts.breaks).toBe(false);
-  });
-
-  test("returns a fresh object each call (callers can mutate without side effects)", () => {
-    const a = createMarkedOptions();
-    const b = createMarkedOptions();
-    expect(a).not.toBe(b);
-    expect(a).toEqual(b);
-  });
-});
