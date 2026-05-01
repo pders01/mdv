@@ -15,6 +15,7 @@ let highlighter: HighlighterInstance;
 
 beforeAll(async () => {
   highlighter = await createHighlighterInstance("github-dark");
+  await highlighter.highlighter.loadLanguage("javascript", "typescript");
   highlighter.colors = extractThemeColors(highlighter.highlighter, "github-dark" as BundledTheme);
 });
 
@@ -146,6 +147,7 @@ describe("createShikiAdapter dual mode", () => {
 
   beforeAll(async () => {
     dualHl = await createHighlighterInstance(["github-light", "github-dark"]);
+    await dualHl.highlighter.loadLanguage("typescript");
   });
 
   test("emits both light and dark CSS vars per token in dual mode", () => {

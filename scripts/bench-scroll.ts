@@ -20,7 +20,7 @@ import { MarkdownRenderable, type KeyEvent } from "@opentui/core";
 import { createTestRenderer } from "@opentui/core/testing";
 
 import { extractThemeColors, createSyntaxStyle, resolveTheme } from "../src/theme/index.js";
-import { createHighlighterInstance } from "../src/highlighting/shiki.js";
+import { createHighlighterInstance, loadLangsForContent } from "../src/highlighting/shiki.js";
 import { createRenderNode } from "../src/rendering/index.js";
 import { createMainContainer } from "../src/ui/container.js";
 import { createCursorManager } from "../src/input/cursor.js";
@@ -87,6 +87,7 @@ async function main(): Promise<void> {
     extractThemeColors(highlighter.highlighter, theme as BundledTheme),
   );
   highlighter.colors = themeColors;
+  await phase("shiki:load-langs", () => loadLangsForContent(highlighter, content));
   const syntaxStyle = phaseSync("theme:syntax-style", () => createSyntaxStyle(themeColors));
 
   const { renderer, mockInput, renderOnce } = await phase("renderer:create", () =>

@@ -17,7 +17,11 @@ import type { BundledTheme } from "shiki";
 
 import type { CliArgs } from "../cli.js";
 import { scanDirectory, makeExclusionFilter, type FileTree } from "../fs/tree.js";
-import { createHighlighterInstance, type HighlighterInstance } from "../highlighting/shiki.js";
+import {
+  createHighlighterInstance,
+  loadLangsForContent,
+  type HighlighterInstance,
+} from "../highlighting/shiki.js";
 import { extractThemeColors, resolveThemeSpec } from "../theme/index.js";
 
 import { createMarkdown } from "./html.js";
@@ -364,6 +368,9 @@ async function renderEntry(
   const source = await Bun.file(fullPath).text().catch(() => null);
   if (source == null) return notFound();
 
+  // Lazy-load any fence langs this file uses before marked.parse — the
+  // shiki adapter is sync and would fall back to plain text otherwise.
+  await loadLangsForContent(ctx.highlighter, source);
   const html = ctx.marked.parse(source) as string;
   const sidebar = renderSidebar(tree, relativePath);
   const page = renderTemplate(ctx, {

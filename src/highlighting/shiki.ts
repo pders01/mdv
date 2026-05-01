@@ -17,7 +17,13 @@ import { escapeHtml } from "../util/escape.js";
 // =============================================================================
 
 /**
- * Supported languages for syntax highlighting
+ * Languages supported for syntax highlighting. Used to filter content
+ * scanning so unknown fence labels (`text`, `output`, `console`, …) skip
+ * the load round-trip and render as plain.
+ *
+ * Languages are loaded lazily by `loadLangsForContent` based on what the
+ * rendered content actually uses; eager loading the whole set added
+ * ~150 ms to cold-open even on files with no code blocks.
  */
 export const shikiLangs: BundledLanguage[] = [
   "typescript",
@@ -37,6 +43,8 @@ export const shikiLangs: BundledLanguage[] = [
   "ruby",
   "php",
 ];
+
+const SHIKI_LANGS_SET: ReadonlySet<string> = new Set(shikiLangs);
 
 /**
  * Language aliases for common shorthand names
@@ -81,6 +89,10 @@ export interface HighlighterInstance {
  * Pass an array to load multiple themes at once — the first is the primary
  * (used by the TUI chunk converter and `shikiToHtml`); the rest are
  * available to `shikiToHtmlDual` for `prefers-color-scheme` rendering.
+ *
+ * No languages are pre-loaded — call `loadLangsForContent` (or
+ * `highlighter.loadLanguage` directly) before rendering. Cold-open creates
+ * the highlighter in ~5 ms instead of the ~150 ms an eager load took.
  */
 export async function createHighlighterInstance(
   theme: string | string[],
@@ -88,10 +100,46 @@ export async function createHighlighterInstance(
   const themes = Array.isArray(theme) ? theme : [theme];
   const highlighter = await createHighlighter({
     themes: themes as BundledTheme[],
-    langs: shikiLangs,
+    langs: [],
   });
 
   return { highlighter, theme: themes[0]!, themes, colors: undefined };
+}
+
+/**
+ * Scan markdown content for fenced code-block languages. Returns canonical
+ * (alias-resolved) names that are in the supported set. Cheap regex pass —
+ * no marked.lex dependency, so safe to call before MarkdownRenderable
+ * construction without paying the parse cost twice.
+ */
+const FENCE_LANG_RE = /^[ \t]*(?:```|~~~)[ \t]*([A-Za-z0-9_+-]+)/gm;
+
+export function detectFenceLangs(content: string): string[] {
+  const found = new Set<string>();
+  for (const m of content.matchAll(FENCE_LANG_RE)) {
+    const raw = m[1];
+    if (!raw) continue;
+    const resolved = resolveLanguage(raw);
+    if (SHIKI_LANGS_SET.has(resolved)) found.add(resolved);
+  }
+  return [...found];
+}
+
+/**
+ * Load any languages referenced by `content` that the highlighter does not
+ * already have. No-op when every fence lang is already loaded — important
+ * for the reload path, which must stay cheap when the file shape is stable.
+ */
+export async function loadLangsForContent(
+  instance: HighlighterInstance,
+  content: string,
+): Promise<void> {
+  const langs = detectFenceLangs(content);
+  if (langs.length === 0) return;
+  const loaded = new Set(instance.highlighter.getLoadedLanguages());
+  const missing = langs.filter((l) => !loaded.has(l));
+  if (missing.length === 0) return;
+  await instance.highlighter.loadLanguage(...(missing as BundledLanguage[]));
 }
 
 // =============================================================================

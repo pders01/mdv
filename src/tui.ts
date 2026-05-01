@@ -18,7 +18,7 @@ import {
   readStdinContent,
 } from "./cli.js";
 import { extractThemeColors, createSyntaxStyle, resolveTheme } from "./theme/index.js";
-import { createHighlighterInstance } from "./highlighting/shiki.js";
+import { createHighlighterInstance, loadLangsForContent } from "./highlighting/shiki.js";
 import { createRenderNode } from "./rendering/index.js";
 import { prerenderMermaid } from "./rendering/mermaid.js";
 import { createMainContainer } from "./ui/container.js";
@@ -144,6 +144,11 @@ const themeColors = phaseSync("theme:extract", () =>
   extractThemeColors(highlighterInstance.highlighter, resolvedTheme as BundledTheme),
 );
 highlighterInstance.colors = themeColors;
+
+// Lazy-load only the fence languages this file actually uses. On a file with
+// no code blocks this is a free no-op; on a real file it loads ~3 langs in
+// 30–60 ms versus ~150 ms for the full bundle.
+await phase("shiki:load-langs", () => loadLangsForContent(highlighterInstance, content));
 
 // =============================================================================
 // OpenTUI Setup
@@ -331,8 +336,9 @@ if (isDirectory && fileTree) {
       currentContentLines = newContent.split("\n");
       currentFilePath = filePath;
 
-      // Refresh mermaid pre-pass for the newly opened file.
+      // Refresh mermaid pre-pass and load any new fence langs before swapping.
       await refreshMermaidRenders(newContent);
+      await loadLangsForContent(highlighterInstance, newContent);
 
       ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
 
@@ -399,8 +405,9 @@ if (isDirectory && fileTree) {
           currentContent = newContent;
           currentContentLines = newContent.split("\n");
 
-          // Refresh mermaid pre-pass for the reloaded file.
+          // Refresh mermaid pre-pass and load any new fence langs.
           await refreshMermaidRenders(newContent);
+          await loadLangsForContent(highlighterInstance, newContent);
 
           ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
 
@@ -554,8 +561,9 @@ if (args.watch && !isStdin && !isDirectory && args.filePath) {
       currentContent = newContent;
       currentContentLines = newContent.split("\n");
 
-      // Refresh mermaid pre-pass for the reloaded file.
+      // Refresh mermaid pre-pass and load any new fence langs.
       await refreshMermaidRenders(newContent);
+      await loadLangsForContent(highlighterInstance, newContent);
 
       ({ getLinePosition, getContentLineY } = reloadContent(currentContent, currentContentLines));
 

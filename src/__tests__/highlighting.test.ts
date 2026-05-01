@@ -52,13 +52,11 @@ describe("createHighlighterInstance", () => {
     expect(instance.colors).toBeUndefined();
   });
 
-  test("highlighter has loaded languages", async () => {
+  test("starts with no languages loaded; loads on demand", async () => {
     const instance = await createHighlighterInstance("github-dark");
-    const loadedLangs = instance.highlighter.getLoadedLanguages();
-
-    expect(loadedLangs).toContain("javascript");
-    expect(loadedLangs).toContain("typescript");
-    expect(loadedLangs).toContain("python");
+    expect(instance.highlighter.getLoadedLanguages()).toEqual([]);
+    await instance.highlighter.loadLanguage("javascript");
+    expect(instance.highlighter.getLoadedLanguages()).toContain("javascript");
   });
 });
 
@@ -67,6 +65,7 @@ describe("shikiToChunks", () => {
 
   beforeAll(async () => {
     instance = await createHighlighterInstance("github-dark");
+    await instance.highlighter.loadLanguage("javascript");
     instance.colors = defaultColors;
   });
 

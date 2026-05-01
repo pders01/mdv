@@ -22,6 +22,7 @@ let registry: CodeAdapterRegistry;
 
 beforeAll(async () => {
   highlighter = await createHighlighterInstance("github-dark");
+  await highlighter.highlighter.loadLanguage("javascript", "typescript");
   highlighter.colors = extractThemeColors(highlighter.highlighter, "github-dark" as BundledTheme);
   registry = new CodeAdapterRegistry();
   registry.register(createShikiAdapter(highlighter));
