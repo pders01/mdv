@@ -290,7 +290,15 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       const state = getCursorState();
       if (currentContentLines.length === 0) return;
 
-      const drawLineHighlight = (line: number, color: InstanceType<typeof RGBA>) => {
+      // Edge bar instead of a full-row fill: a tinted full-row band sat on
+      // top of code-block colors made the syntax highlighting unreadable
+      // (cyan-on-orange at low contrast). A 1-cell left bar at full alpha
+      // reads as "this row" without touching the text.
+      const drawEdgeBar = (
+        line: number,
+        color: InstanceType<typeof RGBA>,
+        width: number,
+      ) => {
         const pos = getLinePosition(line);
         if (!pos) return;
 
@@ -303,7 +311,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
         }
 
         if (height > 0) {
-          buffer.fillRect(0, y, buffer.width, height, color);
+          buffer.fillRect(0, y, width, height, color);
         }
       };
 
@@ -325,11 +333,13 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       }
 
       if (state.mode === "visual") {
+        // Wider left bar for the selected range so it reads as "block of
+        // selected lines" rather than a single-row cursor.
         for (let line = state.selectionStart; line <= state.selectionEnd; line++) {
-          drawLineHighlight(line, selectionRGBA);
+          drawEdgeBar(line, selectionRGBA, 2);
         }
       } else {
-        drawLineHighlight(state.cursorLine, cursorRGBA);
+        drawEdgeBar(state.cursorLine, cursorRGBA, 1);
       }
     };
   };
@@ -344,13 +354,16 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
   ): { getLinePosition: GetLinePosition; getContentLineY: GetContentLineY } {
     currentMarkdown = markdown;
 
+    // Bars are narrow (1-2 cells) so they need higher alpha to read as a
+    // distinct rail; full-row fills used to compensate for low alpha by
+    // covering more area, but that hurt text contrast.
     const cursorRGBA = RGBA.fromHex(cursorColor);
-    cursorRGBA.a = 0.2;
+    cursorRGBA.a = 1;
     const selectionRGBA = RGBA.fromHex(selectionColor);
-    selectionRGBA.a = 0.35;
+    selectionRGBA.a = 1;
     const codeBgRGBA = RGBA.fromHex(codeBgColor);
     const searchRGBA = RGBA.fromHex(searchHighlightColor);
-    searchRGBA.a = 0.25;
+    searchRGBA.a = 0.4;
 
     highlightState = {
       getCursorState,
