@@ -14,14 +14,15 @@
 import { test, expect } from "bun:test";
 import { runBench } from "../../../scripts/lib/commonmark-bench.js";
 
-// 641 reflects intentional conflicts with the strict spec, traded for
+// 639 reflects intentional conflicts with the strict spec, traded for
 // real-world feature support:
 // - `---\nFoo\n---` consumed by remark-frontmatter as YAML (-2)
-// - `[[Page]]` consumed by remark-wiki-link as Obsidian wiki link, even
-//   inside what spec would treat as triple-bracket links / image refs (-3)
-// Both features are far more common in actual user files than the edge
-// cases they shadow.
-const THRESHOLD = 641;
+// - `[[Page]]` consumed by remark-wiki-link as Obsidian wiki link (-3)
+// - misc edges from supersub / marks / directives consuming `~`, `==`,
+//   `:::` patterns the spec would tokenize differently (-2)
+// All these features are far more common in actual user files than the
+// edge cases they shadow.
+const THRESHOLD = 639;
 const TOTAL = 652;
 
 test(

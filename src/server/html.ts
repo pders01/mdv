@@ -29,6 +29,10 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkAlert from "remark-github-blockquote-alert";
 import remarkMath from "remark-math";
 import wikiLink from "remark-wiki-link";
+import remarkDeflist from "remark-deflist";
+import remarkDirective from "remark-directive";
+import remarkMarkers from "remark-flexible-markers";
+import remarkSupersub from "remark-supersub";
 import remarkRehype from "remark-rehype";
 import rehypeKatex from "rehype-katex";
 import rehypeStringify from "rehype-stringify";
@@ -42,9 +46,15 @@ export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor
   return unified()
     .use(remarkParse)
     .use(remarkFrontmatter, ["yaml", "toml"])
-    .use(remarkGfm)
+    // singleTilde:false reserves `~text~` for remark-supersub (subscript)
+    // — GFM strikethrough still works as `~~text~~`.
+    .use(remarkGfm, { singleTilde: false })
     .use(remarkMath)
     .use(wikiLink, { aliasDivider: "|" })
+    .use(remarkDeflist)
+    .use(remarkDirective)
+    .use(remarkMarkers)
+    .use(remarkSupersub)
     .use(remarkAlert)
     .use(remarkRehype, {
       allowDangerousHtml: true,

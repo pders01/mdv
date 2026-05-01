@@ -34,6 +34,10 @@ import remarkGfm from "remark-gfm";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMath from "remark-math";
 import wikiLink from "remark-wiki-link";
+import remarkDeflist from "remark-deflist";
+import remarkDirective from "remark-directive";
+import remarkMarkers from "remark-flexible-markers";
+import remarkSupersub from "remark-supersub";
 import type { Root } from "mdast";
 import { mdastRootToTokens } from "../util/mdast-to-marked.js";
 
@@ -78,9 +82,15 @@ function getProcessor(): Processor<Root, Root, Root, Root, string> {
     sharedProcessor = unified()
       .use(remarkParse)
       .use(remarkFrontmatter, ["yaml", "toml"])
-      .use(remarkGfm)
+      // singleTilde:false reserves `~text~` for remark-supersub (subscript)
+      // — GFM strikethrough still works as `~~text~~`.
+      .use(remarkGfm, { singleTilde: false })
       .use(remarkMath)
-      .use(wikiLink, { aliasDivider: "|" }) as unknown as Processor<Root, Root, Root, Root, string>;
+      .use(wikiLink, { aliasDivider: "|" })
+      .use(remarkDeflist)
+      .use(remarkDirective)
+      .use(remarkMarkers)
+      .use(remarkSupersub) as unknown as Processor<Root, Root, Root, Root, string>;
   }
   return sharedProcessor;
 }
@@ -139,7 +149,11 @@ export class MdvMarkdownRenderable extends BoxRenderable {
 
     if (!this._content || !this._renderNode) return;
 
-    const tree = getProcessor().parse(this._content) as Root;
+    const proc = getProcessor();
+    // `runSync` applies transformer plugins (markers, supersub, alert,
+    // wiki-link, etc.) on top of the raw `parse` tree. Skipping it leaves
+    // ==highlight==, ~sub~, ^sup^, and similar syntaxes as literal text.
+    const tree = proc.runSync(proc.parse(this._content)) as Root;
     const tokens = mdastRootToTokens(tree);
     const rawSlices = computeRawSlices(this._content, tree);
 

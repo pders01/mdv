@@ -220,6 +220,32 @@ export function convertInlineToken(token: Token, colors: ThemeColors): InlineTok
       };
     }
 
+    // Highlight (`==text==` via remark-flexible-markers). Bold yellow on
+    // theme bg is the closest approximation to a `<mark>` background in a
+    // terminal that supports only fg colors per chunk.
+    case "mark": {
+      const t = token as Token & { text?: string };
+      return {
+        segment: { text: t.text || "", fg: colors.yellow, bold: true, italic: false },
+      };
+    }
+
+    // `H~2~O` and `x^2^` from remark-supersub. We could pass the value
+    // through unchanged, but Unicode subscript / superscript glyphs
+    // approximate the intent in a TUI without HTML.
+    case "subscript": {
+      const t = token as Token & { text?: string };
+      return {
+        segment: { text: toSubscript(t.text || ""), fg: colors.fg, bold: false, italic: false },
+      };
+    }
+    case "superscript": {
+      const t = token as Token & { text?: string };
+      return {
+        segment: { text: toSuperscript(t.text || ""), fg: colors.fg, bold: false, italic: false },
+      };
+    }
+
     default:
       return null;
   }

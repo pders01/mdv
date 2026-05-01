@@ -143,6 +143,11 @@ function convertBlock(node: RootContent, ctx: ConvertContext): Token | null {
       return definitionToken(node as Definition);
     case "footnoteDefinition":
       return footnoteDefinitionToken(node as FootnoteDefinition, ctx);
+    case "descriptionlist":
+      return descriptionListToken(node as { children: unknown[] }, ctx);
+    case "containerDirective":
+    case "leafDirective":
+      return directiveToken(node as DirectiveNode, ctx);
     default:
       return null;
   }
@@ -449,6 +454,33 @@ function convertInline(node: PhrasingContent, ctx: ConvertContext): Token {
       const text = `$${im.value}$`;
       return { type: "codespan", raw: "", text } as unknown as Token;
     }
+    case "mark": {
+      const m = node as { type: "mark"; children: PhrasingContent[] };
+      const tokens = m.children.map((c) => convertInline(c, ctx));
+      const text = tokens.map(extractText).join("");
+      return { type: "mark", raw: "", text, tokens } as unknown as Token;
+    }
+    case "subscript": {
+      const s = node as { type: "subscript"; children: PhrasingContent[] };
+      const tokens = s.children.map((c) => convertInline(c, ctx));
+      const text = tokens.map(extractText).join("");
+      return { type: "subscript", raw: "", text, tokens } as unknown as Token;
+    }
+    case "superscript": {
+      const s = node as { type: "superscript"; children: PhrasingContent[] };
+      const tokens = s.children.map((c) => convertInline(c, ctx));
+      const text = tokens.map(extractText).join("");
+      return { type: "superscript", raw: "", text, tokens } as unknown as Token;
+    }
+    case "textDirective": {
+      // Inline directive `:name[content]` — render content as plain text.
+      // Surfaces the directive's children without the `:name` wrapper, so
+      // the TUI doesn't show `:emoji[smile]` as literal punctuation.
+      const td = node as { type: "textDirective"; children?: PhrasingContent[] };
+      const tokens = (td.children ?? []).map((c) => convertInline(c, ctx));
+      const text = tokens.map(extractText).join("");
+      return { type: "text", raw: text, text } as unknown as Token;
+    }
     case "wikiLink": {
       // Obsidian-style `[[Page]]` / `[[Page|Label]]`. The plugin populates
       // `value` (target) and `data.alias` (display label, defaults to value
@@ -511,4 +543,86 @@ function footnoteDefinitionToken(node: FootnoteDefinition, ctx: ConvertContext):
 function extractText(token: Token): string {
   const t = token as Token & { text?: string };
   return typeof t.text === "string" ? t.text : "";
+}
+
+interface DirectiveNode {
+  type: "containerDirective" | "leafDirective" | "textDirective";
+  name: string;
+  children?: unknown[];
+}
+
+/**
+ * `remark-deflist` produces `descriptionlist` containers with alternating
+ * `descriptionterm` / `descriptiondetails` children. Flatten into a list
+ * of `{term, defs[]}` pairs so the renderer can print
+ *   Term
+ *     Definition 1
+ *     Definition 2
+ * without needing a new mdast walker.
+ */
+function descriptionListToken(node: { children: unknown[] }, ctx: ConvertContext): Token {
+  const items: Array<{ term: Token[]; defs: Token[][] }> = [];
+  let current: { term: Token[]; defs: Token[][] } | null = null;
+  for (const child of node.children) {
+    const c = child as { type: string; children?: PhrasingContent[] };
+    if (c.type === "descriptionterm") {
+      current = {
+        term: (c.children ?? []).map((cc) => convertInline(cc, ctx)),
+        defs: [],
+      };
+      items.push(current);
+    } else if (c.type === "descriptiondetails" && current) {
+      current.defs.push((c.children ?? []).map((cc) => convertInline(cc, ctx)));
+    }
+  }
+  return {
+    type: "deflist",
+    raw: "",
+    items,
+  } as unknown as Token;
+}
+
+/**
+ * `:::name` containers and `::name` leafs from `remark-directive`. Names
+ * matching GFM alert kinds map onto the alert path so directive users get
+ * the same coloured rendering. Other names render as a labelled
+ * blockquote (the name appears as a bold header above the body).
+ */
+function directiveToken(node: DirectiveNode, ctx: ConvertContext): Token {
+  const alertKind = (
+    ["note", "tip", "important", "warning", "caution"] as const
+  ).find((k) => k === node.name.toLowerCase());
+
+  const tokens = (node.children ?? [])
+    .map((c) => convertBlock(c as RootContent, ctx))
+    .filter((t): t is Token => t !== null);
+
+  if (alertKind) {
+    return {
+      type: "blockquote",
+      raw: "",
+      text: tokens.map(extractText).join("\n"),
+      tokens,
+      alertKind,
+    } as unknown as Token;
+  }
+
+  // Labelled blockquote: prepend a bold header paragraph naming the
+  // directive so the reader can tell it apart from a regular quote.
+  const header = {
+    type: "paragraph",
+    raw: "",
+    text: node.name,
+    tokens: [
+      { type: "strong", raw: "", text: node.name, tokens: [{ type: "text", raw: node.name, text: node.name }] },
+    ],
+  } as unknown as Token;
+
+  const body = [header, ...tokens];
+  return {
+    type: "blockquote",
+    raw: "",
+    text: body.map(extractText).join("\n"),
+    tokens: body,
+  } as unknown as Token;
 }

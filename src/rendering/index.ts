@@ -26,6 +26,7 @@ import { renderBlockquote } from "./blockquote.js";
 import { renderList } from "./list.js";
 import { renderTable } from "./table.js";
 import { renderParagraph } from "./paragraph.js";
+import { renderDefList } from "./deflist.js";
 
 /**
  * RenderNode callback type — matches MarkdownRenderable's expected signature.
@@ -111,6 +112,11 @@ export function createRenderNode(
     // Handle horizontal rules
     if (token.type === "hr") {
       return renderHorizontalRule(renderer, colors);
+    }
+
+    // Handle definition lists (remark-deflist)
+    if ((token as Token & { type: string }).type === "deflist") {
+      return renderDefList(renderer, colors, token);
     }
 
     // Handle blockquotes

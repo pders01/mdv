@@ -27,7 +27,7 @@ function getProcessor(): Processor<Root, Root, Root, Root, string> {
     sharedProcessor = unified()
       .use(remarkParse)
       .use(remarkFrontmatter, ["yaml", "toml"])
-      .use(remarkGfm) as unknown as Processor<Root, Root, Root, Root, string>;
+      .use(remarkGfm, { singleTilde: false }) as unknown as Processor<Root, Root, Root, Root, string>;
   }
   return sharedProcessor;
 }
@@ -41,7 +41,8 @@ function getProcessor(): Processor<Root, Root, Root, Root, string> {
  * caches keyed by content (the TUI mermaid pre-pass) want.
  */
 export function walkCodeFences(content: string, callback: (block: CodeBlock) => void): void {
-  const tree = getProcessor().parse(content) as Root;
+  const proc = getProcessor();
+  const tree = proc.runSync(proc.parse(content)) as Root;
   visit(tree as { children?: unknown[] }, callback);
 }
 
