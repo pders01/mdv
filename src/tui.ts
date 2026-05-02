@@ -330,6 +330,30 @@ export async function startTui(args: CliArgs): Promise<void> {
     showNotification(`${n} mermaid diagram${n > 1 ? "s" : ""} too wide — showing source`, 3000);
   }
 
+  // Width-baking renderers (table, code, hr, mermaid) capture contentWidth
+  // at construction; whenever the content pane changes width — sidebar
+  // toggle, terminal resize — we recompute the width, swap in a fresh
+  // renderNode, and re-prerender mermaid so its ASCII matches the new pane.
+  // Layout reflows immediately with the existing mermaid cache; the second
+  // rebuild after the async refresh swaps in regenerated diagrams.
+  const reflowMarkdown = (): void => {
+    contentWidth = computeContentWidth();
+    const rebuild = () => {
+      renderNode = createRenderNode(
+        renderer,
+        themeColors,
+        highlighterInstance,
+        contentWidth,
+        mermaidRenders,
+      );
+      markdown.setRenderNode(renderNode);
+    };
+    rebuild();
+    void refreshMermaidRenders(currentContent).then(rebuild);
+  };
+
+  renderer.on("resize", reflowMarkdown);
+
   // =============================================================================
   // UI Assembly
   // =============================================================================
@@ -473,33 +497,9 @@ export async function startTui(args: CliArgs): Promise<void> {
       }
     });
 
-    // Sidebar toggle changes the content-pane width. Width-baking renderers
-    // (table, code, hr, mermaid) capture contentWidth at construction, so we
-    // rebuild the markdown with a fresh renderNode to reflow them. Paragraphs
-    // and lists already reflow via Yoga since they wrap on parent width.
-    // _blockStates is rebuilt at the same token-order indices, so the cached
-    // line→blockIdx mapping in container.ts stays valid; renderable refs are
-    // re-read lazily via _blockStates on each highlight pass.
-    //
-    // Mermaid ASCII is regenerated asynchronously: the layout reflows first
-    // with the existing (stale-width) cache, then a second rebuild swaps in
-    // the freshly-rendered diagrams once mermaid-ascii returns. Files
-    // without mermaid blocks short-circuit inside refreshMermaidRenders.
     const onSidebarToggle = (visible: boolean) => {
       sidebarVisible = visible;
-      contentWidth = computeContentWidth();
-      const rebuild = () => {
-        renderNode = createRenderNode(
-          renderer,
-          themeColors,
-          highlighterInstance,
-          contentWidth,
-          mermaidRenders,
-        );
-        markdown.setRenderNode(renderNode);
-      };
-      rebuild();
-      void refreshMermaidRenders(currentContent).then(rebuild);
+      reflowMarkdown();
     };
 
     // Pane-aware keyboard handler
