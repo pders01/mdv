@@ -219,9 +219,21 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
   };
 
   /**
-   * Content-space Y for scroll calculations.
-   * Uses first block's Y as reference so the result is scroll-independent:
-   *   contentY = (r.y - firstBlock.y) + lineWithinBlock
+   * Content-space Y for scroll calculations — i.e. the y `scrollBox.scrollTo`
+   * expects. Computed as block render-y minus scrollbox content render-y;
+   * both shift by `-scrollTop` together so the diff is the block's layout
+   * position within the scroll surface, regardless of current scroll.
+   *
+   * Invariant: `MdvMarkdownRenderable` is a direct child of
+   * `scrollBox.content` (set up in `tui.ts` via `scrollBox.add(markdown)`).
+   * If a wrapper box is ever inserted between them, the diff picks up that
+   * wrapper's local y and is no longer the layout offset on its own.
+   *
+   * Earlier version normalized to `firstBlock.y`, which silently subtracted
+   * the first child's top margin (heading marginTop=2 etc.) — cursor scroll
+   * targets came out 2-3 rows short, and trailing-list bullets dropped
+   * below the viewport whenever a narrow pane (sidebar mode) wrapped the
+   * list and pulled scrollHeight tighter than the deficit.
    */
   const contentLineYForBlock = (
     line: number,
@@ -229,13 +241,12 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     blockIdx: number,
   ): number => {
     const r = blockStates[blockIdx]!.renderable;
-    const firstBlockY = blockStates[0]!.renderable.y;
     const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
     const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
     const lineWithinBlock = line - blockStartLine;
 
     const lineHeight = linesInBlock > 0 ? r.height / linesInBlock : 1;
-    return Math.max(0, r.y - firstBlockY + lineWithinBlock * lineHeight);
+    return Math.max(0, r.y - scrollBox.content.y + lineWithinBlock * lineHeight);
   };
 
   const getContentLineY: GetContentLineY = (line: number): number | null => {
