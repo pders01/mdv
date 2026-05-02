@@ -111,7 +111,7 @@ export function createRenderNode(
 
     // Handle horizontal rules
     if (token.type === "hr") {
-      return renderHorizontalRule(renderer, colors);
+      return renderHorizontalRule(renderer, colors, contentWidth);
     }
 
     // Handle definition lists (remark-deflist)

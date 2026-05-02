@@ -484,10 +484,16 @@ export function renderHtmlBlock(
 // =============================================================================
 
 /**
- * Render horizontal rule
+ * Render horizontal rule. Width comes from the caller's content area, not
+ * `renderer.width` \u2014 in sidebar mode the content pane is renderer.width
+ * minus the sidebar, and a renderer-width rule overflows under the sidebar.
  */
-export function renderHorizontalRule(renderer: CliRenderer, colors: ThemeColors): BoxRenderable {
-  const width = Math.max(renderer.width - 4, 20);
+export function renderHorizontalRule(
+  renderer: CliRenderer,
+  colors: ThemeColors,
+  contentWidth: number,
+): BoxRenderable {
+  const width = Math.max(contentWidth - 2, 20);
   const line = "\u2500".repeat(width);
 
   const wrapper = new BoxRenderable(renderer, {
