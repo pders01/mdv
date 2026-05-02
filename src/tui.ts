@@ -215,9 +215,10 @@ export async function startTui(args: CliArgs): Promise<void> {
 
   // Mermaid pre-pass: render all mermaid code blocks to ASCII before the first
   // paint. The map is mutated in place on reloads (directory switch, watch
-  // reload) so the renderNode closure always sees current state.
-  // availableWidth is contentWidth minus the code-block padding the wrapper adds.
-  const mermaidWidth = Math.max(20, contentWidth - 2);
+  // reload, sidebar toggle) so the renderNode closure always sees current
+  // state. availableWidth = contentWidth minus the code-block padding the
+  // wrapper adds, recomputed on each call so width changes flow through.
+  const mermaidAvailableWidth = () => Math.max(20, contentWidth - 2);
   const mermaidRenders = new Map<string, string>();
   let mermaidToolWasMissing = false;
   let mermaidInitialOverflow = 0;
@@ -225,7 +226,7 @@ export async function startTui(args: CliArgs): Promise<void> {
     const result = await phase("mermaid:prerender", () =>
       prerenderMermaid(currentContent, {
         disabled: args.noMermaid,
-        availableWidth: mermaidWidth,
+        availableWidth: mermaidAvailableWidth(),
       }),
     );
     for (const [k, v] of result.renders) mermaidRenders.set(k, v);
@@ -309,7 +310,7 @@ export async function startTui(args: CliArgs): Promise<void> {
   const refreshMermaidRenders = async (text: string): Promise<void> => {
     const result = await prerenderMermaid(text, {
       disabled: args.noMermaid,
-      availableWidth: mermaidWidth,
+      availableWidth: mermaidAvailableWidth(),
     });
     mermaidRenders.clear();
     for (const [k, v] of result.renders) mermaidRenders.set(k, v);
@@ -479,17 +480,26 @@ export async function startTui(args: CliArgs): Promise<void> {
     // _blockStates is rebuilt at the same token-order indices, so the cached
     // line→blockIdx mapping in container.ts stays valid; renderable refs are
     // re-read lazily via _blockStates on each highlight pass.
+    //
+    // Mermaid ASCII is regenerated asynchronously: the layout reflows first
+    // with the existing (stale-width) cache, then a second rebuild swaps in
+    // the freshly-rendered diagrams once mermaid-ascii returns. Files
+    // without mermaid blocks short-circuit inside refreshMermaidRenders.
     const onSidebarToggle = (visible: boolean) => {
       sidebarVisible = visible;
       contentWidth = computeContentWidth();
-      renderNode = createRenderNode(
-        renderer,
-        themeColors,
-        highlighterInstance,
-        contentWidth,
-        mermaidRenders,
-      );
-      markdown.setRenderNode(renderNode);
+      const rebuild = () => {
+        renderNode = createRenderNode(
+          renderer,
+          themeColors,
+          highlighterInstance,
+          contentWidth,
+          mermaidRenders,
+        );
+        markdown.setRenderNode(renderNode);
+      };
+      rebuild();
+      void refreshMermaidRenders(currentContent).then(rebuild);
     };
 
     // Pane-aware keyboard handler
