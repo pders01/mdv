@@ -135,6 +135,17 @@ export class MdvMarkdownRenderable extends BoxRenderable {
   }
 
   /**
+   * Swap the renderNode and re-run rebuild. Used when something the
+   * renderNode closure captured (e.g. content-pane width on sidebar
+   * toggle) has changed and the existing children need to be re-laid
+   * out against the new context.
+   */
+  setRenderNode(renderNode: MdvRenderNode): void {
+    this._renderNode = renderNode;
+    this.rebuild();
+  }
+
+  /**
    * Discard existing children + block states, re-parse content, mount fresh
    * children. Called on construction and on every `content` / `conceal`
    * mutation. Cheap enough at current document sizes that incremental reuse

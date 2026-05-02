@@ -205,9 +205,13 @@ export async function startTui(args: CliArgs): Promise<void> {
   cursor.setCursorablePredicate(isLineCursorable);
 
   // Create render node callback
-  // In directory mode, subtract sidebar width (30) from available content width
-  // Scrollbox padding (1 on each side) is accounted for internally
-  const contentWidth = isDirectory ? renderer.width - 30 - 2 : renderer.width - 2;
+  // In directory mode the content pane is renderer.width minus the sidebar
+  // (30 cols) when shown, full width minus padding when hidden via `\`.
+  // Scrollbox padding (1 on each side) is accounted for internally.
+  let sidebarVisible = isDirectory;
+  const computeContentWidth = () =>
+    isDirectory && sidebarVisible ? renderer.width - 30 - 2 : renderer.width - 2;
+  let contentWidth = computeContentWidth();
 
   // Mermaid pre-pass: render all mermaid code blocks to ASCII before the first
   // paint. The map is mutated in place on reloads (directory switch, watch
@@ -229,7 +233,7 @@ export async function startTui(args: CliArgs): Promise<void> {
     mermaidInitialOverflow = result.overflowed;
   }
 
-  const renderNode = phaseSync("render-node:create", () =>
+  let renderNode = phaseSync("render-node:create", () =>
     createRenderNode(renderer, themeColors, highlighterInstance, contentWidth, mermaidRenders),
   );
 
@@ -468,6 +472,26 @@ export async function startTui(args: CliArgs): Promise<void> {
       }
     });
 
+    // Sidebar toggle changes the content-pane width. Width-baking renderers
+    // (table, code, hr, mermaid) capture contentWidth at construction, so we
+    // rebuild the markdown with a fresh renderNode to reflow them. Paragraphs
+    // and lists already reflow via Yoga since they wrap on parent width.
+    // _blockStates is rebuilt at the same token-order indices, so the cached
+    // line→blockIdx mapping in container.ts stays valid; renderable refs are
+    // re-read lazily via _blockStates on each highlight pass.
+    const onSidebarToggle = (visible: boolean) => {
+      sidebarVisible = visible;
+      contentWidth = computeContentWidth();
+      renderNode = createRenderNode(
+        renderer,
+        themeColors,
+        highlighterInstance,
+        contentWidth,
+        mermaidRenders,
+      );
+      markdown.setRenderNode(renderNode);
+    };
+
     // Pane-aware keyboard handler
     setupPaneKeyboardHandler({
       renderer,
@@ -487,6 +511,7 @@ export async function startTui(args: CliArgs): Promise<void> {
           return getContentLineY;
         },
       },
+      onSidebarToggle,
     });
   } else {
     // Single-file mode (unchanged)

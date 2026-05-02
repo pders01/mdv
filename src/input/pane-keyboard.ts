@@ -17,10 +17,17 @@ export interface PaneKeyboardOptions {
   sidebar: SidebarSetup;
   contentOptions: KeyboardHandlerOptions;
   sidebarSearch: SearchManager;
+  /**
+   * Called after the sidebar visibility has flipped. tui.ts uses it to
+   * recompute the content-pane width and rebuild the markdown so width-
+   * dependent renderers (table, code, hr, mermaid) match the new layout.
+   */
+  onSidebarToggle?: (visible: boolean) => void;
 }
 
 export function setupPaneKeyboardHandler(options: PaneKeyboardOptions): void {
-  const { renderer, focusManager, sidebar, contentOptions, sidebarSearch } = options;
+  const { renderer, focusManager, sidebar, contentOptions, sidebarSearch, onSidebarToggle } =
+    options;
   const state: KeyboardState = { lastKey: "", lastKeyTime: 0 };
 
   renderer.keyInput.on("keypress", (event: KeyEvent) => {
@@ -58,6 +65,7 @@ export function setupPaneKeyboardHandler(options: PaneKeyboardOptions): void {
       if (!nowVisible && focusManager.activePane === "sidebar") {
         focusManager.switchTo("content");
       }
+      onSidebarToggle?.(nowVisible);
       return;
     }
 
