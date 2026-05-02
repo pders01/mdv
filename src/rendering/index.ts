@@ -51,7 +51,7 @@ export function createRenderNode(
   renderer: CliRenderer,
   colors: ThemeColors,
   highlighterInstance: HighlighterInstance,
-  contentWidth?: number,
+  contentWidth: number,
   mermaidRenders?: Map<string, string>,
 ): RenderNodeCallback {
   // Heading colors by depth (h1 = most prominent, h6 = subtlest)
