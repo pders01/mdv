@@ -76,14 +76,14 @@ interface RowRenderable {
 }
 
 /**
- * Per-row layout within a multi-row block. Walks the block's direct children
- * when their count matches the source-line count — each child corresponds to
- * one source line (a list item, a table row, a heading text) and its
- * `y/height` reflects wrap-induced extra rows that a uniform divide misses.
- *
- * Falls back to `r.height / linesInBlock` when child shape doesn't match
- * (e.g. paragraph blocks that have 1 child for 1 source line; uniform divide
- * already gives the right answer there).
+ * Per-row layout within a multi-row block. Walks the block's direct
+ * children when their count matches the source-line count; otherwise
+ * descends one DFS layer to collect leaf text/text-like renderables
+ * (each leaf corresponds to one source line in lists / tables / nested
+ * lists). Falls back to `r.height / linesInBlock` only when neither
+ * shape produces a 1:1 match — that's correct for single-paragraph
+ * blocks that wrap (one source line, N visible rows, uniform divide
+ * gives the right answer for `lineWithinBlock === 0`).
  */
 export function getRowLayout(
   r: RowRenderable,
@@ -96,9 +96,42 @@ export function getRowLayout(
       const child = children[lineWithinBlock];
       if (child) return { y: child.y, height: child.height };
     }
+    // Drop into leaves: nested-list items, list-item content boxes that
+    // wrap a TextRenderable, table rows wrapped in extra boxes.
+    const leaves = collectLeafRows(r);
+    if (leaves.length === linesInBlock) {
+      const leaf = leaves[lineWithinBlock];
+      if (leaf) return { y: leaf.y, height: leaf.height };
+    }
   }
   const lineHeight = linesInBlock > 0 ? r.height / linesInBlock : 1;
   return { y: r.y + lineWithinBlock * lineHeight, height: lineHeight };
+}
+
+/**
+ * DFS over a block's renderable subtree collecting "row-like" leaves.
+ * A leaf is a renderable that itself has no nested children with
+ * children — typically a TextRenderable. Order matches paint order
+ * (top-to-bottom in column-flex containers), so leaves[i] corresponds
+ * to the i-th source line of the block.
+ */
+function collectLeafRows(r: RowRenderable): RowRenderable[] {
+  const out: RowRenderable[] = [];
+  const visit = (node: RowRenderable) => {
+    const get = node.getChildren;
+    if (typeof get !== "function") {
+      out.push(node);
+      return;
+    }
+    const children = get.call(node);
+    if (children.length === 0) {
+      out.push(node);
+      return;
+    }
+    for (const child of children) visit(child);
+  };
+  visit(r);
+  return out;
 }
 
 /**

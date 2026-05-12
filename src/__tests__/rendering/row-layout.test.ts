@@ -52,6 +52,48 @@ describe("getRowLayout", () => {
     expect(getRowLayout(r, 4, 2)).toEqual({ y: 14, height: 2 });
   });
 
+  it("descends one DFS layer when top-level children count doesn't match line count", () => {
+    // Mimic a list with one top item containing a nested sub-list:
+    //   - top
+    //     - nested 1 (wraps to 2 rows)
+    //     - nested 2
+    // 3 source lines, 1 top-level child (the outer item box). The leaf
+    // walk should pick up the three TextRenderables and place each at
+    // its actual rendered y.
+    const nestedItem1 = { x: 0, width: 80, y: 6, height: 2 }; // wrapped
+    const nestedItem2 = { x: 0, width: 80, y: 8, height: 1 };
+    const nestedList = {
+      x: 0,
+      width: 80,
+      y: 6,
+      height: 3,
+      getChildren: () => [
+        { ...nestedItem1, getChildren: () => [nestedItem1] },
+        { ...nestedItem2, getChildren: () => [nestedItem2] },
+      ],
+    };
+    const topText = { x: 0, width: 80, y: 5, height: 1 };
+    const topItem = {
+      x: 0,
+      width: 80,
+      y: 5,
+      height: 4,
+      getChildren: () => [topText, nestedList],
+    };
+    const listBox = {
+      x: 0,
+      width: 80,
+      y: 5,
+      height: 4,
+      getChildren: () => [topItem],
+    };
+
+    // Source lines 0..2 within the block.
+    expect(getRowLayout(listBox, 3, 0).y).toBe(5); // top
+    expect(getRowLayout(listBox, 3, 1).y).toBe(6); // nested 1 (wrapped)
+    expect(getRowLayout(listBox, 3, 2).y).toBe(8); // nested 2 — *after* the wrap
+  });
+
   it("falls back to uniform divide when the block has no getChildren", () => {
     const r = { x: 0, y: 10, width: 80, height: 6 };
     // 6 / 3 = 2 per row; row 1 starts at 10 + 1 * 2 = 12.
