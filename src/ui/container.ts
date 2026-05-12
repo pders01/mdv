@@ -183,6 +183,14 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     searchHighlightColor: string;
     cursorTintRGBA: InstanceType<typeof RGBA>;
     selectionTintRGBA: InstanceType<typeof RGBA>;
+    // Pre-blended over the code background instead of the page background.
+    // fillRect lays opaque cells, so painting the page-bg-blended tint over
+    // a code block replaces the darker code-bg with a lighter page-bg-toned
+    // cell and the row reads as a second overlay (the "double highlight"
+    // people see when their cursor lands inside a fenced block). Using the
+    // code-bg-blended variant on those rows keeps the code-bg tone intact.
+    cursorTintCodeRGBA: InstanceType<typeof RGBA>;
+    selectionTintCodeRGBA: InstanceType<typeof RGBA>;
     codeBgRGBA: InstanceType<typeof RGBA>;
     searchRGBA: InstanceType<typeof RGBA>;
   } | null = null;
@@ -337,8 +345,23 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const content = scrollBox.content;
     if (!content || !highlightState) return;
 
-    const { getCursorState, cursorTintRGBA, selectionTintRGBA, codeBgRGBA, searchRGBA } =
-      highlightState;
+    const {
+      getCursorState,
+      cursorTintRGBA,
+      selectionTintRGBA,
+      cursorTintCodeRGBA,
+      selectionTintCodeRGBA,
+      codeBgRGBA,
+      searchRGBA,
+    } = highlightState;
+
+    const isLineInCodeBlock = (line: number): boolean => {
+      if (!cachedLineToBlock) return false;
+      const blockIdx = cachedLineToBlock.get(line);
+      if (blockIdx === undefined) return false;
+      const blockStates = getBlockStates();
+      return blockStates?.[blockIdx]?.token.type === "code";
+    };
 
     content.renderBefore = (buffer) => {
       if (currentContentLines.length === 0) return;
@@ -408,10 +431,13 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
       if (state.mode === "visual") {
         for (let line = state.selectionStart; line <= state.selectionEnd; line++) {
-          drawRowMarker(line, selectionTintRGBA);
+          drawRowMarker(line, isLineInCodeBlock(line) ? selectionTintCodeRGBA : selectionTintRGBA);
         }
       } else {
-        drawRowMarker(state.cursorLine, cursorTintRGBA);
+        drawRowMarker(
+          state.cursorLine,
+          isLineInCodeBlock(state.cursorLine) ? cursorTintCodeRGBA : cursorTintRGBA,
+        );
       }
     };
   };
@@ -431,9 +457,16 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     // the visible blended color on top of an empty buffer; setting alpha
     // directly led to tint-as-darkened-color artifacts on every theme.
     const bgRGBA = RGBA.fromHex(bgColor);
-    const cursorTintRGBA = blendOver(RGBA.fromHex(cursorColor), bgRGBA, 0.22);
-    const selectionTintRGBA = blendOver(RGBA.fromHex(selectionColor), bgRGBA, 0.28);
+    const cursorRGBA = RGBA.fromHex(cursorColor);
+    const selectionRGBA = RGBA.fromHex(selectionColor);
     const codeBgRGBA = RGBA.fromHex(codeBgColor);
+    const cursorTintRGBA = blendOver(cursorRGBA, bgRGBA, 0.22);
+    const selectionTintRGBA = blendOver(selectionRGBA, bgRGBA, 0.28);
+    // Variants blended over the code background — used when the active row
+    // is inside a fenced block so the cursor/selection overlay preserves
+    // the darker code-bg tone instead of replacing it with page-bg cells.
+    const cursorTintCodeRGBA = blendOver(cursorRGBA, codeBgRGBA, 0.22);
+    const selectionTintCodeRGBA = blendOver(selectionRGBA, codeBgRGBA, 0.28);
     const searchRGBA = blendOver(RGBA.fromHex(searchHighlightColor), bgRGBA, 0.55);
 
     highlightState = {
@@ -444,6 +477,8 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       searchHighlightColor,
       cursorTintRGBA,
       selectionTintRGBA,
+      cursorTintCodeRGBA,
+      selectionTintCodeRGBA,
       codeBgRGBA,
       searchRGBA,
     };
