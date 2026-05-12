@@ -77,6 +77,17 @@ for (let blockIdx = 0; blockIdx < blockStates.length; blockIdx++) {
       `lineHeight=${(r.height / Math.max(1, linesInToken)).toFixed(3)}  ` +
       `raw="${preview}"`,
   );
+  const getChildren =
+    (r as unknown as { getChildren?: () => Array<{ y: number; height: number }> }).getChildren;
+  if (typeof getChildren === "function") {
+    const children = getChildren.call(r);
+    if (children.length > 0) {
+      const list = children
+        .map((c, i) => `${i}:y=${c.y},h=${c.height}`)
+        .join(" ");
+      console.log(`         children: ${list}`);
+    }
+  }
   searchStart = tokenStart === -1 ? searchStart : tokenStart + tokenRaw.length;
 }
 

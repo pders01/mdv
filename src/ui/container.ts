@@ -48,7 +48,41 @@ export function countTokenLines(tokenRaw: string): number {
 interface BlockState {
   token: { type: string; raw: string };
   tokenRaw: string;
-  renderable: { x: number; y: number; width: number; height: number };
+  renderable: RowRenderable;
+}
+
+interface RowRenderable {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  getChildren?: () => RowRenderable[];
+}
+
+/**
+ * Per-row layout within a multi-row block. Walks the block's direct children
+ * when their count matches the source-line count — each child corresponds to
+ * one source line (a list item, a table row, a heading text) and its
+ * `y/height` reflects wrap-induced extra rows that a uniform divide misses.
+ *
+ * Falls back to `r.height / linesInBlock` when child shape doesn't match
+ * (e.g. paragraph blocks that have 1 child for 1 source line; uniform divide
+ * already gives the right answer there).
+ */
+export function getRowLayout(
+  r: RowRenderable,
+  linesInBlock: number,
+  lineWithinBlock: number,
+): { y: number; height: number } {
+  if (linesInBlock > 1 && typeof r.getChildren === "function") {
+    const children = r.getChildren();
+    if (children.length === linesInBlock) {
+      const child = children[lineWithinBlock];
+      if (child) return { y: child.y, height: child.height };
+    }
+  }
+  const lineHeight = linesInBlock > 0 ? r.height / linesInBlock : 1;
+  return { y: r.y + lineWithinBlock * lineHeight, height: lineHeight };
 }
 
 /**
@@ -225,11 +259,8 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
     const lineWithinBlock = line - blockStartLine;
 
-    // Use actual rendered height per line instead of assuming 1
-    const lineHeight = linesInBlock > 0 ? r.height / linesInBlock : 1;
-    const lineY = r.y + lineWithinBlock * lineHeight;
-
-    return { x: r.x, y: lineY, height: lineHeight };
+    const row = getRowLayout(r, linesInBlock, lineWithinBlock);
+    return { x: r.x, y: row.y, height: row.height };
   };
 
   /**
@@ -264,8 +295,8 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
     const lineWithinBlock = line - blockStartLine;
 
-    const lineHeight = linesInBlock > 0 ? r.height / linesInBlock : 1;
-    return Math.max(0, r.y - scrollSurfaceY() + lineWithinBlock * lineHeight);
+    const row = getRowLayout(r, linesInBlock, lineWithinBlock);
+    return Math.max(0, row.y - scrollSurfaceY());
   };
 
   const getContentLineY: GetContentLineY = (line: number): number | null => {
