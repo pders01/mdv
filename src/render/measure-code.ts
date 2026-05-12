@@ -12,7 +12,6 @@
  */
 
 import type { BoxSpec, TextSpec, TextLine } from "./spec.js";
-import { cellWidth } from "../util/width.js";
 
 export interface CodeLineOffset {
   sourceLine: number;
@@ -59,15 +58,3 @@ export function measureCodeLines(
   return { innerYStart: padding, innerHeight: cursor, lines: offsets };
 }
 
-/**
- * Convenience: build a `TextLine[]` from raw code-block text + the source
- * line index of the opening fence. Used by container.ts which receives
- * tokens straight from the parser and never builds a Spec.
- */
-export function textLinesFromCodeText(text: string, openingFenceLine: number): TextLine[] {
-  return text.split("\n").map((t, i) => ({
-    sourceLine: openingFenceLine + 1 + i,
-    displayWidth: cellWidth(t),
-    displayText: t,
-  }));
-}

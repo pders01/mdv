@@ -174,6 +174,7 @@ export function listToSpec(colors: ThemeColors, token: ListToken, depth: number 
 
   return {
     kind: "box",
+    ...(depth === 0 ? { block: "list" as const } : {}),
     flexDirection: "column",
     marginTop: depth === 0 ? 1 : 0,
     marginBottom: depth === 0 ? 1 : 0,

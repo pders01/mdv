@@ -117,6 +117,7 @@ export function codeBlockToSpec(
 
   return {
     kind: "box",
+    block: "code",
     padding: 1,
     marginTop: 1,
     marginBottom: 1,

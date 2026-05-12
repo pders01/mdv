@@ -31,10 +31,9 @@ function blendOver(
 /**
  * BlockState shape MdvMarkdownRenderable.blockStates returns. Source
  * span lives on `spec.source` (mutated to a non-null range during
- * mount, see ui/markdown.ts).
+ * mount, see ui/markdown.ts); block-kind dispatch reads `spec.block`.
  */
 interface BlockState {
-  token: { type: string; text?: string };
   renderable: {
     x: number;
     y: number;
@@ -42,7 +41,12 @@ interface BlockState {
     height: number;
     getChildren?: () => unknown;
   };
-  spec: { source: { start: number; end: number } | null };
+  spec: {
+    source: { start: number; end: number } | null;
+    block?: string;
+    kind: string;
+    children?: unknown;
+  };
 }
 
 /**
@@ -289,7 +293,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       const blockIdx = cachedLineToBlock.get(line);
       if (blockIdx === undefined) return false;
       const blockStates = getBlockStates();
-      return blockStates?.[blockIdx]?.token.type === "code";
+      return blockStates?.[blockIdx]?.spec.block === "code";
     };
 
     content.renderBefore = (buffer) => {
@@ -299,7 +303,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
       if (!blockStates) return;
 
       for (const blockState of blockStates) {
-        if (blockState.token.type === "code") {
+        if (blockState.spec.block === "code") {
           const r = blockState.renderable;
           let drawY = r.y;
           let drawHeight = r.height;

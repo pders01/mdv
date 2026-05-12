@@ -32,10 +32,29 @@ export interface SourceSpan {
   end: number;
 }
 
+/**
+ * Block-kind tag on top-level specs. Lets downstream code (measurement,
+ * cursor overlays) dispatch without reaching back into the source token.
+ * Top-level *ToSpec factories set this; inner / decorative boxes leave
+ * it unset.
+ */
+export type BlockTag =
+  | "code"
+  | "paragraph"
+  | "heading"
+  | "list"
+  | "table"
+  | "blockquote"
+  | "hr"
+  | "html"
+  | "deflist";
+
 export interface BoxSpec {
   kind: "box";
   /** Stable id for the resulting Renderable; lets mount diff on reload. */
   id?: string;
+  /** Block-kind tag (top-level only). */
+  block?: BlockTag;
   padding?: number;
   paddingLeft?: number;
   paddingRight?: number;

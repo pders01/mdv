@@ -49,6 +49,7 @@ export function defListToSpec(colors: ThemeColors, token: Token): BoxSpec {
   }
   return {
     kind: "box",
+    block: "deflist",
     flexDirection: "column",
     marginTop: 1,
     marginBottom: 1,

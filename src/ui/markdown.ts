@@ -62,12 +62,10 @@ export type MdvRenderNode = (
 /**
  * Per-block state exposed via `MdvMarkdownRenderable.blockStates`.
  * Source-line ranges live on `spec.source` (always populated for
- * top-level blocks by `rebuild`); container.ts / measurement read them
- * from there. The token is kept for type-dispatched paths (code block
- * fast-path in measureBlockLine).
+ * top-level blocks by `rebuild`). Block-kind dispatch reads
+ * `spec.block`; the source token is not retained.
  */
 export interface MdvBlockState {
-  token: Token;
   renderable: Renderable;
   /**
    * The spec the dispatcher emitted for this block. `spec.source`
@@ -199,7 +197,7 @@ export class MdvMarkdownRenderable extends BoxRenderable {
       spec.source = { start: range.start, end: range.end };
       const renderable = mountSpec(this.ctx, spec);
       this.add(renderable);
-      this._blockStates.push({ token, renderable, spec });
+      this._blockStates.push({ renderable, spec });
     }
   }
 }

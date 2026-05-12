@@ -282,6 +282,7 @@ function htmlTableToSpec(colors: ThemeColors, html: string): BoxSpec {
 
   const wrapper: BoxSpec = {
     kind: "box",
+    block: "html",
     flexDirection: "column",
     marginTop: 1,
     marginBottom: 1,
@@ -315,6 +316,7 @@ function htmlListToSpec(colors: ThemeColors, html: string): BoxSpec {
   const isOrdered = /<ol/i.test(html);
   const wrapper: BoxSpec = {
     kind: "box",
+    block: "html",
     flexDirection: "column",
     marginTop: 1,
     marginBottom: 1,
@@ -346,6 +348,7 @@ function htmlHeadingToSpec(colors: ThemeColors, html: string, level: number): Bo
   const fg = palette[level - 1] || colors.blue;
   return {
     kind: "box",
+    block: "html",
     marginTop: level === 1 ? 1 : 0,
     marginBottom: 1,
     source: null,
@@ -367,6 +370,7 @@ export function htmlBlockToSpec(colors: ThemeColors, html: string): BoxSpec | nu
   if (!content) return null;
   return {
     kind: "box",
+    block: "html",
     marginBottom: 1,
     source: null,
     children: [textSpec(content, colors.fg)],
@@ -388,6 +392,7 @@ export function hrToSpec(colors: ThemeColors, contentWidth: number): BoxSpec {
   const width = Math.max(contentWidth - 2, 20);
   return {
     kind: "box",
+    block: "hr",
     marginTop: 1,
     marginBottom: 1,
     source: null,

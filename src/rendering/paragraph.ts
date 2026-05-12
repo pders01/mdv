@@ -285,6 +285,7 @@ export function paragraphToSpec(colors: ThemeColors, token: ParagraphToken): Box
 
   return {
     kind: "box",
+    block: "paragraph",
     marginBottom: 1,
     source: null,
     children: [{ kind: "text", chunks, source: null }],

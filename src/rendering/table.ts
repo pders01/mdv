@@ -167,6 +167,7 @@ export function tableToSpec(
 
   return {
     kind: "box",
+    block: "table",
     flexDirection: "column",
     marginTop: 1,
     marginBottom: 1,

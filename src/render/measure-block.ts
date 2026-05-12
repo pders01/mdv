@@ -19,17 +19,29 @@
  */
 
 import type { CodeMeasurement } from "./measure-code.js";
-import { measureCodeLines, textLinesFromCodeText } from "./measure-code.js";
+import { measureCodeLines } from "./measure-code.js";
+import type { BoxSpec, Spec, TextSpec } from "./spec.js";
 
 /**
- * Block state shape the measurer needs. Loose to avoid pulling marked
- * types. `spec.source` holds the 0-indexed inclusive source-line range
- * (populated for every top-level block by MdvMarkdownRenderable).
+ * Block state shape the measurer needs. `spec.block` tells the
+ * measurer what kind of block this is (for code-block fast-path);
+ * `spec.source` carries the source-line range; nested TextSpec.lines
+ * carries the per-source-line wrap data for code blocks.
  */
 export interface BlockStateForMeasure {
-  token: { type: string; text?: string };
   renderable: RowRenderable;
-  spec: { source: { start: number; end: number } | null };
+  spec: Spec;
+}
+
+function asTopBox(spec: Spec): BoxSpec | null {
+  return spec.kind === "box" ? spec : null;
+}
+
+function codeTextSpec(spec: Spec): TextSpec | null {
+  const box = asTopBox(spec);
+  if (!box || box.block !== "code") return null;
+  const inner = box.children[0];
+  return inner && inner.kind === "text" && inner.lines ? inner : null;
 }
 
 export interface RowRenderable {
@@ -67,11 +79,11 @@ export function codeRowMapFor(
   state: BlockStateForMeasure,
   codeBlockPadding = 1,
 ): CodeRowMap | null {
-  if (state.token.type !== "code" || typeof state.token.text !== "string") return null;
+  const textSpec = codeTextSpec(state.spec);
+  if (!textSpec) return null;
   const span = state.spec.source;
   if (!span) return null;
-  const lines = textLinesFromCodeText(state.token.text, span.start);
-  const measurement = measureCodeLines(lines, state.renderable.width, codeBlockPadding);
+  const measurement = measureCodeLines(textSpec.lines!, state.renderable.width, codeBlockPadding);
   return buildCodeRowMap(measurement, span.start, span.end, codeBlockPadding);
 }
 

@@ -237,6 +237,7 @@ export function blockquoteToSpec(colors: ThemeColors, token: ContentToken): BoxS
 
   return {
     kind: "box",
+    block: "blockquote",
     marginTop: 1,
     marginBottom: 1,
     paddingLeft: 2,

@@ -36,6 +36,7 @@ export function headingToSpec(colors: ThemeColors, token: HeadingToken): BoxSpec
 
   return {
     kind: "box",
+    block: "heading",
     marginTop: token.depth <= 2 ? 2 : 1,
     marginBottom: 1,
     source: null,
