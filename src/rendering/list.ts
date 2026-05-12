@@ -2,7 +2,7 @@
  * List rendering with nesting support
  */
 
-import { TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
+import { RGBA } from "@opentui/core";
 import type { Token } from "marked";
 import type {
   ThemeColors,
@@ -14,6 +14,19 @@ import type {
 } from "../types.js";
 import { convertInlineToken } from "./text.js";
 import type { BoxSpec, Spec } from "../render/spec.js";
+
+/**
+ * Convert styled segments to TextChunks for use with StyledText
+ */
+function segmentsToChunks(segments: StyledSegment[]): TextChunk[] {
+  return segments.map((seg) => ({
+    __isChunk: true,
+    text: seg.text,
+    fg: seg.fg ? RGBA.fromHex(seg.fg) : undefined,
+    bold: seg.bold || undefined,
+    italic: seg.italic || undefined,
+  }));
+}
 
 /**
  * Convert inline tokens to styled segments (pure function, no OpenTUI dependency)
@@ -98,36 +111,6 @@ export function listToBlocks(
   });
 
   return blocks;
-}
-
-/**
- * Convert styled segments to TextChunks for use with StyledText
- */
-function segmentsToChunks(segments: StyledSegment[]): TextChunk[] {
-  return segments.map((seg) => ({
-    __isChunk: true,
-    text: seg.text,
-    fg: seg.fg ? RGBA.fromHex(seg.fg) : undefined,
-    bold: seg.bold || undefined,
-    italic: seg.italic || undefined,
-  }));
-}
-
-/**
- * Render inline tokens (for list items, etc.)
- */
-export function renderInlineTokens(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  tokens: Token[],
-): TextRenderable {
-  const segments = inlineTokensToSegments(colors, tokens);
-  const chunks = segmentsToChunks(segments);
-  const styledText = new StyledText(chunks as any);
-
-  return new TextRenderable(renderer, {
-    content: styledText,
-  });
 }
 
 /**

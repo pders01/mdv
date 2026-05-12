@@ -147,7 +147,7 @@ export {
   hrToBlock,
 } from "./html.js";
 export { extractBlockquoteText, blockquoteToBlock } from "./blockquote.js";
-export { renderInlineTokens, listToBlocks, inlineTokensToSegments } from "./list.js";
+export { listToBlocks, inlineTokensToSegments } from "./list.js";
 export { tableToBlock } from "./table.js";
 export { paragraphToSegments, paragraphToBlock } from "./paragraph.js";
 export { decodeHtmlEntities, toSubscript, toSuperscript } from "./text.js";
