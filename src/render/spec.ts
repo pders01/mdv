@@ -37,6 +37,10 @@ export interface BoxSpec {
   /** Stable id for the resulting Renderable; lets mount diff on reload. */
   id?: string;
   padding?: number;
+  paddingLeft?: number;
+  paddingRight?: number;
+  paddingTop?: number;
+  paddingBottom?: number;
   marginTop?: number;
   marginBottom?: number;
   flexDirection?: "row" | "column";

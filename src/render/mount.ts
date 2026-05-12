@@ -36,6 +36,10 @@ export function mountSpec(renderer: CliRenderer, spec: Spec): Renderable {
   const box = new BoxRenderable(renderer, {
     ...(spec.id ? { id: spec.id } : {}),
     ...(spec.padding !== undefined ? { padding: spec.padding } : {}),
+    ...(spec.paddingLeft !== undefined ? { paddingLeft: spec.paddingLeft } : {}),
+    ...(spec.paddingRight !== undefined ? { paddingRight: spec.paddingRight } : {}),
+    ...(spec.paddingTop !== undefined ? { paddingTop: spec.paddingTop } : {}),
+    ...(spec.paddingBottom !== undefined ? { paddingBottom: spec.paddingBottom } : {}),
     ...(spec.marginTop !== undefined ? { marginTop: spec.marginTop } : {}),
     ...(spec.marginBottom !== undefined ? { marginBottom: spec.marginBottom } : {}),
     ...(spec.flexDirection ? { flexDirection: spec.flexDirection } : {}),

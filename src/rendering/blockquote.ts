@@ -7,8 +7,10 @@
  * coloured bar plus a labelled header so the alert reads at a glance.
  */
 
-import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
-import type { ThemeColors, RenderBlock } from "../types.js";
+import { BoxRenderable, RGBA, type CliRenderer } from "@opentui/core";
+import type { ThemeColors, RenderBlock, TextChunk } from "../types.js";
+import type { BoxSpec, Spec } from "../render/spec.js";
+import { mountSpec } from "../render/mount.js";
 
 /**
  * Token with optional text content (for recursive extraction).
@@ -101,60 +103,83 @@ export function blockquoteToBlock(colors: ThemeColors, token: ContentToken): Ren
 }
 
 /**
- * Render blockquote with proper styling
+ * Build a pure Spec for a blockquote. Wrapper applies left padding so the
+ * bar sits inside the indent; each row is a row-flex box with the colored
+ * bar and the body text as siblings. Alert variants prepend a header row
+ * with the icon + label; body sits below in the same indent column.
+ *
+ * Attributes (bold / italic) are carried per-chunk rather than at the
+ * TextRenderable level, so the spec stays kind-agnostic and the mounter
+ * doesn't need a TextAttributes prop.
+ */
+export function blockquoteToSpec(colors: ThemeColors, token: ContentToken): BoxSpec {
+  const alert = token.alertKind ? ALERT_STYLES[token.alertKind] : null;
+  const barColor = alert ? colors[alert.color] : colors.purple;
+  const textContent = extractBlockquoteText(token);
+
+  const barTextSpec = (): Spec => ({
+    kind: "text",
+    chunks: [{ __isChunk: true, text: "│ ", fg: RGBA.fromHex(barColor) }],
+    source: null,
+  });
+
+  // Two TextSpec siblings inside a row-flex box so the body wraps within
+  // its own flex item (continuation indents past the bar). Merging bar
+  // and body into a single TextSpec would wrap continuation lines back
+  // to the bar's column, losing the visual hang.
+  const rowSpec = (bodyChunks: TextChunk[]): BoxSpec => ({
+    kind: "box",
+    flexDirection: "row",
+    source: null,
+    children: [barTextSpec(), { kind: "text", chunks: bodyChunks, source: null }],
+  });
+
+  const children: Spec[] = [];
+
+  if (alert) {
+    children.push(
+      rowSpec([
+        {
+          __isChunk: true,
+          text: `${alert.icon} ${alert.label}`,
+          fg: RGBA.fromHex(barColor),
+          bold: true,
+        },
+      ]),
+    );
+  }
+
+  children.push(
+    rowSpec([
+      {
+        __isChunk: true,
+        text: textContent,
+        fg: RGBA.fromHex(colors.gray),
+        italic: true,
+      },
+    ]),
+  );
+
+  return {
+    kind: "box",
+    marginTop: 1,
+    marginBottom: 1,
+    paddingLeft: 2,
+    source: null,
+    children,
+  };
+}
+
+/**
+ * Render blockquote with proper styling.
+ *
+ * Legacy adapter — funnels through `blockquoteToSpec` + `mountSpec`.
  */
 export function renderBlockquote(
   renderer: CliRenderer,
   colors: ThemeColors,
   token: ContentToken,
 ): BoxRenderable {
-  const wrapper = new BoxRenderable(renderer, {
-    marginTop: 1,
-    marginBottom: 1,
-    paddingLeft: 2,
-  });
-
-  const alert = token.alertKind ? ALERT_STYLES[token.alertKind] : null;
-  const barColor = alert ? colors[alert.color] : colors.purple;
-
-  // Alert header (label + icon) on its own row, before the body.
-  if (alert) {
-    const headerBox = new BoxRenderable(renderer, { flexDirection: "row" });
-    headerBox.add(
-      new TextRenderable(renderer, {
-        content: "│ ",
-        fg: barColor,
-      }),
-    );
-    headerBox.add(
-      new TextRenderable(renderer, {
-        content: `${alert.icon} ${alert.label}`,
-        fg: barColor,
-        attributes: TextAttributes.BOLD,
-      }),
-    );
-    wrapper.add(headerBox);
-  }
-
-  const contentBox = new BoxRenderable(renderer, { flexDirection: "row" });
-
-  // Extract text from blockquote tokens
-  const textContent = extractBlockquoteText(token);
-
-  const quoteBar = new TextRenderable(renderer, {
-    content: "│ ",
-    fg: barColor,
-  });
-
-  const quoteText = new TextRenderable(renderer, {
-    content: textContent,
-    fg: colors.gray,
-    attributes: TextAttributes.ITALIC,
-  });
-
-  contentBox.add(quoteBar);
-  contentBox.add(quoteText);
-  wrapper.add(contentBox);
-
-  return wrapper;
+  const spec = blockquoteToSpec(colors, token);
+  return mountSpec(renderer, spec) as BoxRenderable;
 }

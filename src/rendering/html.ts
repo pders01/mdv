@@ -2,10 +2,12 @@
  * HTML parsing and rendering utilities
  */
 
-import { BoxRenderable, TextRenderable, TextAttributes, type CliRenderer } from "@opentui/core";
+import { BoxRenderable, TextRenderable, TextAttributes, RGBA, type CliRenderer } from "@opentui/core";
 import type { ThemeColors, StyledSegment, RenderBlock } from "../types.js";
 import { decodeHtmlEntities } from "./text.js";
 import { calculateColumnWidths, padCell, buildSeparatorLine, CELL_PADDING } from "./table-utils.js";
+import type { BoxSpec } from "../render/spec.js";
+import { mountSpec } from "../render/mount.js";
 
 // =============================================================================
 // HTML Parsing
@@ -484,29 +486,38 @@ export function renderHtmlBlock(
 // =============================================================================
 
 /**
+ * Build a pure Spec for a horizontal rule.
+ */
+export function hrToSpec(colors: ThemeColors, contentWidth: number): BoxSpec {
+  const width = Math.max(contentWidth - 2, 20);
+  return {
+    kind: "box",
+    marginTop: 1,
+    marginBottom: 1,
+    source: null,
+    children: [
+      {
+        kind: "text",
+        chunks: [
+          { __isChunk: true, text: "\u2500".repeat(width), fg: RGBA.fromHex(colors.gray) },
+        ],
+        source: null,
+      },
+    ],
+  };
+}
+
+/**
  * Render horizontal rule. Width comes from the caller's content area, not
  * `renderer.width` \u2014 in sidebar mode the content pane is renderer.width
  * minus the sidebar, and a renderer-width rule overflows under the sidebar.
+ *
+ * Legacy adapter \u2014 funnels through `hrToSpec` + `mountSpec`.
  */
 export function renderHorizontalRule(
   renderer: CliRenderer,
   colors: ThemeColors,
   contentWidth: number,
 ): BoxRenderable {
-  const width = Math.max(contentWidth - 2, 20);
-  const line = "\u2500".repeat(width);
-
-  const wrapper = new BoxRenderable(renderer, {
-    marginTop: 1,
-    marginBottom: 1,
-  });
-
-  wrapper.add(
-    new TextRenderable(renderer, {
-      content: line,
-      fg: colors.gray,
-    }),
-  );
-
-  return wrapper;
+  return mountSpec(renderer, hrToSpec(colors, contentWidth)) as BoxRenderable;
 }
