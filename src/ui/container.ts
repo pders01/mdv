@@ -208,14 +208,13 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     searchRGBA: InstanceType<typeof RGBA>;
   } | null = null;
 
-  // Line mapping caches (rebuilt on reload)
+  // Line mapping caches (rebuilt on reload). Width-dependent values (code-
+  // block row offsets) are *not* cached — they're computed on demand from
+  // the renderable's current width so sidebar toggle / terminal resize /
+  // any Yoga reflow doesn't strand stale offsets.
   let cachedLineToBlock: Map<number, number> | null = null;
   let cachedBlockStartLines: Map<number, number> | null = null;
   let cachedBlockLineCount: Map<number, number> | null = null;
-  // Per-block exact row offsets for blocks where uniform divide is wrong.
-  // Today only code blocks populate this; lists / tables / headings still
-  // go through `getRowLayout`'s children-walk or uniform fallback.
-  let cachedCodeRowMaps: Map<number, CodeRowMap> | null = null;
 
   const getBlockStates = (): BlockState[] | null => {
     if (!currentMarkdown) return null;
@@ -228,7 +227,26 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     cachedLineToBlock = null;
     cachedBlockStartLines = null;
     cachedBlockLineCount = null;
-    cachedCodeRowMaps = null;
+  };
+
+  /**
+   * Compute exact per-source-line offsets for a code block from its
+   * current rendered width. Recomputed per `getLinePosition` call so
+   * reflow events (resize / sidebar toggle) take effect immediately.
+   * Returns null for blocks that aren't code or have no text content.
+   */
+  const codeRowMapFor = (state: BlockState, startLine: number, endLine: number): CodeRowMap | null => {
+    if (state.token.type !== "code" || typeof state.token.text !== "string") return null;
+    const padding = 1; // matches codeBlockToSpec padding
+    const lines = textLinesFromCodeText(state.token.text, startLine);
+    const measurement = measureCodeLines(lines, state.renderable.width, padding);
+    const rows = new Map<number, { innerY: number; height: number }>();
+    rows.set(startLine, { innerY: -measurement.innerYStart, height: padding });
+    for (const row of measurement.lines) {
+      rows.set(row.sourceLine, { innerY: row.innerY, height: row.height });
+    }
+    rows.set(endLine, { innerY: measurement.innerHeight, height: padding });
+    return { innerYStart: measurement.innerYStart, rows };
   };
 
   const ensureLineMappings = (blockStates: BlockState[]): void => {
@@ -237,7 +255,6 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     cachedLineToBlock = new Map<number, number>();
     cachedBlockStartLines = new Map<number, number>();
     cachedBlockLineCount = new Map<number, number>();
-    cachedCodeRowMaps = new Map<number, CodeRowMap>();
 
     const fullContent = currentContentLines.join("\n");
     let searchStart = 0;
@@ -264,33 +281,6 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
         cachedLineToBlock.set(line, blockIdx);
       }
 
-      // Code blocks: pre-compute per-source-line wrap offsets so the
-      // cursor row tint can land on the exact rendered row, not on the
-      // average position produced by uniform divide. Fence lines (open
-      // and close ```) get the top/bottom padding rows — the renderer
-      // doesn't paint a fence row, the wrapper's padding stands in for
-      // them visually, so the cursor highlight lands on padding to mark
-      // its source position.
-      if (state.token.type === "code" && typeof state.token.text === "string") {
-        const lines = textLinesFromCodeText(state.token.text, startLine);
-        const padding = 1; // matches `codeBlockToSpec` padding
-        const measurement = measureCodeLines(lines, state.renderable.width, padding);
-        const rows = new Map<number, { innerY: number; height: number }>();
-
-        // Opening fence row sits at the top padding (innerY=-padding so
-        // r.y + innerYStart + innerY = r.y, the wrapper's top edge).
-        rows.set(startLine, { innerY: -measurement.innerYStart, height: padding });
-
-        for (const row of measurement.lines) {
-          rows.set(row.sourceLine, { innerY: row.innerY, height: row.height });
-        }
-
-        // Closing fence row sits at the bottom padding row.
-        rows.set(endLine, { innerY: measurement.innerHeight, height: padding });
-
-        cachedCodeRowMaps.set(blockIdx, { innerYStart: measurement.innerYStart, rows });
-      }
-
       searchStart = tokenStart + tokenRaw.length;
     }
   };
@@ -315,14 +305,13 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
     // Code blocks pre-measure per-source-line wrap offsets — prefer those
     // over uniform divide so the cursor row tracks the exact rendered row.
-    const codeMap = cachedCodeRowMaps?.get(blockIdx);
+    const blockEndLine = blockStartLine + linesInBlock - 1;
+    const codeMap = codeRowMapFor(blockState, blockStartLine, blockEndLine);
     if (codeMap) {
       const exact = codeMap.rows.get(line);
       if (exact) {
         return { x: r.x, y: r.y + codeMap.innerYStart + exact.innerY, height: exact.height };
       }
-      // Fence rows (opening / closing ``` line) are inside the block but
-      // not in the content map; fall through to uniform divide for them.
     }
 
     const row = getRowLayout(r, linesInBlock, lineWithinBlock);
@@ -361,7 +350,8 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
     const lineWithinBlock = line - blockStartLine;
 
-    const codeMap = cachedCodeRowMaps?.get(blockIdx);
+    const blockEndLine = blockStartLine + linesInBlock - 1;
+    const codeMap = codeRowMapFor(blockStates[blockIdx]!, blockStartLine, blockEndLine);
     if (codeMap) {
       const exact = codeMap.rows.get(line);
       if (exact) {
