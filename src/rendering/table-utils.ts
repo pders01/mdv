@@ -2,6 +2,8 @@
  * Shared table rendering utilities
  */
 
+import { cellWidth } from "../util/width.js";
+
 /**
  * Minimum column width (enough for truncation ellipsis)
  */
@@ -38,7 +40,7 @@ export function calculateColumnWidths(
 
   for (const row of rows) {
     for (let i = 0; i < row.length; i++) {
-      natural[i] = Math.max(natural[i]!, row[i]!.length);
+      natural[i] = Math.max(natural[i]!, cellWidth(row[i]!));
     }
   }
 
@@ -120,10 +122,12 @@ export function calculateColumnWidths(
 }
 
 /**
- * Pad cell content to specified width with alignment
+ * Pad cell content to specified width (in display cells) with alignment.
+ * Uses cellWidth so CJK / emoji content lines up correctly — a single
+ * char measured by `.length` undercounts for wide chars and over-pads.
  */
 export function padCell(text: string, width: number, align: string | null = "left"): string {
-  const padding = width - text.length;
+  const padding = width - cellWidth(text);
   if (padding <= 0) return text;
 
   if (align === "center") {
@@ -240,10 +244,29 @@ export function chooseLayout(rows: string[][], availableWidth?: number): TableLa
 }
 
 /**
- * Truncate cell text to maxWidth, adding ellipsis if needed
+ * Truncate cell text so its rendered cell width stays within maxWidth.
+ * Walks chars and stops when adding the next would exceed \u2014 required for
+ * CJK / emoji where one char consumes two cells.
  */
 export function truncateCell(text: string, maxWidth: number): string {
-  if (text.length <= maxWidth) return text;
-  if (maxWidth <= 1) return text.slice(0, maxWidth);
-  return text.slice(0, maxWidth - 1) + "\u2026";
+  if (cellWidth(text) <= maxWidth) return text;
+  if (maxWidth <= 1) {
+    // Take as many cells as fit; for a single CJK char that's none.
+    return takeUpToWidth(text, maxWidth);
+  }
+  const head = takeUpToWidth(text, maxWidth - 1);
+  return head + "\u2026";
+}
+
+function takeUpToWidth(text: string, budget: number): string {
+  if (budget <= 0) return "";
+  let used = 0;
+  let out = "";
+  for (const ch of text) {
+    const w = cellWidth(ch);
+    if (used + w > budget) break;
+    out += ch;
+    used += w;
+  }
+  return out;
 }

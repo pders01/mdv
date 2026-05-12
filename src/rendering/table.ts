@@ -2,7 +2,7 @@
  * Markdown table rendering
  */
 
-import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
+import { BoxRenderable, RGBA, type CliRenderer } from "@opentui/core";
 import type { ThemeColors, TableToken, StyledSegment, RenderBlock, TextChunk } from "../types.js";
 import {
   calculateColumnWidths,
@@ -11,6 +11,8 @@ import {
   truncateCell,
   chooseLayout,
 } from "./table-utils.js";
+import type { BoxSpec, Spec } from "../render/spec.js";
+import { mountSpec } from "../render/mount.js";
 
 /**
  * Convert a table token to a RenderBlock (pure function, no OpenTUI dependency)
@@ -84,24 +86,102 @@ export function tableToBlock(
 }
 
 /**
- * Build a StyledText row from segments — renders as a single TextRenderable
- * to avoid Yoga flex layout adding extra space between cells.
+ * Convert styled segments to TextChunks — kept pure so tableToSpec can
+ * build TextSpec children without touching OpenTUI.
  */
-function segmentsToStyledText(segments: StyledSegment[]): StyledText {
-  const chunks: TextChunk[] = segments.map((seg) => ({
+function segmentsToChunks(segments: StyledSegment[]): TextChunk[] {
+  return segments.map((seg) => ({
     __isChunk: true,
     text: seg.text,
     fg: seg.fg ? RGBA.fromHex(seg.fg) : undefined,
     bold: seg.bold || undefined,
     italic: seg.italic || undefined,
   }));
-  return new StyledText(chunks as any);
+}
+
+/**
+ * Build a pure Spec for a table. One column-flex BoxSpec wrapping:
+ *   - header TextSpec
+ *   - separator TextSpec
+ *   - one TextSpec per data row
+ * Each row is a single TextSpec so cell alignment is owned by string
+ * padding (cellWidth-aware), not by Yoga flex which can add inter-cell
+ * gaps. `contentWidth` constrains column-width math; supply
+ * `renderer.width - 2` when calling from the dispatcher.
+ */
+export function tableToSpec(
+  colors: ThemeColors,
+  token: TableToken,
+  contentWidth: number,
+): BoxSpec {
+  const headerCells = token.header.map((h) => h.text);
+  const dataCells = token.rows.map((row) => row.map((cell) => cell.text));
+  const allRows = [headerCells, ...dataCells];
+  const colCount = token.header.length;
+
+  const availableWidth = Math.max(20, contentWidth);
+  const layout = chooseLayout(allRows, availableWidth);
+  const colWidths = calculateColumnWidths(allRows, availableWidth, layout);
+  const paddedWidths = colWidths.map((w) => w + layout.cellPadding);
+
+  const rowToSegments = (cells: string[], headerRow: boolean): StyledSegment[] => {
+    const segs: StyledSegment[] = [
+      { text: layout.leftBorder, fg: colors.gray, bold: false, italic: false },
+    ];
+    for (let i = 0; i < colCount; i++) {
+      const align = token.align?.[i] || "left";
+      const cell = i < cells.length ? cells[i]! : "";
+      const text = padCell(truncateCell(cell, colWidths[i]!), paddedWidths[i]!, align);
+      segs.push({
+        text,
+        fg: headerRow ? colors.cyan : colors.fg,
+        bold: headerRow,
+        italic: false,
+      });
+      if (i < colCount - 1) {
+        segs.push({ text: layout.innerSep, fg: colors.gray, bold: false, italic: false });
+      }
+    }
+    segs.push({ text: layout.rightBorder, fg: colors.gray, bold: false, italic: false });
+    return segs;
+  };
+
+  const children: Spec[] = [
+    { kind: "text", chunks: segmentsToChunks(rowToSegments(headerCells, true)), source: null },
+    {
+      kind: "text",
+      chunks: [
+        {
+          __isChunk: true,
+          text: buildSeparatorLine(paddedWidths, layout),
+          fg: RGBA.fromHex(colors.gray),
+        },
+      ],
+      source: null,
+    },
+  ];
+
+  for (const row of token.rows) {
+    const segs = rowToSegments(row.map((c) => c.text), false);
+    children.push({ kind: "text", chunks: segmentsToChunks(segs), source: null });
+  }
+
+  return {
+    kind: "box",
+    flexDirection: "column",
+    marginTop: 1,
+    marginBottom: 1,
+    source: null,
+    children,
+  };
 }
 
 /**
  * Render table with proper formatting.
- * Each row is a single StyledText TextRenderable to ensure exact character-width
+ * Each row is a single StyledText TextRenderable to ensure exact cell
  * alignment (Yoga flex rows can add spacing between children).
+ *
+ * Legacy adapter — funnels through `tableToSpec` + `mountSpec`.
  */
 export function renderTable(
   renderer: CliRenderer,
@@ -109,70 +189,7 @@ export function renderTable(
   token: TableToken,
   contentWidth?: number,
 ): BoxRenderable {
-  const wrapper = new BoxRenderable(renderer, {
-    marginTop: 1,
-    marginBottom: 1,
-    flexDirection: "column",
-  });
-
-  // Convert token data to string arrays for shared utility
-  const headerCells = token.header.map((h) => h.text);
-  const dataCells = token.rows.map((row) => row.map((cell) => cell.text));
-  const allRows = [headerCells, ...dataCells];
-  const colCount = token.header.length;
-
-  // Calculate column widths, constrained to available content width
-  const availableWidth = Math.max(20, contentWidth ?? renderer.width - 2);
-  const layout = chooseLayout(allRows, availableWidth);
-  const colWidths = calculateColumnWidths(allRows, availableWidth, layout);
-  const paddedWidths = colWidths.map((w) => w + layout.cellPadding);
-
-  // Render header row as single StyledText. Same bounds guarantees as above.
-  const headerSegs: StyledSegment[] = [
-    { text: layout.leftBorder, fg: colors.gray, bold: false, italic: false },
-  ];
-  for (let i = 0; i < colCount; i++) {
-    const align = token.align?.[i] || "left";
-    const cellText = padCell(
-      truncateCell(token.header[i]!.text, colWidths[i]!),
-      paddedWidths[i]!,
-      align,
-    );
-    headerSegs.push({ text: cellText, fg: colors.cyan, bold: true, italic: false });
-    if (i < colCount - 1) {
-      headerSegs.push({ text: layout.innerSep, fg: colors.gray, bold: false, italic: false });
-    }
-  }
-  headerSegs.push({ text: layout.rightBorder, fg: colors.gray, bold: false, italic: false });
-
-  wrapper.add(new TextRenderable(renderer, { content: segmentsToStyledText(headerSegs) }));
-
-  // Render separator row
-  wrapper.add(
-    new TextRenderable(renderer, {
-      content: buildSeparatorLine(paddedWidths, layout),
-      fg: colors.gray,
-    }),
-  );
-
-  // Render data rows as single StyledText each
-  for (const row of token.rows) {
-    const dataSegs: StyledSegment[] = [
-      { text: layout.leftBorder, fg: colors.gray, bold: false, italic: false },
-    ];
-    for (let i = 0; i < colCount; i++) {
-      const align = token.align?.[i] || "left";
-      const cellContent = i < row.length ? row[i]!.text : "";
-      const cellText = padCell(truncateCell(cellContent, colWidths[i]!), paddedWidths[i]!, align);
-      dataSegs.push({ text: cellText, fg: colors.fg, bold: false, italic: false });
-      if (i < colCount - 1) {
-        dataSegs.push({ text: layout.innerSep, fg: colors.gray, bold: false, italic: false });
-      }
-    }
-    dataSegs.push({ text: layout.rightBorder, fg: colors.gray, bold: false, italic: false });
-
-    wrapper.add(new TextRenderable(renderer, { content: segmentsToStyledText(dataSegs) }));
-  }
-
-  return wrapper;
+  const width = contentWidth ?? renderer.width - 2;
+  const spec = tableToSpec(colors, token, width);
+  return mountSpec(renderer, spec) as BoxRenderable;
 }
