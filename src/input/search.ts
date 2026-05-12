@@ -4,6 +4,8 @@
  * Tracks search pattern, match positions, and navigation.
  */
 
+import { cellColumn, cellWidth } from "../util/width.js";
+
 /**
  * Strip markdown inline syntax to approximate what the renderer displays after
  * conceal. This makes search column offsets match the rendered output.
@@ -192,7 +194,13 @@ export class SearchManager {
       while (true) {
         const idx = lowerLine.indexOf(lowerPattern, col);
         if (idx === -1) break;
-        this._matches.push({ line: i, col: idx, length: this._pattern.length });
+        // Convert char-index → display column and char-length → display width
+        // so the renderer's fillRect lands on the right cells for CJK / emoji
+        // content where 1 char ≠ 1 cell.
+        const displayCol = cellColumn(stripped, idx);
+        const matchedSlice = stripped.slice(idx, idx + this._pattern.length);
+        const displayLen = cellWidth(matchedSlice);
+        this._matches.push({ line: i, col: displayCol, length: displayLen });
         col = idx + 1;
       }
     }

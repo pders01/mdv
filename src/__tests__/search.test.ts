@@ -277,6 +277,39 @@ describe("SearchManager navigation", () => {
     expect(search.firstMatchFrom(2)).toBe(1); // wraps
   });
 
+  test("CJK before match shifts display col by 2 per wide char", () => {
+    const search = new SearchManager();
+    search.startInput();
+    "foo".split("").forEach((c) => search.appendChar(c));
+    search.confirm(["中文 foo"]);
+
+    // "中文" = 2 wide chars × 2 cells = 4, plus " " = 5 cells before "foo"
+    expect(search.matches.length).toBe(1);
+    expect(search.matches[0]!.col).toBe(5);
+    expect(search.matches[0]!.length).toBe(3);
+  });
+
+  test("CJK match itself counts as 2 cells per char", () => {
+    const search = new SearchManager();
+    search.startInput();
+    "中文".split("").forEach((c) => search.appendChar(c));
+    search.confirm(["abc 中文 xyz"]);
+
+    expect(search.matches.length).toBe(1);
+    expect(search.matches[0]!.col).toBe(4); // "abc " = 4 cells
+    expect(search.matches[0]!.length).toBe(4); // "中文" = 2 chars × 2 cells
+  });
+
+  test("pure ASCII match preserves col == char index", () => {
+    const search = new SearchManager();
+    search.startInput();
+    "bar".split("").forEach((c) => search.appendChar(c));
+    search.confirm(["foo bar baz"]);
+
+    expect(search.matches[0]!.col).toBe(4);
+    expect(search.matches[0]!.length).toBe(3);
+  });
+
   test("clear resets all state", () => {
     const search = new SearchManager();
     search.startInput();
