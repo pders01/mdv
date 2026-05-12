@@ -181,9 +181,9 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
   const getBlockStates = (): BlockState[] | null => {
     if (!currentMarkdown) return null;
-    const blockStates = (currentMarkdown as unknown as { _blockStates: unknown })._blockStates;
-    if (!Array.isArray(blockStates) || blockStates.length === 0) return null;
-    return blockStates as BlockState[];
+    const blockStates = currentMarkdown.blockStates;
+    if (blockStates.length === 0) return null;
+    return blockStates as unknown as BlockState[];
   };
 
   const invalidateLineMappings = () => {

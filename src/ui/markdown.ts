@@ -117,8 +117,16 @@ export class MdvMarkdownRenderable extends BoxRenderable {
   private _content = "";
   private _conceal = true;
   private _renderNode?: MdvRenderNode;
-  /** Public-by-name (matching OpenTUI's `_blockStates`) so `container.ts` can read it. */
-  _blockStates: MdvBlockState[] = [];
+  private _blockStates: MdvBlockState[] = [];
+
+  /**
+   * Per-block state in source order. Read by `container.ts` line-mapping,
+   * cursor overlays, search, and measurement. Returned as the live array
+   * so callers can pin a reference across reloads; treat as read-only.
+   */
+  get blockStates(): readonly MdvBlockState[] {
+    return this._blockStates;
+  }
 
   constructor(ctx: RenderContext, options: MdvMarkdownOptions) {
     super(ctx, {
@@ -196,9 +204,13 @@ export class MdvMarkdownRenderable extends BoxRenderable {
       const token = tokens[i]!;
       const spec = this._renderNode(token, ctx);
       if (!spec) continue;
+      const range = lineRanges[i] ?? { start: 0, end: 0 };
+      // Persist the block's source span on the spec so downstream code
+      // (measure, container line-mapping) can read it without reaching
+      // into MdvBlockState.sourceStartLine/sourceEndLine duplicates.
+      spec.source = { start: range.start, end: range.end };
       const renderable = mountSpec(this.ctx, spec);
       this.add(renderable);
-      const range = lineRanges[i] ?? { start: 0, end: 0 };
       this._blockStates.push({
         token,
         tokenRaw: rawSlices[i] ?? "",
