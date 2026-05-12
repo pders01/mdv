@@ -5,9 +5,10 @@
  * unicode trickery.
  */
 
-import { BoxRenderable, TextRenderable, type CliRenderer, TextAttributes } from "@opentui/core";
-import type { ThemeColors } from "../types.js";
+import { RGBA } from "@opentui/core";
 import type { Token } from "marked";
+import type { ThemeColors, TextChunk } from "../types.js";
+import type { BoxSpec, TextSpec } from "../render/spec.js";
 import { convertInlineToken } from "./text.js";
 
 interface DefListToken {
@@ -15,42 +16,44 @@ interface DefListToken {
   items: Array<{ term: Token[]; defs: Token[][] }>;
 }
 
-function renderInlineRow(
-  renderer: CliRenderer,
+function inlineRowSpec(
   colors: ThemeColors,
   tokens: Token[],
   baseFg: string,
-  baseBold: boolean,
-): TextRenderable {
-  const parts = tokens.map((t) => convertInlineToken(t, colors)?.segment.text ?? "").join("");
-  return new TextRenderable(renderer, {
-    content: parts,
-    fg: baseFg,
-    attributes: baseBold ? TextAttributes.BOLD : 0,
-  });
+  bold: boolean,
+): TextSpec {
+  const text = tokens.map((t) => convertInlineToken(t, colors)?.segment.text ?? "").join("");
+  const chunk: TextChunk = {
+    __isChunk: true,
+    text,
+    fg: RGBA.fromHex(baseFg),
+    ...(bold ? { bold: true } : {}),
+  };
+  return { kind: "text", chunks: [chunk], source: null };
 }
 
-export function renderDefList(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  token: Token,
-): BoxRenderable {
+export function defListToSpec(colors: ThemeColors, token: Token): BoxSpec {
   const t = token as unknown as DefListToken;
-  const wrapper = new BoxRenderable(renderer, {
+  const children: BoxSpec["children"] = [];
+  for (const item of t.items) {
+    children.push(inlineRowSpec(colors, item.term, colors.fg, true));
+    for (const def of item.defs) {
+      children.push({
+        kind: "box",
+        paddingLeft: 4,
+        flexDirection: "row",
+        source: null,
+        children: [inlineRowSpec(colors, def, colors.gray, false)],
+      });
+    }
+  }
+  return {
+    kind: "box",
     flexDirection: "column",
     marginTop: 1,
     marginBottom: 1,
-  });
-  for (const item of t.items) {
-    wrapper.add(renderInlineRow(renderer, colors, item.term, colors.fg, true));
-    for (const def of item.defs) {
-      const indent = new BoxRenderable(renderer, {
-        flexDirection: "row",
-        paddingLeft: 4,
-      });
-      indent.add(renderInlineRow(renderer, colors, def, colors.gray, false));
-      wrapper.add(indent);
-    }
-  }
-  return wrapper;
+    source: null,
+    children,
+  };
 }
+

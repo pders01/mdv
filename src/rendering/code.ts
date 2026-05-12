@@ -5,11 +5,10 @@
  * using _blockStates for accurate scroll-aware positioning.
  */
 
-import { BoxRenderable, type CliRenderer, RGBA } from "@opentui/core";
+import { RGBA } from "@opentui/core";
 import type { ThemeColors, TextChunk, StyledSegment, RenderBlock } from "../types.js";
 import { shikiToChunks, resolveLanguage, type HighlighterInstance } from "../highlighting/shiki.js";
 import type { BoxSpec, TextLine } from "../render/spec.js";
-import { mountSpec } from "../render/mount.js";
 import { cellWidth } from "../util/width.js";
 
 /**
@@ -134,28 +133,3 @@ export function codeBlockToSpec(
   };
 }
 
-/**
- * Render code block with Shiki syntax highlighting.
- *
- * `wrapMode` controls how the inner text buffer handles lines wider than
- * the available width. Defaults to the OpenTUI default (word wrap) which
- * is right for source code. Callers rendering ASCII art (mermaid diagrams,
- * tables) should pass "none" so horizontal box-drawing characters stay
- * intact instead of fragmenting across wrap boundaries.
- *
- * Legacy adapter — the underlying spec/mount split is what new callers
- * should consume. Kept so the renderNode dispatcher can swap to the spec
- * pipeline one block kind at a time.
- */
-export function renderCodeBlock(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  highlighterInstance: HighlighterInstance,
-  token: CodeToken,
-  wrapMode?: "none" | "char" | "word",
-): BoxRenderable {
-  // sourceLineStart=0 is a placeholder until the dispatcher passes the
-  // real source-line index; cursor mapping still uses _blockStates today.
-  const spec = codeBlockToSpec(colors, highlighterInstance, token, 0, wrapMode);
-  return mountSpec(renderer, spec) as BoxRenderable;
-}

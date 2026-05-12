@@ -2,7 +2,7 @@
  * Paragraph rendering with inline HTML support
  */
 
-import { BoxRenderable, RGBA, type CliRenderer } from "@opentui/core";
+import { RGBA } from "@opentui/core";
 import type { Token } from "marked";
 import type {
   ThemeColors,
@@ -17,7 +17,6 @@ import type {
 } from "../types.js";
 import { decodeHtmlEntities, toSubscript, toSuperscript, convertInlineToken } from "./text.js";
 import type { BoxSpec } from "../render/spec.js";
-import { mountSpec } from "../render/mount.js";
 
 /**
  * Extract styled segments from a paragraph token (pure function, no OpenTUI dependency)
@@ -292,17 +291,3 @@ export function paragraphToSpec(colors: ThemeColors, token: ParagraphToken): Box
   };
 }
 
-/**
- * Render paragraph with inline HTML support.
- *
- * Legacy adapter — funnels through `paragraphToSpec` + `mountSpec`.
- */
-export function renderParagraph(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  token: ParagraphToken,
-): BoxRenderable | null {
-  const spec = paragraphToSpec(colors, token);
-  if (!spec) return null;
-  return mountSpec(renderer, spec) as BoxRenderable;
-}

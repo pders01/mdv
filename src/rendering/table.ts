@@ -2,7 +2,7 @@
  * Markdown table rendering
  */
 
-import { BoxRenderable, RGBA, type CliRenderer } from "@opentui/core";
+import { RGBA } from "@opentui/core";
 import type { ThemeColors, TableToken, StyledSegment, RenderBlock, TextChunk } from "../types.js";
 import {
   calculateColumnWidths,
@@ -12,7 +12,6 @@ import {
   chooseLayout,
 } from "./table-utils.js";
 import type { BoxSpec, Spec } from "../render/spec.js";
-import { mountSpec } from "../render/mount.js";
 
 /**
  * Convert a table token to a RenderBlock (pure function, no OpenTUI dependency)
@@ -176,20 +175,3 @@ export function tableToSpec(
   };
 }
 
-/**
- * Render table with proper formatting.
- * Each row is a single StyledText TextRenderable to ensure exact cell
- * alignment (Yoga flex rows can add spacing between children).
- *
- * Legacy adapter — funnels through `tableToSpec` + `mountSpec`.
- */
-export function renderTable(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  token: TableToken,
-  contentWidth?: number,
-): BoxRenderable {
-  const width = contentWidth ?? renderer.width - 2;
-  const spec = tableToSpec(colors, token, width);
-  return mountSpec(renderer, spec) as BoxRenderable;
-}

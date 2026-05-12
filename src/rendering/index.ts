@@ -7,20 +7,19 @@
  * points. Adding a new token kind: add a `*ToSpec`, route to it here.
  */
 
-import { type CliRenderer, type Renderable } from "@opentui/core";
+import { type CliRenderer } from "@opentui/core";
 import type { MdvRenderNodeContext } from "../ui/markdown.js";
 import type { Token } from "marked";
 import type { ThemeColors, ListToken, TableToken, ParagraphToken } from "../types.js";
 
 import type { HighlighterInstance } from "../highlighting/shiki.js";
 import { codeBlockToSpec } from "./code.js";
-import { hrToSpec } from "./html.js";
-import { renderHtmlBlock } from "./html.js";
+import { hrToSpec, htmlBlockToSpec } from "./html.js";
 import { blockquoteToSpec } from "./blockquote.js";
 import { listToSpec } from "./list.js";
 import { tableToSpec } from "./table.js";
 import { paragraphToSpec } from "./paragraph.js";
-import { renderDefList } from "./deflist.js";
+import { defListToSpec } from "./deflist.js";
 import { headingToSpec, type HeadingToken } from "./heading.js";
 import type { Spec } from "../render/spec.js";
 
@@ -117,11 +116,7 @@ export function createRenderNode(
     if (token.type === "html") {
       const htmlToken = token as Token & { raw: string; block?: boolean };
       if (htmlToken.block) {
-        // renderHtmlBlock still returns a Renderable directly — it's the
-        // last legacy renderer (covers raw <table>/<ol>/<h2> in source).
-        // We surface its output via a leaked spec by mounting null here;
-        // the dispatcher handles that case below.
-        return null;
+        return htmlBlockToSpec(colors, htmlToken.raw) ?? emptySpec();
       }
       // Inline HTML — let the paragraph handler take over upstream.
       return null;
@@ -130,27 +125,9 @@ export function createRenderNode(
     return null;
   };
 
-  // Wrap a legacy Renderable so the dispatcher can still return Spec.
-  // Used for the renderers we haven't ported yet (raw block HTML +
-  // definition list); MdvMarkdownRenderable's mountSpec returns the
-  // embedded renderable as-is.
-  const wrapLegacy = (renderable: Renderable): Spec => ({
-    kind: "legacy",
-    renderable,
-    source: null,
-  });
-
   return (token: Token, _context: MdvRenderNodeContext): Spec | null => {
     if ((token as Token & { type: string }).type === "deflist") {
-      return wrapLegacy(renderDefList(renderer, colors, token));
-    }
-    if (token.type === "html") {
-      const htmlToken = token as Token & { raw: string; block?: boolean };
-      if (htmlToken.block) {
-        const rendered = renderHtmlBlock(renderer, colors, htmlToken.raw);
-        return rendered ? wrapLegacy(rendered) : emptySpec();
-      }
-      return null;
+      return defListToSpec(colors, token);
     }
     if (token.type === "def") {
       return emptySpec();
@@ -160,23 +137,18 @@ export function createRenderNode(
   };
 }
 
-// Re-export individual renderers for testing
-export { renderCodeBlock, codeToBlock } from "./code.js";
+// Re-export segment/block helpers for tests + downstream consumers.
+export { codeToBlock } from "./code.js";
 export {
-  renderHorizontalRule,
-  renderHtmlBlock,
-  renderHtmlTable,
-  renderHtmlList,
-  renderHtmlHeading,
   htmlTableToBlock,
   htmlListToBlocks,
   htmlHeadingToBlock,
   htmlBlockToBlocks,
   hrToBlock,
 } from "./html.js";
-export { renderBlockquote, extractBlockquoteText, blockquoteToBlock } from "./blockquote.js";
-export { renderList, renderInlineTokens, listToBlocks, inlineTokensToSegments } from "./list.js";
-export { renderTable, tableToBlock } from "./table.js";
-export { renderParagraph, paragraphToSegments, paragraphToBlock } from "./paragraph.js";
+export { extractBlockquoteText, blockquoteToBlock } from "./blockquote.js";
+export { renderInlineTokens, listToBlocks, inlineTokensToSegments } from "./list.js";
+export { tableToBlock } from "./table.js";
+export { paragraphToSegments, paragraphToBlock } from "./paragraph.js";
 export { decodeHtmlEntities, toSubscript, toSuperscript } from "./text.js";
 export { renderMarkdownToBlocks } from "./segments.js";

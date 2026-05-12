@@ -2,7 +2,7 @@
  * List rendering with nesting support
  */
 
-import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
+import { TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
 import type {
   ThemeColors,
@@ -14,7 +14,6 @@ import type {
 } from "../types.js";
 import { convertInlineToken } from "./text.js";
 import type { BoxSpec, Spec } from "../render/spec.js";
-import { mountSpec } from "../render/mount.js";
 
 /**
  * Convert inline tokens to styled segments (pure function, no OpenTUI dependency)
@@ -200,19 +199,3 @@ export function listToSpec(colors: ThemeColors, token: ListToken, depth: number 
   };
 }
 
-/**
- * Render list with proper indentation for nested lists.
- *
- * Legacy adapter \u2014 funnels through `listToSpec` + `mountSpec` so the
- * Renderable construction stays inside the mount stage even while the
- * dispatcher still calls this entry point.
- */
-export function renderList(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  token: ListToken,
-  depth: number = 0,
-): BoxRenderable {
-  const spec = listToSpec(colors, token, depth);
-  return mountSpec(renderer, spec) as BoxRenderable;
-}

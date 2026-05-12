@@ -8,10 +8,9 @@
  * the heading visually.
  */
 
-import { BoxRenderable, RGBA, type CliRenderer } from "@opentui/core";
+import { RGBA } from "@opentui/core";
 import type { ThemeColors } from "../types.js";
 import type { BoxSpec } from "../render/spec.js";
-import { mountSpec } from "../render/mount.js";
 
 export interface HeadingToken {
   type: "heading";
@@ -57,13 +56,3 @@ export function headingToSpec(colors: ThemeColors, token: HeadingToken): BoxSpec
   };
 }
 
-/**
- * Legacy adapter — funnels through `headingToSpec` + `mountSpec`.
- */
-export function renderHeading(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  token: HeadingToken,
-): BoxRenderable {
-  return mountSpec(renderer, headingToSpec(colors, token)) as BoxRenderable;
-}

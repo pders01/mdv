@@ -7,10 +7,9 @@
  * coloured bar plus a labelled header so the alert reads at a glance.
  */
 
-import { BoxRenderable, RGBA, type CliRenderer } from "@opentui/core";
+import { RGBA } from "@opentui/core";
 import type { ThemeColors, RenderBlock, TextChunk } from "../types.js";
 import type { BoxSpec, Spec } from "../render/spec.js";
-import { mountSpec } from "../render/mount.js";
 
 /**
  * Token with optional text content (for recursive extraction).
@@ -170,16 +169,3 @@ export function blockquoteToSpec(colors: ThemeColors, token: ContentToken): BoxS
   };
 }
 
-/**
- * Render blockquote with proper styling.
- *
- * Legacy adapter — funnels through `blockquoteToSpec` + `mountSpec`.
- */
-export function renderBlockquote(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  token: ContentToken,
-): BoxRenderable {
-  const spec = blockquoteToSpec(colors, token);
-  return mountSpec(renderer, spec) as BoxRenderable;
-}
