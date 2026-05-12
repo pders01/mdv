@@ -48,10 +48,16 @@ import { mdastRootToTokens } from "../util/mdast-to-marked.js";
  * `defaultRender` is here because the type signature `src/rendering/*`
  * accepts requires it; we never invoke it (every handler returns its own
  * Renderable) so a no-op stub is safe.
+ *
+ * `sourceLineStart` is the 0-indexed source line where the current block
+ * begins, populated by `rebuild` before each `renderNode` call. Code
+ * block emission uses it to set absolute `TextLine.sourceLine` values
+ * so per-line measurement maps directly without post-hoc shifts.
  */
 export interface MdvRenderNodeContext {
   conceal: boolean;
   defaultRender: () => Renderable | null;
+  sourceLineStart: number;
 }
 
 export type MdvRenderNode = (
@@ -185,13 +191,15 @@ export class MdvMarkdownRenderable extends BoxRenderable {
     const ctx: MdvRenderNodeContext = {
       conceal: this._conceal,
       defaultRender: () => null,
+      sourceLineStart: 0,
     };
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i]!;
+      const range = lineRanges[i] ?? { start: 0, end: 0 };
+      ctx.sourceLineStart = range.start;
       const spec = this._renderNode(token, ctx);
       if (!spec) continue;
-      const range = lineRanges[i] ?? { start: 0, end: 0 };
       // Persist the block's source span on the spec; container.ts and
       // measureBlockLine read it from here, no duplicate fields needed.
       spec.source = { start: range.start, end: range.end };
@@ -208,7 +216,10 @@ export class MdvMarkdownRenderable extends BoxRenderable {
  * meaningful character. Lines BETWEEN consecutive blocks (separator
  * blanks) belong to no block; container.ts treats them as gap lines.
  */
-function computeBlockLineRanges(_content: string, tree: Root): Array<{ start: number; end: number }> {
+function computeBlockLineRanges(
+  _content: string,
+  tree: Root,
+): Array<{ start: number; end: number }> {
   const ranges: Array<{ start: number; end: number }> = [];
   for (const node of tree.children) {
     const startLine = (node.position?.start.line ?? 1) - 1; // mdast is 1-based

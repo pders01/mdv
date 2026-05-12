@@ -83,6 +83,9 @@ export function codeRowMapFor(
   if (!textSpec) return null;
   const span = state.spec.source;
   if (!span) return null;
+  // TextLine.sourceLine values are already absolute — the dispatcher
+  // threads the real `sourceLineStart` from MdvRenderNodeContext into
+  // codeBlockToSpec, so each line knows its source position at emission.
   const measurement = measureCodeLines(textSpec.lines!, state.renderable.width, codeBlockPadding);
   return buildCodeRowMap(measurement, span.start, span.end, codeBlockPadding);
 }

@@ -195,6 +195,13 @@ export function blockquoteToSpec(colors: ThemeColors, token: ContentToken): BoxS
         },
       ]),
     );
+    // Alert header occupies the `[!KIND]` source line; advance past it.
+    // The first child's mdast position usually starts on `blockStart + 1`
+    // (the line after the marker) thanks to stripAlertMarker, so the
+    // Math.max(range.start, cursor) clamp below collapses to a no-op for
+    // it. If a future parser change leaves the first child anchored at
+    // blockStart, the clamp silently skips its blank-row padding — the
+    // row itself still emits, but its visual position may shift by one.
     cursor = blockStart + 1;
   }
 
@@ -245,4 +252,3 @@ export function blockquoteToSpec(colors: ThemeColors, token: ContentToken): BoxS
     children,
   };
 }
-

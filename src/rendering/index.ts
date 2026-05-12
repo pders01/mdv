@@ -58,7 +58,7 @@ export function createRenderNode(
   // sync with the source token stream.
   const emptySpec = (): Spec => ({ kind: "box", source: null, children: [] });
 
-  const toSpec = (token: Token): Spec | null => {
+  const toSpec = (token: Token, context: MdvRenderNodeContext): Spec | null => {
     // Handle headings (OpenTUI 0.1.86+ no longer renders these by default
     // when a renderNode callback is provided)
     if (token.type === "heading") {
@@ -67,6 +67,7 @@ export function createRenderNode(
 
     if (token.type === "code") {
       const codeToken = token as Token & { text: string; lang?: string };
+      const sourceStart = context.sourceLineStart;
       // Mermaid interception: substitute pre-rendered ASCII when available.
       // Strip the lang so the replacement renders as plain text rather than
       // attempting (and failing) to highlight ASCII art as source code.
@@ -77,11 +78,11 @@ export function createRenderNode(
           colors,
           highlighterInstance,
           { ...codeToken, text: mermaidRenders.get(codeToken.text)!, lang: "" },
-          0,
+          sourceStart,
           "none",
         );
       }
-      return codeBlockToSpec(colors, highlighterInstance, codeToken, 0);
+      return codeBlockToSpec(colors, highlighterInstance, codeToken, sourceStart);
     }
 
     if (token.type === "hr") {
@@ -125,7 +126,7 @@ export function createRenderNode(
     return null;
   };
 
-  return (token: Token, _context: MdvRenderNodeContext): Spec | null => {
+  return (token: Token, context: MdvRenderNodeContext): Spec | null => {
     if ((token as Token & { type: string }).type === "deflist") {
       return defListToSpec(colors, token);
     }
@@ -133,7 +134,7 @@ export function createRenderNode(
       return emptySpec();
     }
 
-    return toSpec(token);
+    return toSpec(token, context);
   };
 }
 
