@@ -50,6 +50,9 @@ interface BlockState {
   token: { type: string; raw: string; text?: string };
   tokenRaw: string;
   renderable: RowRenderable;
+  /** Source-line range, 0-indexed inclusive — populated by MdvMarkdownRenderable. */
+  sourceStartLine: number;
+  sourceEndLine: number;
 }
 
 /**
@@ -208,13 +211,13 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     searchRGBA: InstanceType<typeof RGBA>;
   } | null = null;
 
-  // Line mapping caches (rebuilt on reload). Width-dependent values (code-
-  // block row offsets) are *not* cached — they're computed on demand from
-  // the renderable's current width so sidebar toggle / terminal resize /
-  // any Yoga reflow doesn't strand stale offsets.
+  // Line → block index cache, rebuilt on content reload. Source-line
+  // ranges live on each MdvBlockState now (derived from mdast positions
+  // in MdvMarkdownRenderable), so we no longer reverse-engineer them
+  // via tokenRaw.indexOf + newline counting. Width-dependent values
+  // (code-block per-row offsets) are still recomputed per call so
+  // sidebar toggle / terminal resize takes effect immediately.
   let cachedLineToBlock: Map<number, number> | null = null;
-  let cachedBlockStartLines: Map<number, number> | null = null;
-  let cachedBlockLineCount: Map<number, number> | null = null;
 
   const getBlockStates = (): BlockState[] | null => {
     if (!currentMarkdown) return null;
@@ -225,8 +228,6 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
   const invalidateLineMappings = () => {
     cachedLineToBlock = null;
-    cachedBlockStartLines = null;
-    cachedBlockLineCount = null;
   };
 
   /**
@@ -251,37 +252,17 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
   const ensureLineMappings = (blockStates: BlockState[]): void => {
     if (cachedLineToBlock !== null) return;
-
     cachedLineToBlock = new Map<number, number>();
-    cachedBlockStartLines = new Map<number, number>();
-    cachedBlockLineCount = new Map<number, number>();
-
-    const fullContent = currentContentLines.join("\n");
-    let searchStart = 0;
 
     for (let blockIdx = 0; blockIdx < blockStates.length; blockIdx++) {
       const state = blockStates[blockIdx]!;
-      const tokenRaw = state.tokenRaw;
-
-      const tokenStart = fullContent.indexOf(tokenRaw, searchStart);
-      if (tokenStart === -1) continue;
-
-      let startLine = 0;
-      for (let i = 0; i < tokenStart; i++) {
-        if (fullContent[i] === "\n") startLine++;
-      }
-
-      const linesInToken = countTokenLines(tokenRaw);
-      const endLine = startLine + linesInToken - 1;
-
-      cachedBlockStartLines.set(blockIdx, startLine);
-      cachedBlockLineCount.set(blockIdx, linesInToken);
-
-      for (let line = startLine; line <= endLine && line < currentContentLines.length; line++) {
+      for (
+        let line = state.sourceStartLine;
+        line <= state.sourceEndLine && line < currentContentLines.length;
+        line++
+      ) {
         cachedLineToBlock.set(line, blockIdx);
       }
-
-      searchStart = tokenStart + tokenRaw.length;
     }
   };
 
@@ -299,13 +280,13 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     if (!blockState) return null;
 
     const r = blockState.renderable;
-    const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
-    const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
+    const blockStartLine = blockState.sourceStartLine;
+    const blockEndLine = blockState.sourceEndLine;
+    const linesInBlock = blockEndLine - blockStartLine + 1;
     const lineWithinBlock = line - blockStartLine;
 
     // Code blocks pre-measure per-source-line wrap offsets — prefer those
     // over uniform divide so the cursor row tracks the exact rendered row.
-    const blockEndLine = blockStartLine + linesInBlock - 1;
     const codeMap = codeRowMapFor(blockState, blockStartLine, blockEndLine);
     if (codeMap) {
       const exact = codeMap.rows.get(line);
@@ -345,13 +326,14 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     blockStates: BlockState[],
     blockIdx: number,
   ): number => {
-    const r = blockStates[blockIdx]!.renderable;
-    const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
-    const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
+    const state = blockStates[blockIdx]!;
+    const r = state.renderable;
+    const blockStartLine = state.sourceStartLine;
+    const blockEndLine = state.sourceEndLine;
+    const linesInBlock = blockEndLine - blockStartLine + 1;
     const lineWithinBlock = line - blockStartLine;
 
-    const blockEndLine = blockStartLine + linesInBlock - 1;
-    const codeMap = codeRowMapFor(blockStates[blockIdx]!, blockStartLine, blockEndLine);
+    const codeMap = codeRowMapFor(state, blockStartLine, blockEndLine);
     if (codeMap) {
       const exact = codeMap.rows.get(line);
       if (exact) {

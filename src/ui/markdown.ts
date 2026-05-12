@@ -76,6 +76,15 @@ export interface MdvBlockState {
    * walking the post-mount Renderable graph.
    */
   spec: Spec;
+  /**
+   * Source-line range (0-indexed, inclusive on both ends) for this
+   * block, derived from mdast position info. Container.ts reads these
+   * directly instead of reverse-engineering them via
+   * `tokenRaw.indexOf(fullContent)` + newline counting. Both fields are
+   * always set; the indexOf path is gone.
+   */
+  sourceStartLine: number;
+  sourceEndLine: number;
 }
 
 export interface MdvMarkdownOptions extends BoxOptions {
@@ -176,6 +185,7 @@ export class MdvMarkdownRenderable extends BoxRenderable {
     const tree = proc.runSync(proc.parse(this._content)) as Root;
     const tokens = mdastRootToTokens(tree);
     const rawSlices = computeRawSlices(this._content, tree);
+    const lineRanges = computeBlockLineRanges(this._content, tree);
 
     const ctx: MdvRenderNodeContext = {
       conceal: this._conceal,
@@ -188,11 +198,14 @@ export class MdvMarkdownRenderable extends BoxRenderable {
       if (!spec) continue;
       const renderable = mountSpec(this.ctx, spec);
       this.add(renderable);
+      const range = lineRanges[i] ?? { start: 0, end: 0 };
       this._blockStates.push({
         token,
         tokenRaw: rawSlices[i] ?? "",
         renderable,
         spec,
+        sourceStartLine: range.start,
+        sourceEndLine: range.end,
       });
     }
   }
@@ -219,4 +232,25 @@ function computeRawSlices(content: string, tree: Root): string[] {
     slices.push(content.slice(start, end));
   }
   return slices;
+}
+
+/**
+ * Source-line range (0-indexed, inclusive) for each top-level mdast block.
+ * `start` is the line the block begins on, `end` is the line of its last
+ * meaningful character. Lines BETWEEN consecutive blocks (separator
+ * blanks) belong to no block; container.ts treats them as gap lines.
+ *
+ * Replaces the prior `tokenRaw.indexOf(fullContent)` + newline-counting
+ * dance in container.ts: same data, derived once at parse time from the
+ * mdast positions that drove `computeRawSlices` anyway. Removes the
+ * trailing-blank inflation that needed `countTokenLines` to compensate.
+ */
+function computeBlockLineRanges(_content: string, tree: Root): Array<{ start: number; end: number }> {
+  const ranges: Array<{ start: number; end: number }> = [];
+  for (const node of tree.children) {
+    const startLine = (node.position?.start.line ?? 1) - 1; // mdast is 1-based
+    const endLine = (node.position?.end.line ?? node.position?.start.line ?? 1) - 1;
+    ranges.push({ start: startLine, end: endLine });
+  }
+  return ranges;
 }
