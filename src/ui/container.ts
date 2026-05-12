@@ -29,21 +29,6 @@ function blendOver(
 }
 
 /**
- * Count source lines that a block actually paints. The parser includes the
- * trailing `\n\n` separator in `tokenRaw`, but the renderer paints no row
- * for that blank — counting it inflates `linesInBlock` and produces a
- * fractional `lineHeight = r.height / linesInBlock`. Math.floor of that
- * fractional Y then highlights the wrong row. Strip trailing newlines
- * before counting.
- */
-export function countTokenLines(tokenRaw: string): number {
-  const trimmed = tokenRaw.replace(/\n+$/, "");
-  if (trimmed.length === 0) return 1;
-  const newlines = (trimmed.match(/\n/g) || []).length;
-  return newlines + 1;
-}
-
-/**
  * BlockState shape MdvMarkdownRenderable.blockStates returns. Source
  * span lives on `spec.source` (mutated to a non-null range during
  * mount, see ui/markdown.ts).
@@ -171,11 +156,10 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
   } | null = null;
 
   // Line → block index cache, rebuilt on content reload. Source-line
-  // ranges live on each MdvBlockState now (derived from mdast positions
-  // in MdvMarkdownRenderable), so we no longer reverse-engineer them
-  // via tokenRaw.indexOf + newline counting. Width-dependent values
-  // (code-block per-row offsets) are still recomputed per call so
-  // sidebar toggle / terminal resize takes effect immediately.
+  // ranges come from spec.source (set by MdvMarkdownRenderable from
+  // mdast positions). Width-dependent values (code-block per-row
+  // offsets) are still recomputed per call so sidebar toggle / terminal
+  // resize takes effect immediately.
   let cachedLineToBlock: Map<number, number> | null = null;
 
   const getBlockStates = (): BlockState[] | null => {
