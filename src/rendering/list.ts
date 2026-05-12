@@ -13,6 +13,8 @@ import type {
   RenderBlock,
 } from "../types.js";
 import { convertInlineToken } from "./text.js";
+import type { BoxSpec, Spec } from "../render/spec.js";
+import { mountSpec } from "../render/mount.js";
 
 /**
  * Convert inline tokens to styled segments (pure function, no OpenTUI dependency)
@@ -130,28 +132,21 @@ export function renderInlineTokens(
 }
 
 /**
- * Render list with proper indentation for nested lists
+ * Build a pure Spec for a list. One child BoxSpec per item (column-flex
+ * so a nested sub-list stacks under its parent item). Each item carries a
+ * TextSpec for the bullet + inline content; nested lists recurse.
+ *
+ * The Spec carries no source-line info today \u2014 that requires the parser
+ * to emit per-item source positions, which mdv currently reconstructs
+ * post-hoc via `tokenRaw.indexOf`. When the dispatcher port lands, the
+ * source positions will flow in from the same place and we can populate
+ * `SourceSpan` here instead of leaving it null.
  */
-export function renderList(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  token: ListToken,
-  depth: number = 0,
-): BoxRenderable {
-  const wrapper = new BoxRenderable(renderer, {
-    flexDirection: "column",
-    marginTop: depth === 0 ? 1 : 0,
-    marginBottom: depth === 0 ? 1 : 0,
-  });
-
+export function listToSpec(colors: ThemeColors, token: ListToken, depth: number = 0): BoxSpec {
   const indent = "  ".repeat(depth);
   const marker = token.ordered ? "1." : "\u2022";
 
-  token.items.forEach((item, index) => {
-    const itemWrapper = new BoxRenderable(renderer, {
-      flexDirection: "column",
-    });
-
+  const itemSpecs: BoxSpec[] = token.items.map((item, index) => {
     let nestedList: ListToken | null = null;
     const paragraphTokens: Token[] = [];
 
@@ -165,9 +160,8 @@ export function renderList(
       }
     }
 
-    // Build all chunks for this list item (bullet + content) as a single StyledText
     const bulletText = token.ordered ? `${index + 1}.` : marker;
-    const allChunks: TextChunk[] = [
+    const chunks: TextChunk[] = [
       { __isChunk: true, text: indent + bulletText + " ", fg: RGBA.fromHex(colors.cyan) },
     ];
 
@@ -176,26 +170,49 @@ export function renderList(
       const paraTokens = (pt as ParagraphToken)?.tokens;
       if (paraTokens) {
         const segments = inlineTokensToSegments(colors, paraTokens);
-        allChunks.push(...segmentsToChunks(segments));
+        chunks.push(...segmentsToChunks(segments));
         hasContent = true;
       }
     }
     if (!hasContent) {
       const itemText = item.text?.split("\n")[0] || "";
-      allChunks.push({ __isChunk: true, text: itemText, fg: RGBA.fromHex(colors.fg) });
+      chunks.push({ __isChunk: true, text: itemText, fg: RGBA.fromHex(colors.fg) });
     }
 
-    const styledText = new StyledText(allChunks as any);
-    itemWrapper.add(new TextRenderable(renderer, { content: styledText }));
+    const children: Spec[] = [{ kind: "text", chunks, source: null }];
+    if (nestedList) children.push(listToSpec(colors, nestedList, depth + 1));
 
-    // Render nested list if present
-    if (nestedList) {
-      const nestedRendered = renderList(renderer, colors, nestedList, depth + 1);
-      itemWrapper.add(nestedRendered);
-    }
-
-    wrapper.add(itemWrapper);
+    return {
+      kind: "box",
+      flexDirection: "column",
+      source: null,
+      children,
+    };
   });
 
-  return wrapper;
+  return {
+    kind: "box",
+    flexDirection: "column",
+    marginTop: depth === 0 ? 1 : 0,
+    marginBottom: depth === 0 ? 1 : 0,
+    source: null,
+    children: itemSpecs,
+  };
+}
+
+/**
+ * Render list with proper indentation for nested lists.
+ *
+ * Legacy adapter \u2014 funnels through `listToSpec` + `mountSpec` so the
+ * Renderable construction stays inside the mount stage even while the
+ * dispatcher still calls this entry point.
+ */
+export function renderList(
+  renderer: CliRenderer,
+  colors: ThemeColors,
+  token: ListToken,
+  depth: number = 0,
+): BoxRenderable {
+  const spec = listToSpec(colors, token, depth);
+  return mountSpec(renderer, spec) as BoxRenderable;
 }

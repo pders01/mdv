@@ -2,7 +2,7 @@
  * Paragraph rendering with inline HTML support
  */
 
-import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
+import { BoxRenderable, RGBA, type CliRenderer } from "@opentui/core";
 import type { Token } from "marked";
 import type {
   ThemeColors,
@@ -16,6 +16,8 @@ import type {
   EscapeToken,
 } from "../types.js";
 import { decodeHtmlEntities, toSubscript, toSuperscript, convertInlineToken } from "./text.js";
+import type { BoxSpec } from "../render/spec.js";
+import { mountSpec } from "../render/mount.js";
 
 /**
  * Extract styled segments from a paragraph token (pure function, no OpenTUI dependency)
@@ -263,19 +265,16 @@ export function paragraphToBlock(colors: ThemeColors, token: ParagraphToken): Re
 }
 
 /**
- * Render paragraph with inline HTML support
+ * Build a pure Spec for a paragraph. Single child TextSpec carrying the
+ * inline-styled chunks; the wrapper box owns the bottom margin so the
+ * paragraph clears the next block.
+ *
+ * Returns null when the paragraph has no segments — the dispatcher skips
+ * empty blocks rather than mounting an empty wrapper.
  */
-export function renderParagraph(
-  renderer: CliRenderer,
-  colors: ThemeColors,
-  token: ParagraphToken,
-): BoxRenderable | null {
+export function paragraphToSpec(colors: ThemeColors, token: ParagraphToken): BoxSpec | null {
   const segments = paragraphToSegments(colors, token);
   if (segments.length === 0) return null;
-
-  const wrapper = new BoxRenderable(renderer, {
-    marginBottom: 1,
-  });
 
   const chunks: TextChunk[] = segments.map((seg) => ({
     __isChunk: true,
@@ -285,7 +284,25 @@ export function renderParagraph(
     italic: seg.italic || undefined,
   }));
 
-  const styledText = new StyledText(chunks as any);
-  wrapper.add(new TextRenderable(renderer, { content: styledText }));
-  return wrapper;
+  return {
+    kind: "box",
+    marginBottom: 1,
+    source: null,
+    children: [{ kind: "text", chunks, source: null }],
+  };
+}
+
+/**
+ * Render paragraph with inline HTML support.
+ *
+ * Legacy adapter — funnels through `paragraphToSpec` + `mountSpec`.
+ */
+export function renderParagraph(
+  renderer: CliRenderer,
+  colors: ThemeColors,
+  token: ParagraphToken,
+): BoxRenderable | null {
+  const spec = paragraphToSpec(colors, token);
+  if (!spec) return null;
+  return mountSpec(renderer, spec) as BoxRenderable;
 }
