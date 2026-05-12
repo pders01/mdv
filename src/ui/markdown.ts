@@ -60,31 +60,21 @@ export type MdvRenderNode = (
 ) => Spec | null | undefined;
 
 /**
- * Mirrors the BlockState shape `container.ts` introspects via
- * `markdown._blockStates`. Three fields are accessed externally: `token.type`,
- * `tokenRaw` (matched against the source string for line-mapping), and
- * `renderable.y` (current render offset).
+ * Per-block state exposed via `MdvMarkdownRenderable.blockStates`.
+ * Source-line ranges live on `spec.source` (always populated for
+ * top-level blocks by `rebuild`); container.ts / measurement read them
+ * from there. The token is kept for type-dispatched paths (code block
+ * fast-path in measureBlockLine).
  */
 export interface MdvBlockState {
   token: Token;
-  tokenRaw: string;
   renderable: Renderable;
   /**
-   * The spec the dispatcher emitted for this block. Kept alongside the
-   * mounted renderable so downstream code (container.ts line mapping,
-   * per-block measurement) can introspect intended structure without
-   * walking the post-mount Renderable graph.
+   * The spec the dispatcher emitted for this block. `spec.source`
+   * carries the 0-indexed inclusive source-line range, set in
+   * `rebuild` before mount.
    */
   spec: Spec;
-  /**
-   * Source-line range (0-indexed, inclusive on both ends) for this
-   * block, derived from mdast position info. Container.ts reads these
-   * directly instead of reverse-engineering them via
-   * `tokenRaw.indexOf(fullContent)` + newline counting. Both fields are
-   * always set; the indexOf path is gone.
-   */
-  sourceStartLine: number;
-  sourceEndLine: number;
 }
 
 export interface MdvMarkdownOptions extends BoxOptions {
@@ -192,7 +182,6 @@ export class MdvMarkdownRenderable extends BoxRenderable {
     // ==highlight==, ~sub~, ^sup^, and similar syntaxes as literal text.
     const tree = proc.runSync(proc.parse(this._content)) as Root;
     const tokens = mdastRootToTokens(tree, this._content);
-    const rawSlices = computeRawSlices(this._content, tree);
     const lineRanges = computeBlockLineRanges(this._content, tree);
 
     const ctx: MdvRenderNodeContext = {
@@ -205,45 +194,14 @@ export class MdvMarkdownRenderable extends BoxRenderable {
       const spec = this._renderNode(token, ctx);
       if (!spec) continue;
       const range = lineRanges[i] ?? { start: 0, end: 0 };
-      // Persist the block's source span on the spec so downstream code
-      // (measure, container line-mapping) can read it without reaching
-      // into MdvBlockState.sourceStartLine/sourceEndLine duplicates.
+      // Persist the block's source span on the spec; container.ts and
+      // measureBlockLine read it from here, no duplicate fields needed.
       spec.source = { start: range.start, end: range.end };
       const renderable = mountSpec(this.ctx, spec);
       this.add(renderable);
-      this._blockStates.push({
-        token,
-        tokenRaw: rawSlices[i] ?? "",
-        renderable,
-        spec,
-        sourceStartLine: range.start,
-        sourceEndLine: range.end,
-      });
+      this._blockStates.push({ token, renderable, spec });
     }
   }
-}
-
-/**
- * Compute the source slice that "belongs to" each top-level mdast block,
- * including trailing whitespace up to the next block. The raw slice is
- * what `container.ts` searches for in the full content to map blocks
- * back to source lines (`fullContent.indexOf(tokenRaw, searchStart)`),
- * and its line count drives cursor positioning, so we extend each block's
- * end offset to the next block's start (or end of content).
- */
-function computeRawSlices(content: string, tree: Root): string[] {
-  const slices: string[] = [];
-  const children = tree.children;
-  for (let i = 0; i < children.length; i++) {
-    const node = children[i]!;
-    const start = node.position?.start.offset ?? 0;
-    const end =
-      i + 1 < children.length
-        ? (children[i + 1]!.position?.start.offset ?? node.position?.end.offset ?? content.length)
-        : content.length;
-    slices.push(content.slice(start, end));
-  }
-  return slices;
 }
 
 /**
@@ -251,11 +209,6 @@ function computeRawSlices(content: string, tree: Root): string[] {
  * `start` is the line the block begins on, `end` is the line of its last
  * meaningful character. Lines BETWEEN consecutive blocks (separator
  * blanks) belong to no block; container.ts treats them as gap lines.
- *
- * Replaces the prior `tokenRaw.indexOf(fullContent)` + newline-counting
- * dance in container.ts: same data, derived once at parse time from the
- * mdast positions that drove `computeRawSlices` anyway. Removes the
- * trailing-blank inflation that needed `countTokenLines` to compensate.
  */
 function computeBlockLineRanges(_content: string, tree: Root): Array<{ start: number; end: number }> {
   const ranges: Array<{ start: number; end: number }> = [];

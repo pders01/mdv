@@ -1,8 +1,8 @@
 /**
- * Diagnostic: dump per-block tokenRaw, source line count, rendered r.height
- * and the resulting lineHeight. Cursor-row drift shows up here as
- * fractional lineHeight values. CJK content is exposed at narrow widths
- * because wrap inflates r.height beyond the source line count.
+ * Diagnostic: dump per-block source span, rendered r.height and the
+ * resulting lineHeight. Cursor-row drift shows up here as fractional
+ * lineHeight values. CJK content is exposed at narrow widths because
+ * wrap inflates r.height beyond the source line count.
  *
  * Usage:
  *   bun run scripts/repro-blocks.ts [file.md]
@@ -17,7 +17,7 @@ import { createTestRenderer } from "@opentui/core/testing";
 import { extractThemeColors, resolveTheme } from "../src/theme/index.js";
 import { createHighlighterInstance, loadLangsForContent } from "../src/highlighting/shiki.js";
 import { createRenderNode } from "../src/rendering/index.js";
-import { createMainContainer, countTokenLines } from "../src/ui/container.js";
+import { createMainContainer } from "../src/ui/container.js";
 import { MdvMarkdownRenderable } from "../src/ui/markdown.js";
 
 const WIDTH = Number(process.env.W ?? 80);
@@ -53,24 +53,20 @@ renderer.root.add(container);
 await renderOnce();
 await renderOnce();
 
-const blockStates = (markdown as unknown as { _blockStates: any[] })._blockStates;
-const fullContent = contentLines.join("\n");
-let searchStart = 0;
+const blockStates = markdown.blockStates;
 
 for (let blockIdx = 0; blockIdx < blockStates.length; blockIdx++) {
-  const state = blockStates[blockIdx];
-  const tokenRaw: string = state.tokenRaw;
-  const tokenStart = fullContent.indexOf(tokenRaw, searchStart);
-  let startLine = 0;
-  if (tokenStart !== -1) {
-    for (let i = 0; i < tokenStart; i++) if (fullContent[i] === "\n") startLine++;
-  }
-  const linesInToken = countTokenLines(tokenRaw);
+  const state = blockStates[blockIdx]!;
+  const span = state.spec.source ?? { start: 0, end: 0 };
+  const linesInToken = span.end - span.start + 1;
   const r = state.renderable;
-  const preview = tokenRaw.replace(/\n/g, "\\n").slice(0, 60);
+  const preview = contentLines
+    .slice(span.start, span.end + 1)
+    .join("\\n")
+    .slice(0, 60);
   console.log(
     `block ${String(blockIdx).padStart(2)}  ` +
-      `startLine=${String(startLine).padStart(3)}  ` +
+      `startLine=${String(span.start).padStart(3)}  ` +
       `linesInToken=${String(linesInToken).padStart(2)}  ` +
       `r.y=${String(r.y).padStart(3)}  ` +
       `r.height=${String(r.height).padStart(2)}  ` +
@@ -88,7 +84,6 @@ for (let blockIdx = 0; blockIdx < blockStates.length; blockIdx++) {
       console.log(`         children: ${list}`);
     }
   }
-  searchStart = tokenStart === -1 ? searchStart : tokenStart + tokenRaw.length;
 }
 
 renderer.destroy();

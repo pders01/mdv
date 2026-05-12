@@ -44,11 +44,12 @@ export function countTokenLines(tokenRaw: string): number {
 }
 
 /**
- * BlockState from OpenTUI's MdvMarkdownRenderable internal state
+ * BlockState shape MdvMarkdownRenderable.blockStates returns. Source
+ * span lives on `spec.source` (mutated to a non-null range during
+ * mount, see ui/markdown.ts).
  */
 interface BlockState {
-  token: { type: string; raw: string; text?: string };
-  tokenRaw: string;
+  token: { type: string; text?: string };
   renderable: {
     x: number;
     y: number;
@@ -56,9 +57,7 @@ interface BlockState {
     height: number;
     getChildren?: () => unknown;
   };
-  /** Source-line range, 0-indexed inclusive — populated by MdvMarkdownRenderable. */
-  sourceStartLine: number;
-  sourceEndLine: number;
+  spec: { source: { start: number; end: number } | null };
 }
 
 /**
@@ -196,11 +195,9 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
 
     for (let blockIdx = 0; blockIdx < blockStates.length; blockIdx++) {
       const state = blockStates[blockIdx]!;
-      for (
-        let line = state.sourceStartLine;
-        line <= state.sourceEndLine && line < currentContentLines.length;
-        line++
-      ) {
+      const span = state.spec.source;
+      if (!span) continue;
+      for (let line = span.start; line <= span.end && line < currentContentLines.length; line++) {
         cachedLineToBlock.set(line, blockIdx);
       }
     }
