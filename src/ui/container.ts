@@ -6,7 +6,7 @@ import { BoxRenderable, ScrollBoxRenderable, RGBA, type CliRenderer } from "@ope
 import type { MdvMarkdownRenderable } from "./markdown.js";
 import type { Mode } from "../types.js";
 import type { SearchMatch } from "../input/search.js";
-import { measureCodeLines, textLinesFromCodeText } from "../render/measure-code.js";
+import { measureBlockLine } from "../render/measure-block.js";
 
 /**
  * Pre-blend a foreground color over a background at `alpha` and return a
@@ -49,89 +49,16 @@ export function countTokenLines(tokenRaw: string): number {
 interface BlockState {
   token: { type: string; raw: string; text?: string };
   tokenRaw: string;
-  renderable: RowRenderable;
+  renderable: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    getChildren?: () => unknown;
+  };
   /** Source-line range, 0-indexed inclusive — populated by MdvMarkdownRenderable. */
   sourceStartLine: number;
   sourceEndLine: number;
-}
-
-/**
- * Per-source-line offsets within a code block. Built once per block via
- * `measureCodeLines` so the cursor row tint lands on the exact wrapped
- * row for each source line — uniform divide gave the wrong answer when a
- * single source line wrapped to N rows (the cursor highlight bled into
- * the next source line).
- */
-interface CodeRowMap {
-  innerYStart: number;
-  rows: Map<number, { innerY: number; height: number }>;
-}
-
-interface RowRenderable {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  getChildren?: () => RowRenderable[];
-}
-
-/**
- * Per-row layout within a multi-row block. Walks the block's direct
- * children when their count matches the source-line count; otherwise
- * descends one DFS layer to collect leaf text/text-like renderables
- * (each leaf corresponds to one source line in lists / tables / nested
- * lists). Falls back to `r.height / linesInBlock` only when neither
- * shape produces a 1:1 match — that's correct for single-paragraph
- * blocks that wrap (one source line, N visible rows, uniform divide
- * gives the right answer for `lineWithinBlock === 0`).
- */
-export function getRowLayout(
-  r: RowRenderable,
-  linesInBlock: number,
-  lineWithinBlock: number,
-): { y: number; height: number } {
-  if (linesInBlock > 1 && typeof r.getChildren === "function") {
-    const children = r.getChildren();
-    if (children.length === linesInBlock) {
-      const child = children[lineWithinBlock];
-      if (child) return { y: child.y, height: child.height };
-    }
-    // Drop into leaves: nested-list items, list-item content boxes that
-    // wrap a TextRenderable, table rows wrapped in extra boxes.
-    const leaves = collectLeafRows(r);
-    if (leaves.length === linesInBlock) {
-      const leaf = leaves[lineWithinBlock];
-      if (leaf) return { y: leaf.y, height: leaf.height };
-    }
-  }
-  const lineHeight = linesInBlock > 0 ? r.height / linesInBlock : 1;
-  return { y: r.y + lineWithinBlock * lineHeight, height: lineHeight };
-}
-
-/**
- * DFS over a block's renderable subtree collecting "row-like" leaves.
- * A leaf is a renderable that itself has no nested children with
- * children — typically a TextRenderable. Order matches paint order
- * (top-to-bottom in column-flex containers), so leaves[i] corresponds
- * to the i-th source line of the block.
- */
-function collectLeafRows(r: RowRenderable): RowRenderable[] {
-  const out: RowRenderable[] = [];
-  const visit = (node: RowRenderable) => {
-    const get = node.getChildren;
-    if (typeof get !== "function") {
-      out.push(node);
-      return;
-    }
-    const children = get.call(node);
-    if (children.length === 0) {
-      out.push(node);
-      return;
-    }
-    for (const child of children) visit(child);
-  };
-  visit(r);
-  return out;
 }
 
 /**
@@ -263,26 +190,6 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     cachedLineToBlock = null;
   };
 
-  /**
-   * Compute exact per-source-line offsets for a code block from its
-   * current rendered width. Recomputed per `getLinePosition` call so
-   * reflow events (resize / sidebar toggle) take effect immediately.
-   * Returns null for blocks that aren't code or have no text content.
-   */
-  const codeRowMapFor = (state: BlockState, startLine: number, endLine: number): CodeRowMap | null => {
-    if (state.token.type !== "code" || typeof state.token.text !== "string") return null;
-    const padding = 1; // matches codeBlockToSpec padding
-    const lines = textLinesFromCodeText(state.token.text, startLine);
-    const measurement = measureCodeLines(lines, state.renderable.width, padding);
-    const rows = new Map<number, { innerY: number; height: number }>();
-    rows.set(startLine, { innerY: -measurement.innerYStart, height: padding });
-    for (const row of measurement.lines) {
-      rows.set(row.sourceLine, { innerY: row.innerY, height: row.height });
-    }
-    rows.set(endLine, { innerY: measurement.innerHeight, height: padding });
-    return { innerYStart: measurement.innerYStart, rows };
-  };
-
   const ensureLineMappings = (blockStates: BlockState[]): void => {
     if (cachedLineToBlock !== null) return;
     cachedLineToBlock = new Map<number, number>();
@@ -312,24 +219,8 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const blockState = blockStates[blockIdx];
     if (!blockState) return null;
 
-    const r = blockState.renderable;
-    const blockStartLine = blockState.sourceStartLine;
-    const blockEndLine = blockState.sourceEndLine;
-    const linesInBlock = blockEndLine - blockStartLine + 1;
-    const lineWithinBlock = line - blockStartLine;
-
-    // Code blocks pre-measure per-source-line wrap offsets — prefer those
-    // over uniform divide so the cursor row tracks the exact rendered row.
-    const codeMap = codeRowMapFor(blockState, blockStartLine, blockEndLine);
-    if (codeMap) {
-      const exact = codeMap.rows.get(line);
-      if (exact) {
-        return { x: r.x, y: r.y + codeMap.innerYStart + exact.innerY, height: exact.height };
-      }
-    }
-
-    const row = getRowLayout(r, linesInBlock, lineWithinBlock);
-    return { x: r.x, y: row.y, height: row.height };
+    const row = measureBlockLine(blockState, line);
+    return { x: row.x, y: row.y, height: row.height };
   };
 
   /**
@@ -360,21 +251,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     blockIdx: number,
   ): number => {
     const state = blockStates[blockIdx]!;
-    const r = state.renderable;
-    const blockStartLine = state.sourceStartLine;
-    const blockEndLine = state.sourceEndLine;
-    const linesInBlock = blockEndLine - blockStartLine + 1;
-    const lineWithinBlock = line - blockStartLine;
-
-    const codeMap = codeRowMapFor(state, blockStartLine, blockEndLine);
-    if (codeMap) {
-      const exact = codeMap.rows.get(line);
-      if (exact) {
-        return Math.max(0, r.y + codeMap.innerYStart + exact.innerY - scrollSurfaceY());
-      }
-    }
-
-    const row = getRowLayout(r, linesInBlock, lineWithinBlock);
+    const row = measureBlockLine(state, line);
     return Math.max(0, row.y - scrollSurfaceY());
   };
 

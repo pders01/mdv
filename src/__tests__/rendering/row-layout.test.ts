@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { getRowLayout } from "../../ui/container.js";
+import { walkRenderable as getRowLayout } from "../../render/measure-block.js";
 
 function mockBlock(y: number, height: number, children?: Array<{ y: number; height: number }>) {
   return {
