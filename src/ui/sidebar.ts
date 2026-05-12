@@ -47,16 +47,10 @@ const INDENT = "  ";
 /** Available char columns for the sidebar header text (paddingLeft eats one). */
 const HEADER_INNER_WIDTH = SIDEBAR_WIDTH - 1;
 
-/**
- * Truncate `s` to fit `max` columns, appending `…` when shortening. Matches
- * the web sidebar's behavior of showing the rootDir basename, but here we
- * have to do it manually since there's no CSS text-overflow in the TUI.
- */
-function truncateEnd(s: string, max: number): string {
-  if (s.length <= max) return s;
-  if (max <= 1) return "…";
-  return s.slice(0, max - 1) + "…";
-}
+// Cell-aware truncate so CJK / emoji file names don't blow past the
+// fixed-width sidebar. truncateToCellWidth replaces the local helper
+// that was counting UTF-16 code units; same semantics for ASCII paths.
+import { truncateToCellWidth as truncateEnd } from "../util/width.js";
 
 type DisplayRow = { kind: "dir"; text: string } | { kind: "file"; text: string; entry: FileEntry };
 

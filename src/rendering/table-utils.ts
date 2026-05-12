@@ -2,7 +2,7 @@
  * Shared table rendering utilities
  */
 
-import { cellWidth } from "../util/width.js";
+import { cellWidth, takeUpToCellWidth } from "../util/width.js";
 
 /**
  * Minimum column width (enough for truncation ellipsis)
@@ -250,23 +250,6 @@ export function chooseLayout(rows: string[][], availableWidth?: number): TableLa
  */
 export function truncateCell(text: string, maxWidth: number): string {
   if (cellWidth(text) <= maxWidth) return text;
-  if (maxWidth <= 1) {
-    // Take as many cells as fit; for a single CJK char that's none.
-    return takeUpToWidth(text, maxWidth);
-  }
-  const head = takeUpToWidth(text, maxWidth - 1);
-  return head + "\u2026";
-}
-
-function takeUpToWidth(text: string, budget: number): string {
-  if (budget <= 0) return "";
-  let used = 0;
-  let out = "";
-  for (const ch of text) {
-    const w = cellWidth(ch);
-    if (used + w > budget) break;
-    out += ch;
-    used += w;
-  }
-  return out;
+  if (maxWidth <= 1) return takeUpToCellWidth(text, maxWidth);
+  return takeUpToCellWidth(text, maxWidth - 1) + "\u2026";
 }
