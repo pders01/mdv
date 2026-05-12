@@ -390,6 +390,10 @@ export async function startTui(args: CliArgs): Promise<void> {
         // Reset cursor and search for new content
         cursor.reset(currentContentLines.length);
         search.clear();
+        // Mouse-drag character selection survives content swaps unless the
+        // renderer is told to drop it — clear so an old selection from the
+        // previous file doesn't paint blue cells over the new content.
+        renderer.clearSelection();
 
         // Update status bar
         setFileName(basename(filePath));
@@ -512,8 +516,17 @@ export async function startTui(args: CliArgs): Promise<void> {
         renderer,
         scrollBox,
         cursor,
-        content: currentContent,
-        contentLines: currentContentLines,
+        // Use getters so directory-mode file switches (which mutate
+        // currentContent / currentContentLines via onOpenFile) are
+        // visible to the next keypress instead of pinning the values
+        // captured at handler-setup time. Same reason `getContentLineY`
+        // is exposed as a getter.
+        get content() {
+          return currentContent;
+        },
+        get contentLines() {
+          return currentContentLines;
+        },
         showNotification,
         search,
         onSearchUpdate,
