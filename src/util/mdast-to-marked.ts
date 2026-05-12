@@ -71,14 +71,33 @@ type FootnoteMap = Map<string, number>;
 export interface ConvertContext {
   defs: DefMap;
   footnotes: FootnoteMap;
+  /**
+   * Raw source content; used by renderers that need exact source spans
+   * (today: blockquote, so interior blank `>` lines survive the
+   * mdast→token translation and the per-source-line count matches the
+   * rendered row count for cursor math).
+   */
+  source: string;
 }
 
-export function mdastRootToTokens(root: Root): Token[] {
+export function mdastRootToTokens(root: Root, source: string = ""): Token[] {
   const ctx: ConvertContext = {
     defs: collectDefinitions(root),
     footnotes: collectFootnoteIndex(root),
+    source,
   };
   return root.children.map((node) => convertBlock(node, ctx)).filter((t): t is Token => t !== null);
+}
+
+/**
+ * Extract the verbatim source slice for an mdast node given the original
+ * content. Returns empty string when offsets are missing.
+ */
+function nodeSource(node: { position?: { start?: { offset?: number }; end?: { offset?: number } } }, source: string): string {
+  const start = node.position?.start?.offset;
+  const end = node.position?.end?.offset;
+  if (start === undefined || end === undefined) return "";
+  return source.slice(start, end);
 }
 
 function collectFootnoteIndex(root: Root): FootnoteMap {
@@ -249,15 +268,27 @@ function codeToken(node: Code): Token {
 function blockquoteToken(node: Blockquote, ctx: ConvertContext): Token {
   const alertKind = detectAlertKind(node);
   if (alertKind) stripAlertMarker(node);
-  const tokens = node.children
-    .map((c) => convertBlock(c, ctx))
-    .filter((t): t is Token => t !== null);
+  const blockStart = (node.position?.start.line ?? 1) - 1;
+  const blockEnd = (node.position?.end.line ?? blockStart + 1) - 1;
+  const tokens: Token[] = [];
+  const tokenLines: Array<{ start: number; end: number }> = [];
+  for (const c of node.children) {
+    const converted = convertBlock(c, ctx);
+    if (!converted) continue;
+    tokens.push(converted);
+    const start = (c.position?.start.line ?? blockStart + 1) - 1;
+    const end = (c.position?.end.line ?? start + 1) - 1;
+    tokenLines.push({ start, end });
+  }
   const text = tokens.map((t) => extractText(t)).join("\n");
   return {
     type: "blockquote",
-    raw: "",
+    raw: nodeSource(node, ctx.source),
     text,
     tokens,
+    tokenLines,
+    blockStartLine: blockStart,
+    blockEndLine: blockEnd,
     ...(alertKind ? { alertKind } : {}),
   } as unknown as Token;
 }

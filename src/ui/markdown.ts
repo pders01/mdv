@@ -183,7 +183,7 @@ export class MdvMarkdownRenderable extends BoxRenderable {
     // wiki-link, etc.) on top of the raw `parse` tree. Skipping it leaves
     // ==highlight==, ~sub~, ^sup^, and similar syntaxes as literal text.
     const tree = proc.runSync(proc.parse(this._content)) as Root;
-    const tokens = mdastRootToTokens(tree);
+    const tokens = mdastRootToTokens(tree, this._content);
     const rawSlices = computeRawSlices(this._content, tree);
     const lineRanges = computeBlockLineRanges(this._content, tree);
 
