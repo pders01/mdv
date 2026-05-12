@@ -24,7 +24,9 @@ import type { Spec } from "./spec.js";
 
 export function mountSpec(renderer: RenderContext, spec: Spec): Renderable {
   if (spec.kind === "text") {
-    const styled = new StyledText(spec.chunks as unknown as ConstructorParameters<typeof StyledText>[0]);
+    const styled = new StyledText(
+      spec.chunks as unknown as ConstructorParameters<typeof StyledText>[0],
+    );
     return new TextRenderable(renderer, {
       ...(spec.id ? { id: spec.id } : {}),
       content: styled,

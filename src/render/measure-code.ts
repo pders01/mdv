@@ -57,4 +57,3 @@ export function measureCodeLines(
 
   return { innerYStart: padding, innerHeight: cursor, lines: offsets };
 }
-

@@ -1,10 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { tableToSpec } from "../../rendering/table.js";
-import {
-  calculateColumnWidths,
-  padCell,
-  truncateCell,
-} from "../../rendering/table-utils.js";
+import { calculateColumnWidths, padCell, truncateCell } from "../../rendering/table-utils.js";
 import type { ThemeColors, TableToken } from "../../types.js";
 
 const colors: ThemeColors = {

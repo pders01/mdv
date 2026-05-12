@@ -93,7 +93,10 @@ export function mdastRootToTokens(root: Root, source: string = ""): Token[] {
  * Extract the verbatim source slice for an mdast node given the original
  * content. Returns empty string when offsets are missing.
  */
-function nodeSource(node: { position?: { start?: { offset?: number }; end?: { offset?: number } } }, source: string): string {
+function nodeSource(
+  node: { position?: { start?: { offset?: number }; end?: { offset?: number } } },
+  source: string,
+): string {
   const start = node.position?.start?.offset;
   const end = node.position?.end?.offset;
   if (start === undefined || end === undefined) return "";

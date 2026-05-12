@@ -41,7 +41,9 @@ describe("codeBlockToSpec", () => {
 
   it("emits one TextLine per content line with cell-aware displayWidth", () => {
     const spec = codeBlockToSpec(colors, undefined, { text: "abc\n中文 mix" }, 0);
-    const text = spec.children[0] as { lines?: Array<{ sourceLine: number; displayWidth: number; displayText: string }> };
+    const text = spec.children[0] as {
+      lines?: Array<{ sourceLine: number; displayWidth: number; displayText: string }>;
+    };
 
     expect(text.lines).toHaveLength(2);
     expect(text.lines![0]).toEqual({ sourceLine: 1, displayWidth: 3, displayText: "abc" });

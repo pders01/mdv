@@ -108,11 +108,7 @@ function segmentsToChunks(segments: StyledSegment[]): TextChunk[] {
  * gaps. `contentWidth` constrains column-width math; supply
  * `renderer.width - 2` when calling from the dispatcher.
  */
-export function tableToSpec(
-  colors: ThemeColors,
-  token: TableToken,
-  contentWidth: number,
-): BoxSpec {
+export function tableToSpec(colors: ThemeColors, token: TableToken, contentWidth: number): BoxSpec {
   const headerCells = token.header.map((h) => h.text);
   const dataCells = token.rows.map((row) => row.map((cell) => cell.text));
   const allRows = [headerCells, ...dataCells];
@@ -161,7 +157,10 @@ export function tableToSpec(
   ];
 
   for (const row of token.rows) {
-    const segs = rowToSegments(row.map((c) => c.text), false);
+    const segs = rowToSegments(
+      row.map((c) => c.text),
+      false,
+    );
     children.push({ kind: "text", chunks: segmentsToChunks(segs), source: null });
   }
 
@@ -175,4 +174,3 @@ export function tableToSpec(
     children,
   };
 }
-

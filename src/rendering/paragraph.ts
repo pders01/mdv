@@ -291,4 +291,3 @@ export function paragraphToSpec(colors: ThemeColors, token: ParagraphToken): Box
     children: [{ kind: "text", chunks, source: null }],
   };
 }
-

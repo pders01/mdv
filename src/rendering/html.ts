@@ -331,10 +331,7 @@ function htmlListToSpec(colors: ThemeColors, html: string): BoxSpec {
       kind: "box",
       flexDirection: "row",
       source: null,
-      children: [
-        textSpec(marker + " ", colors.cyan),
-        textSpec(itemContent, colors.fg),
-      ],
+      children: [textSpec(marker + " ", colors.cyan), textSpec(itemContent, colors.fg)],
     });
     index++;
   }
@@ -344,7 +341,14 @@ function htmlListToSpec(colors: ThemeColors, html: string): BoxSpec {
 function htmlHeadingToSpec(colors: ThemeColors, html: string, level: number): BoxSpec | null {
   const content = extractHtmlBlockContent(html);
   if (!content) return null;
-  const palette = [colors.red, colors.orange, colors.yellow, colors.green, colors.cyan, colors.purple];
+  const palette = [
+    colors.red,
+    colors.orange,
+    colors.yellow,
+    colors.green,
+    colors.cyan,
+    colors.purple,
+  ];
   const fg = palette[level - 1] || colors.blue;
   return {
     kind: "box",
@@ -399,12 +403,9 @@ export function hrToSpec(colors: ThemeColors, contentWidth: number): BoxSpec {
     children: [
       {
         kind: "text",
-        chunks: [
-          { __isChunk: true, text: "\u2500".repeat(width), fg: RGBA.fromHex(colors.gray) },
-        ],
+        chunks: [{ __isChunk: true, text: "\u2500".repeat(width), fg: RGBA.fromHex(colors.gray) }],
         source: null,
       },
     ],
   };
 }
-

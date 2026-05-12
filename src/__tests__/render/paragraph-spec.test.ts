@@ -38,7 +38,9 @@ describe("paragraphToSpec", () => {
 
   it("converts theme-colored segments to RGBA-tagged chunks", () => {
     const spec = paragraphToSpec(colors, plain("plain text"));
-    const text = spec!.children[0] as { chunks: Array<{ text: string; fg?: { r: number; g: number; b: number } }> };
+    const text = spec!.children[0] as {
+      chunks: Array<{ text: string; fg?: { r: number; g: number; b: number } }>;
+    };
     expect(text.chunks).toHaveLength(1);
     expect(text.chunks[0]!.text).toBe("plain text");
     // fg should be present (RGBA.fromHex result) — null check is enough; we

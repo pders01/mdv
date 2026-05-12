@@ -39,7 +39,12 @@ async function setup(content: string) {
   const search = new SearchManager();
   const { container, scrollBox, setupHighlighting } = createMainContainer(r.renderer, contentLines);
   const renderNode = createRenderNode(r.renderer, themeColors, highlighter, WIDTH - 2, new Map());
-  const markdown = new MdvMarkdownRenderable(r.renderer, { id: "md", content, conceal: true, renderNode });
+  const markdown = new MdvMarkdownRenderable(r.renderer, {
+    id: "md",
+    content,
+    conceal: true,
+    renderNode,
+  });
   scrollBox.add(markdown);
   const { getContentLineY } = setupHighlighting(
     () => ({
@@ -61,7 +66,14 @@ async function setup(content: string) {
   const state: KeyboardState = { lastKey: "", lastKeyTime: 0 };
   const fire = (name: string) =>
     handleContentKey(
-      { name, sequence: name, ctrl: false, shift: false, meta: false, raw: name } as unknown as KeyEvent,
+      {
+        name,
+        sequence: name,
+        ctrl: false,
+        shift: false,
+        meta: false,
+        raw: name,
+      } as unknown as KeyEvent,
       {
         renderer: r.renderer,
         scrollBox,
@@ -81,17 +93,26 @@ async function setup(content: string) {
   return { ...r, cursor, fire, themeColors };
 }
 
-function rowBg(frame: ReturnType<Awaited<ReturnType<typeof setup>>["captureSpans"]>, y: number): string {
+function rowBg(
+  frame: ReturnType<Awaited<ReturnType<typeof setup>>["captureSpans"]>,
+  y: number,
+): string {
   const line = frame.lines[y];
   if (!line || line.spans.length === 0) return "transparent";
   // Pick the dominant bg from the longest span (excludes random 1-cell gaps).
   const span = line.spans.reduce((a, b) => (a.width >= b.width ? a : b));
   const { r, g, b } = span.bg;
-  const hex = (v: number) => Math.round(v * 255).toString(16).padStart(2, "0");
+  const hex = (v: number) =>
+    Math.round(v * 255)
+      .toString(16)
+      .padStart(2, "0");
   return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
-function findRowContaining(frame: ReturnType<Awaited<ReturnType<typeof setup>>["captureSpans"]>, needle: string): number {
+function findRowContaining(
+  frame: ReturnType<Awaited<ReturnType<typeof setup>>["captureSpans"]>,
+  needle: string,
+): number {
   for (let y = 0; y < frame.lines.length; y++) {
     const text = frame.lines[y]!.spans.map((s) => s.text).join("");
     if (text.includes(needle)) return y;

@@ -52,9 +52,11 @@ describe("listToSpec", () => {
     expect(firstText(unordered)).toBe("• ");
     expect(firstText(ordered)).toBe("1. ");
 
-    const secondMarker = (ordered.children[1]!.kind === "box"
-      ? (ordered.children[1]!.children[0] as { chunks?: Array<{ text: string }> }).chunks?.[0]?.text
-      : "");
+    const secondMarker =
+      ordered.children[1]!.kind === "box"
+        ? (ordered.children[1]!.children[0] as { chunks?: Array<{ text: string }> }).chunks?.[0]
+            ?.text
+        : "";
     expect(secondMarker).toBe("2. ");
   });
 
@@ -73,7 +75,9 @@ describe("listToSpec", () => {
               ordered: false,
               start: "",
               loose: false,
-              items: [{ type: "list_item", text: "inner", raw: "inner", loose: false, task: false }],
+              items: [
+                { type: "list_item", text: "inner", raw: "inner", loose: false, task: false },
+              ],
             } as never,
           ],
         },
@@ -82,7 +86,10 @@ describe("listToSpec", () => {
     const spec = listToSpec(colors, nested);
     const item = spec.children[0]!;
     expect(item.kind === "box" && item.children[1]!.kind).toBe("box");
-    const inner = item.kind === "box" ? (item.children[1] as { marginTop?: number; marginBottom?: number }) : ({} as never);
+    const inner =
+      item.kind === "box"
+        ? (item.children[1] as { marginTop?: number; marginBottom?: number })
+        : ({} as never);
     expect(inner.marginTop).toBe(0);
     expect(inner.marginBottom).toBe(0);
   });
@@ -101,14 +108,19 @@ describe("listToSpec", () => {
               ordered: false,
               start: "",
               loose: false,
-              items: [{ type: "list_item", text: "inner", raw: "inner", loose: false, task: false }],
+              items: [
+                { type: "list_item", text: "inner", raw: "inner", loose: false, task: false },
+              ],
             } as never,
           ],
         },
       ],
     };
     const spec = listToSpec(colors, nested);
-    const innerListBox = spec.children[0]!.kind === "box" ? (spec.children[0]!.children[1] as { kind: "box"; children: unknown[] }) : ({} as never);
+    const innerListBox =
+      spec.children[0]!.kind === "box"
+        ? (spec.children[0]!.children[1] as { kind: "box"; children: unknown[] })
+        : ({} as never);
     const innerItem = innerListBox.children[0] as { kind: "box"; children: unknown[] };
     const innerText = innerItem.children[0] as { chunks: Array<{ text: string }> };
     // depth=1 indent is 2 spaces before the bullet.

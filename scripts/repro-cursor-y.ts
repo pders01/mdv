@@ -44,7 +44,12 @@ const cursor = createCursorManager(contentLines.length, () => {});
 const search = new SearchManager();
 const { container, scrollBox, setupHighlighting } = createMainContainer(renderer, contentLines);
 const renderNode = createRenderNode(renderer, themeColors, highlighter, WIDTH - 2, new Map());
-const markdown = new MdvMarkdownRenderable(renderer, { id: "md", content, conceal: true, renderNode });
+const markdown = new MdvMarkdownRenderable(renderer, {
+  id: "md",
+  content,
+  conceal: true,
+  renderNode,
+});
 scrollBox.add(markdown);
 const { getContentLineY } = setupHighlighting(
   () => ({
@@ -66,7 +71,14 @@ renderer.root.add(container);
 const state: KeyboardState = { lastKey: "", lastKeyTime: 0 };
 const fire = (name: string) =>
   handleContentKey(
-    { name, sequence: name, ctrl: false, shift: false, meta: false, raw: name } as unknown as KeyEvent,
+    {
+      name,
+      sequence: name,
+      ctrl: false,
+      shift: false,
+      meta: false,
+      raw: name,
+    } as unknown as KeyEvent,
     {
       renderer,
       scrollBox,

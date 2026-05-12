@@ -23,7 +23,14 @@ export interface HeadingToken {
  * Out-of-range depths fall back to the last entry (h6 blue).
  */
 function headingColor(colors: ThemeColors, depth: number): string {
-  const palette = [colors.red, colors.orange, colors.yellow, colors.green, colors.cyan, colors.blue];
+  const palette = [
+    colors.red,
+    colors.orange,
+    colors.yellow,
+    colors.green,
+    colors.cyan,
+    colors.blue,
+  ];
   return palette[Math.min(Math.max(depth, 1) - 1, palette.length - 1)]!;
 }
 
@@ -56,4 +63,3 @@ export function headingToSpec(colors: ThemeColors, token: HeadingToken): BoxSpec
     ],
   };
 }
-

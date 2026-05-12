@@ -96,9 +96,10 @@ export function codeBlockToSpec(
 ): BoxSpec {
   const lang = token.lang ? resolveLanguage(token.lang) : "";
 
-  const chunks: TextChunk[] = lang && highlighterInstance
-    ? shikiToChunks(highlighterInstance, token.text, lang)
-    : [{ __isChunk: true, text: token.text, fg: RGBA.fromHex(colors.fg) }];
+  const chunks: TextChunk[] =
+    lang && highlighterInstance
+      ? shikiToChunks(highlighterInstance, token.text, lang)
+      : [{ __isChunk: true, text: token.text, fg: RGBA.fromHex(colors.fg) }];
 
   // Build per-source-line breakdown so stage 4 can compute wrap height per
   // line without re-parsing chunks. Source lines are the content lines
@@ -133,4 +134,3 @@ export function codeBlockToSpec(
     ],
   };
 }
-

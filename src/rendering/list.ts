@@ -182,4 +182,3 @@ export function listToSpec(colors: ThemeColors, token: ListToken, depth: number 
     children: itemSpecs,
   };
 }
-

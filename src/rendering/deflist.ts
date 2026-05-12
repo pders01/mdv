@@ -57,4 +57,3 @@ export function defListToSpec(colors: ThemeColors, token: Token): BoxSpec {
     children,
   };
 }
-
