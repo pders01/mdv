@@ -20,6 +20,7 @@
  */
 
 import type { TextChunk } from "../types.js";
+import type { Renderable } from "@opentui/core";
 
 /**
  * Source-line span a spec subtree covers. Used by stage 4 to build the
@@ -84,4 +85,19 @@ export interface TextLine {
   displayText: string;
 }
 
-export type Spec = BoxSpec | TextSpec;
+/**
+ * Escape hatch for renderers that still build their Renderable graph
+ * imperatively (raw block HTML, definition lists). The dispatcher wraps
+ * them in this kind so MdvMarkdownRenderable can keep `mountSpec` as
+ * the single mount entry point. Anything we want to port can replace a
+ * `LegacySpec` with a `BoxSpec`/`TextSpec` subtree later without
+ * touching the consumer.
+ */
+export interface LegacySpec {
+  kind: "legacy";
+  /** Pre-built Renderable. mountSpec returns it as-is. */
+  renderable: Renderable;
+  source: SourceSpan | null;
+}
+
+export type Spec = BoxSpec | TextSpec | LegacySpec;

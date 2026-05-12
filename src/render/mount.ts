@@ -17,12 +17,16 @@ import {
   BoxRenderable,
   TextRenderable,
   StyledText,
-  type CliRenderer,
   type Renderable,
+  type RenderContext,
 } from "@opentui/core";
 import type { Spec } from "./spec.js";
 
-export function mountSpec(renderer: CliRenderer, spec: Spec): Renderable {
+export function mountSpec(renderer: RenderContext, spec: Spec): Renderable {
+  if (spec.kind === "legacy") {
+    return spec.renderable;
+  }
+
   if (spec.kind === "text") {
     const styled = new StyledText(spec.chunks as unknown as ConstructorParameters<typeof StyledText>[0]);
     return new TextRenderable(renderer, {

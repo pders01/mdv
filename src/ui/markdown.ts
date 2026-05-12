@@ -28,6 +28,8 @@
 import { BoxRenderable, type Renderable, type RenderContext } from "@opentui/core";
 import type { BoxOptions } from "@opentui/core";
 import type { Token } from "marked";
+import type { Spec } from "../render/spec.js";
+import { mountSpec } from "../render/mount.js";
 import { unified, type Processor } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
@@ -55,7 +57,7 @@ export interface MdvRenderNodeContext {
 export type MdvRenderNode = (
   token: Token,
   context: MdvRenderNodeContext,
-) => Renderable | null | undefined;
+) => Spec | null | undefined;
 
 /**
  * Mirrors the BlockState shape `container.ts` introspects via
@@ -67,6 +69,13 @@ export interface MdvBlockState {
   token: Token;
   tokenRaw: string;
   renderable: Renderable;
+  /**
+   * The spec the dispatcher emitted for this block. Kept alongside the
+   * mounted renderable so downstream code (container.ts line mapping,
+   * per-block measurement) can introspect intended structure without
+   * walking the post-mount Renderable graph.
+   */
+  spec: Spec;
 }
 
 export interface MdvMarkdownOptions extends BoxOptions {
@@ -175,13 +184,15 @@ export class MdvMarkdownRenderable extends BoxRenderable {
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i]!;
-      const renderable = this._renderNode(token, ctx);
-      if (!renderable) continue;
+      const spec = this._renderNode(token, ctx);
+      if (!spec) continue;
+      const renderable = mountSpec(this.ctx, spec);
       this.add(renderable);
       this._blockStates.push({
         token,
         tokenRaw: rawSlices[i] ?? "",
         renderable,
+        spec,
       });
     }
   }

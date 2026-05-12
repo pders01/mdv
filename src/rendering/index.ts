@@ -23,17 +23,19 @@ import { paragraphToSpec } from "./paragraph.js";
 import { renderDefList } from "./deflist.js";
 import { headingToSpec, type HeadingToken } from "./heading.js";
 import type { Spec } from "../render/spec.js";
-import { mountSpec } from "../render/mount.js";
 
 /**
- * RenderNode callback type — matches MarkdownRenderable's expected signature.
- * Returns `Renderable | null | undefined` to stay compatible with OpenTUI
- * even though this module always returns `BoxRenderable | null` in practice.
+ * RenderNode callback type — emits a Spec per token, or null when the
+ * token should be skipped. MdvMarkdownRenderable mounts the spec at the
+ * end of rebuild via `mountSpec`. Funnelling mount through one place
+ * keeps the spec → renderable boundary observable; downstream code
+ * (container.ts line-mapping, future per-block measurement) can read
+ * the spec instead of reverse-engineering it from `_blockStates`.
  */
 export type RenderNodeCallback = (
   token: Token,
   context: MdvRenderNodeContext,
-) => Renderable | null | undefined;
+) => Spec | null | undefined;
 
 /**
  * Create a renderNode callback with all rendering capabilities.
@@ -128,27 +130,33 @@ export function createRenderNode(
     return null;
   };
 
-  return (token: Token, _context: MdvRenderNodeContext): Renderable | null => {
-    // deflist + raw block HTML are still legacy Renderable-returning
-    // paths; route them before the spec path.
+  // Wrap a legacy Renderable so the dispatcher can still return Spec.
+  // Used for the renderers we haven't ported yet (raw block HTML +
+  // definition list); MdvMarkdownRenderable's mountSpec returns the
+  // embedded renderable as-is.
+  const wrapLegacy = (renderable: Renderable): Spec => ({
+    kind: "legacy",
+    renderable,
+    source: null,
+  });
+
+  return (token: Token, _context: MdvRenderNodeContext): Spec | null => {
     if ((token as Token & { type: string }).type === "deflist") {
-      return renderDefList(renderer, colors, token);
+      return wrapLegacy(renderDefList(renderer, colors, token));
     }
     if (token.type === "html") {
       const htmlToken = token as Token & { raw: string; block?: boolean };
       if (htmlToken.block) {
         const rendered = renderHtmlBlock(renderer, colors, htmlToken.raw);
-        return rendered ?? mountSpec(renderer, emptySpec());
+        return rendered ? wrapLegacy(rendered) : emptySpec();
       }
       return null;
     }
     if (token.type === "def") {
-      return mountSpec(renderer, emptySpec());
+      return emptySpec();
     }
 
-    const spec = toSpec(token);
-    if (!spec) return null;
-    return mountSpec(renderer, spec);
+    return toSpec(token);
   };
 }
 
