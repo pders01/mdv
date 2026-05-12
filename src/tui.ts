@@ -544,12 +544,21 @@ export async function startTui(args: CliArgs): Promise<void> {
       renderer,
       scrollBox,
       cursor,
-      content: currentContent,
-      contentLines: currentContentLines,
+      // Same reason as the directory-mode contentOptions getters above:
+      // single-file --watch mode mutates these via reloadFile, and a
+      // value capture would freeze them to the pre-reload snapshot.
+      get content() {
+        return currentContent;
+      },
+      get contentLines() {
+        return currentContentLines;
+      },
       showNotification,
       search,
       onSearchUpdate,
-      getContentLineY,
+      get getContentLineY() {
+        return getContentLineY;
+      },
     });
   }
 
