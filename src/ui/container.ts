@@ -28,6 +28,21 @@ function blendOver(
 }
 
 /**
+ * Count source lines that a block actually paints. The parser includes the
+ * trailing `\n\n` separator in `tokenRaw`, but the renderer paints no row
+ * for that blank — counting it inflates `linesInBlock` and produces a
+ * fractional `lineHeight = r.height / linesInBlock`. Math.floor of that
+ * fractional Y then highlights the wrong row. Strip trailing newlines
+ * before counting.
+ */
+export function countTokenLines(tokenRaw: string): number {
+  const trimmed = tokenRaw.replace(/\n+$/, "");
+  if (trimmed.length === 0) return 1;
+  const newlines = (trimmed.match(/\n/g) || []).length;
+  return newlines + 1;
+}
+
+/**
  * BlockState from OpenTUI's MdvMarkdownRenderable internal state
  */
 interface BlockState {
@@ -178,8 +193,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
         if (fullContent[i] === "\n") startLine++;
       }
 
-      const tokenNewlines = (tokenRaw.match(/\n/g) || []).length;
-      const linesInToken = tokenRaw.endsWith("\n") ? Math.max(1, tokenNewlines) : tokenNewlines + 1;
+      const linesInToken = countTokenLines(tokenRaw);
       const endLine = startLine + linesInToken - 1;
 
       cachedBlockStartLines.set(blockIdx, startLine);
