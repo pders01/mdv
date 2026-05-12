@@ -6,6 +6,7 @@ import { BoxRenderable, ScrollBoxRenderable, RGBA, type CliRenderer } from "@ope
 import type { MdvMarkdownRenderable } from "./markdown.js";
 import type { Mode } from "../types.js";
 import type { SearchMatch } from "../input/search.js";
+import { measureCodeLines, textLinesFromCodeText } from "../render/measure-code.js";
 
 /**
  * Pre-blend a foreground color over a background at `alpha` and return a
@@ -46,9 +47,21 @@ export function countTokenLines(tokenRaw: string): number {
  * BlockState from OpenTUI's MdvMarkdownRenderable internal state
  */
 interface BlockState {
-  token: { type: string; raw: string };
+  token: { type: string; raw: string; text?: string };
   tokenRaw: string;
   renderable: RowRenderable;
+}
+
+/**
+ * Per-source-line offsets within a code block. Built once per block via
+ * `measureCodeLines` so the cursor row tint lands on the exact wrapped
+ * row for each source line — uniform divide gave the wrong answer when a
+ * single source line wrapped to N rows (the cursor highlight bled into
+ * the next source line).
+ */
+interface CodeRowMap {
+  innerYStart: number;
+  rows: Map<number, { innerY: number; height: number }>;
 }
 
 interface RowRenderable {
@@ -199,6 +212,10 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
   let cachedLineToBlock: Map<number, number> | null = null;
   let cachedBlockStartLines: Map<number, number> | null = null;
   let cachedBlockLineCount: Map<number, number> | null = null;
+  // Per-block exact row offsets for blocks where uniform divide is wrong.
+  // Today only code blocks populate this; lists / tables / headings still
+  // go through `getRowLayout`'s children-walk or uniform fallback.
+  let cachedCodeRowMaps: Map<number, CodeRowMap> | null = null;
 
   const getBlockStates = (): BlockState[] | null => {
     if (!currentMarkdown) return null;
@@ -211,6 +228,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     cachedLineToBlock = null;
     cachedBlockStartLines = null;
     cachedBlockLineCount = null;
+    cachedCodeRowMaps = null;
   };
 
   const ensureLineMappings = (blockStates: BlockState[]): void => {
@@ -219,6 +237,7 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     cachedLineToBlock = new Map<number, number>();
     cachedBlockStartLines = new Map<number, number>();
     cachedBlockLineCount = new Map<number, number>();
+    cachedCodeRowMaps = new Map<number, CodeRowMap>();
 
     const fullContent = currentContentLines.join("\n");
     let searchStart = 0;
@@ -245,6 +264,33 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
         cachedLineToBlock.set(line, blockIdx);
       }
 
+      // Code blocks: pre-compute per-source-line wrap offsets so the
+      // cursor row tint can land on the exact rendered row, not on the
+      // average position produced by uniform divide. Fence lines (open
+      // and close ```) get the top/bottom padding rows — the renderer
+      // doesn't paint a fence row, the wrapper's padding stands in for
+      // them visually, so the cursor highlight lands on padding to mark
+      // its source position.
+      if (state.token.type === "code" && typeof state.token.text === "string") {
+        const lines = textLinesFromCodeText(state.token.text, startLine);
+        const padding = 1; // matches `codeBlockToSpec` padding
+        const measurement = measureCodeLines(lines, state.renderable.width, padding);
+        const rows = new Map<number, { innerY: number; height: number }>();
+
+        // Opening fence row sits at the top padding (innerY=-padding so
+        // r.y + innerYStart + innerY = r.y, the wrapper's top edge).
+        rows.set(startLine, { innerY: -measurement.innerYStart, height: padding });
+
+        for (const row of measurement.lines) {
+          rows.set(row.sourceLine, { innerY: row.innerY, height: row.height });
+        }
+
+        // Closing fence row sits at the bottom padding row.
+        rows.set(endLine, { innerY: measurement.innerHeight, height: padding });
+
+        cachedCodeRowMaps.set(blockIdx, { innerYStart: measurement.innerYStart, rows });
+      }
+
       searchStart = tokenStart + tokenRaw.length;
     }
   };
@@ -266,6 +312,18 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
     const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
     const lineWithinBlock = line - blockStartLine;
+
+    // Code blocks pre-measure per-source-line wrap offsets — prefer those
+    // over uniform divide so the cursor row tracks the exact rendered row.
+    const codeMap = cachedCodeRowMaps?.get(blockIdx);
+    if (codeMap) {
+      const exact = codeMap.rows.get(line);
+      if (exact) {
+        return { x: r.x, y: r.y + codeMap.innerYStart + exact.innerY, height: exact.height };
+      }
+      // Fence rows (opening / closing ``` line) are inside the block but
+      // not in the content map; fall through to uniform divide for them.
+    }
 
     const row = getRowLayout(r, linesInBlock, lineWithinBlock);
     return { x: r.x, y: row.y, height: row.height };
@@ -302,6 +360,14 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     const blockStartLine = cachedBlockStartLines?.get(blockIdx) ?? 0;
     const linesInBlock = cachedBlockLineCount?.get(blockIdx) ?? 1;
     const lineWithinBlock = line - blockStartLine;
+
+    const codeMap = cachedCodeRowMaps?.get(blockIdx);
+    if (codeMap) {
+      const exact = codeMap.rows.get(line);
+      if (exact) {
+        return Math.max(0, r.y + codeMap.innerYStart + exact.innerY - scrollSurfaceY());
+      }
+    }
 
     const row = getRowLayout(r, linesInBlock, lineWithinBlock);
     return Math.max(0, row.y - scrollSurfaceY());

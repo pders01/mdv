@@ -5,9 +5,12 @@
  * using _blockStates for accurate scroll-aware positioning.
  */
 
-import { BoxRenderable, TextRenderable, StyledText, RGBA, type CliRenderer } from "@opentui/core";
+import { BoxRenderable, type CliRenderer, RGBA } from "@opentui/core";
 import type { ThemeColors, TextChunk, StyledSegment, RenderBlock } from "../types.js";
 import { shikiToChunks, resolveLanguage, type HighlighterInstance } from "../highlighting/shiki.js";
+import type { BoxSpec, TextLine } from "../render/spec.js";
+import { mountSpec } from "../render/mount.js";
+import { cellWidth } from "../util/width.js";
 
 /**
  * Code token shape (structural — marked's Token is a union and can't be
@@ -75,6 +78,63 @@ export function codeToBlock(
 }
 
 /**
+ * Build a pure Spec for a code block. Stage 4 of the pipeline; no
+ * Renderables are created here. `renderCodeBlock` below is the legacy
+ * adapter that funnels callers through `codeBlockToSpec` + `mountSpec`,
+ * so existing call sites keep working while we port further.
+ *
+ * `sourceLineStart` is the index of the opening fence line in the source
+ * content. Used by stage 4 to populate `lines[i].sourceLine` so per-row
+ * cursor / selection / search highlights map back to source positions
+ * without the reverse-engineered string indexOf we use today.
+ */
+export function codeBlockToSpec(
+  colors: ThemeColors,
+  highlighterInstance: HighlighterInstance | undefined,
+  token: CodeToken,
+  sourceLineStart: number,
+  wrapMode?: "none" | "char" | "word",
+): BoxSpec {
+  const lang = token.lang ? resolveLanguage(token.lang) : "";
+
+  const chunks: TextChunk[] = lang && highlighterInstance
+    ? shikiToChunks(highlighterInstance, token.text, lang)
+    : [{ __isChunk: true, text: token.text, fg: RGBA.fromHex(colors.fg) }];
+
+  // Build per-source-line breakdown so stage 4 can compute wrap height per
+  // line without re-parsing chunks. Source lines are the content lines
+  // between the fences — the fences themselves are decorative (the wrapper
+  // box contributes padding that visually stands in for them) and don't
+  // get their own TextLine entry; their source rows are still in the
+  // wrapper's SourceSpan so the cursor can land on them.
+  const contentLines = token.text.split("\n");
+  const lines: TextLine[] = contentLines.map((text, i) => ({
+    sourceLine: sourceLineStart + 1 + i, // +1 skips the opening fence row
+    displayWidth: cellWidth(text),
+    displayText: text,
+  }));
+
+  const sourceEnd = sourceLineStart + 1 + contentLines.length; // closing fence
+
+  return {
+    kind: "box",
+    padding: 1,
+    marginTop: 1,
+    marginBottom: 1,
+    source: { start: sourceLineStart, end: sourceEnd },
+    children: [
+      {
+        kind: "text",
+        chunks,
+        ...(wrapMode ? { wrapMode } : {}),
+        lines,
+        source: { start: lines[0]?.sourceLine ?? sourceLineStart, end: sourceEnd - 1 },
+      },
+    ],
+  };
+}
+
+/**
  * Render code block with Shiki syntax highlighting.
  *
  * `wrapMode` controls how the inner text buffer handles lines wider than
@@ -82,6 +142,10 @@ export function codeToBlock(
  * is right for source code. Callers rendering ASCII art (mermaid diagrams,
  * tables) should pass "none" so horizontal box-drawing characters stay
  * intact instead of fragmenting across wrap boundaries.
+ *
+ * Legacy adapter — the underlying spec/mount split is what new callers
+ * should consume. Kept so the renderNode dispatcher can swap to the spec
+ * pipeline one block kind at a time.
  */
 export function renderCodeBlock(
   renderer: CliRenderer,
@@ -90,28 +154,8 @@ export function renderCodeBlock(
   token: CodeToken,
   wrapMode?: "none" | "char" | "word",
 ): BoxRenderable {
-  const lang = token.lang ? resolveLanguage(token.lang) : "";
-
-  // Create chunks with syntax highlighting
-  const chunks: TextChunk[] = lang
-    ? shikiToChunks(highlighterInstance, token.text, lang)
-    : [{ __isChunk: true, text: token.text, fg: RGBA.fromHex(colors.fg) }];
-
-  const styledText = new StyledText(chunks as any);
-
-  const codeText = new TextRenderable(renderer, {
-    content: styledText,
-    ...(wrapMode ? { wrapMode } : {}),
-  });
-
-  // Wrapper provides padding/margins; background is drawn by container.ts
-  const wrapper = new BoxRenderable(renderer, {
-    padding: 1,
-    marginTop: 1,
-    marginBottom: 1,
-  });
-
-  wrapper.add(codeText);
-
-  return wrapper;
+  // sourceLineStart=0 is a placeholder until the dispatcher passes the
+  // real source-line index; cursor mapping still uses _blockStates today.
+  const spec = codeBlockToSpec(colors, highlighterInstance, token, 0, wrapMode);
+  return mountSpec(renderer, spec) as BoxRenderable;
 }
