@@ -7,9 +7,10 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/_static/app.css">
   <style id="mdv-theme">{{themeVars}}</style>
+  {{viewStyles}}
   {{headAssets}}
 </head>
-<body class="mdv mdv--{{focus}}" data-active-path="{{activePath}}" data-watch="{{watch}}">
+<body class="mdv mdv--{{focus}}{{viewClass}}" data-active-path="{{activePath}}" data-watch="{{watch}}">
   <aside id="sidebar" class="mdv-sidebar" aria-label="File navigation">
     <div class="mdv-sidebar__header">{{rootName}}</div>
     {{sidebar}}

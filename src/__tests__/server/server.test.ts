@@ -31,6 +31,9 @@ const BASE_ARGS: CliArgs = {
   port: 0,
   host: "localhost",
   open: false,
+  print: false,
+  paper: "a4",
+  quiet: true,
 };
 
 beforeAll(async () => {
@@ -95,6 +98,9 @@ describe("server routes", () => {
     expect(res.headers.get("content-type")).toContain("text/css");
     const css = await res.text();
     expect(css).toContain(".mdv-prose");
+    expect(css).toContain("body.mdv.mdv--print.mdv--directory .mdv-sidebar");
+    expect(css).toContain("white-space: pre-wrap");
+    expect(css).toContain("break-inside: auto");
   });
 
   test("static client.js served", async () => {
@@ -118,5 +124,25 @@ describe("server routes", () => {
     const html = await res.text();
     expect(html).toContain("--mdv-fg:");
     expect(html).toContain("--mdv-code-bg:");
+  });
+
+  test("print view emits its page class and light theme", async () => {
+    const printPort = port + 100;
+    const handle = await startServer({
+      ...BASE_ARGS,
+      filePath: tempDir,
+      port: printPort,
+      print: true,
+    });
+    try {
+      const res = await fetch(`http://localhost:${printPort}/`);
+      const html = await res.text();
+      expect(html).toContain("mdv--print mdv--directory");
+      expect(html).toContain("--mdv-paper-width: 210mm");
+      expect(html).toContain("@page { size: A4");
+      expect(html).toContain("--mdv-bg: #fff");
+    } finally {
+      handle.stop();
+    }
   });
 });

@@ -122,6 +122,20 @@ const OPTIONS: readonly OptionDef[] = [
     group: "serve",
   },
   {
+    name: "print",
+    type: "boolean",
+    description: "Open a paper-like web reading and print view",
+    group: "serve",
+  },
+  {
+    name: "paper",
+    type: "string",
+    default: "a4",
+    valueDesc: "<size>",
+    description: "Paper size: a3, a4, a5, letter, legal, tabloid (default: a4)",
+    group: "serve",
+  },
+  {
     name: "quiet",
     short: "q",
     type: "boolean",
@@ -154,6 +168,8 @@ export interface CliArgs {
   port: number;
   host: string;
   open: boolean;
+  print: boolean;
+  paper: string;
   quiet: boolean;
 }
 
@@ -190,7 +206,8 @@ export function parseCliArgs(argv: string[]): CliArgs {
   });
 
   const isServeSubcommand = positionals[0] === "serve";
-  const serve = isServeSubcommand || (values.serve as boolean | undefined) === true;
+  const print = (values.print as boolean | undefined) ?? false;
+  const serve = isServeSubcommand || (values.serve as boolean | undefined) === true || print;
   const filePath = (isServeSubcommand ? positionals[1] : positionals[0]) ?? null;
 
   const portNum = Number.parseInt(values.port as string, 10);
@@ -209,7 +226,10 @@ export function parseCliArgs(argv: string[]): CliArgs {
     serve,
     port: Number.isFinite(portNum) ? portNum : DEFAULT_PORT,
     host: values.host as string,
-    open: (values.open as boolean | undefined) ?? false,
+    // Print view is browser-first, so it implies both serve mode and --open.
+    open: ((values.open as boolean | undefined) ?? false) || print,
+    print,
+    paper: values.paper as string,
     quiet: (values.quiet as boolean | undefined) ?? false,
   };
 }

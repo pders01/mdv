@@ -100,6 +100,26 @@ describe("parseCliArgs", () => {
     expect(args.watch).toBe(false);
   });
 
+  test("print view implies serve mode and opening the browser", () => {
+    const args = parseCliArgs(["node", "mdv", "--print", "file.md"]);
+    expect(args.filePath).toBe("file.md");
+    expect(args.print).toBe(true);
+    expect(args.paper).toBe("a4");
+    expect(args.serve).toBe(true);
+    expect(args.open).toBe(true);
+  });
+
+  test("parses print paper size", () => {
+    const args = parseCliArgs(["node", "mdv", "--print", "--paper", "letter", "file.md"]);
+    expect(args.paper).toBe("letter");
+  });
+
+  test("defaults print view to false", () => {
+    const args = parseCliArgs(["node", "mdv", "file.md"]);
+    expect(args.print).toBe(false);
+    expect(args.paper).toBe("a4");
+  });
+
   test("parses version flag short form", () => {
     const args = parseCliArgs(["node", "mdv", "-v"]);
     expect(args.showVersion).toBe(true);

@@ -38,6 +38,29 @@ import type { ServerWebSocket } from "bun";
 
 const WS_PATH = "/_ws";
 
+interface PaperSize {
+  cssName: string;
+  width: string;
+  height: string;
+}
+
+const PAPER_SIZES: Record<string, PaperSize> = {
+  a3: { cssName: "A3", width: "297mm", height: "420mm" },
+  a4: { cssName: "A4", width: "210mm", height: "297mm" },
+  a5: { cssName: "A5", width: "148mm", height: "210mm" },
+  letter: { cssName: "Letter", width: "8.5in", height: "11in" },
+  legal: { cssName: "Legal", width: "8.5in", height: "14in" },
+  tabloid: { cssName: "Tabloid", width: "11in", height: "17in" },
+};
+
+function resolvePaperSize(name: string): PaperSize {
+  const paper = PAPER_SIZES[name.toLowerCase()];
+  if (paper) return paper;
+  throw new Error(
+    `Unsupported paper size "${name}". Choose: ${Object.keys(PAPER_SIZES).join(", ")}`,
+  );
+}
+
 /**
  * Cap on simultaneous live-reload connections. The server is a local dev
  * tool but `--host 0.0.0.0` exposes it to LAN, so a misbehaving client
@@ -74,6 +97,8 @@ interface ServerContext {
   quiet: boolean;
   debug: boolean;
   watch: boolean;
+  print: boolean;
+  paper: PaperSize;
   /** Connected WebSocket clients for live reload broadcasts. */
   clients: Set<ServerWebSocket<unknown>>;
 }
@@ -105,7 +130,10 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
   // Web UI supports dual-theme: when --theme=auto, ship both light and dark
   // and let the browser pick via prefers-color-scheme. Independent of the
   // host OS the server runs on — important for `--host 0.0.0.0` use.
-  const themeSpec = resolveThemeSpec(args.theme);
+  // Print view deliberately stays light and paper-like even when the system
+  // or requested editor theme is dark. Code still gets a readable light
+  // Shiki palette while prose colors are tightened further by print CSS.
+  const themeSpec = resolveThemeSpec(args.print ? "github-light" : args.theme);
   const isDual = themeSpec.kind === "dual";
   const themesToLoad =
     themeSpec.kind === "single" ? [themeSpec.name] : [themeSpec.light, themeSpec.dark];
@@ -166,6 +194,8 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
     quiet: args.quiet,
     debug: args.debug,
     watch: args.watch,
+    print: args.print,
+    paper: resolvePaperSize(args.paper),
     clients: new Set(),
   };
 
@@ -418,6 +448,10 @@ function renderTemplate(
     themeVars: ctx.themeCss,
     headAssets: ctx.headAssets,
     focus: "content",
+    viewClass: `${ctx.print ? " mdv--print" : ""}${ctx.rootIsDirectory ? " mdv--directory" : ""}`,
+    viewStyles: ctx.print
+      ? `<style id="mdv-print-page">body.mdv--print { --mdv-paper-width: ${ctx.paper.width}; --mdv-paper-height: ${ctx.paper.height}; } @page { size: ${ctx.paper.cssName}; margin: 18mm 20mm; }</style>`
+      : "",
     rootName: escapeHtml(basename(ctx.rootDir)),
     activePath: escapeAttr(vars.activePath),
     fileName: escapeHtml(vars.fileName),

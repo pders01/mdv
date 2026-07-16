@@ -199,6 +199,7 @@ Custom markdown token renderers in `src/rendering/`:
 ## Server (mdv serve)
 
 - `src/server/index.ts` - Bun.serve HTTP server; resolves `args.theme` to a `ThemeSpec` (single or dual) and configures the highlighter, theme CSS, and adapters accordingly
+- `--print` implies `--serve --open`, forces the `github-light` Shiki palette, and adds `mdv--print` for the paper-like serif reading layout; directory mode keeps a matching serif sidebar on screen but hides it in `@media print`; `--paper` supports A3/A4/A5/Letter/Legal/Tabloid with A4 as default
 - `src/server/theme-vars.ts` - `themeColorsToCss` (single) and `themeColorsToCssDual` (light at `:root`, dark inside `@media (prefers-color-scheme: dark)`, plus a Shiki override block scoped to dual mode so single-theme inline colors aren't broken by undefined `var(--shiki-*)` lookups)
 - `src/server/adapters/shiki.ts` - Code-block adapter; `dual` opt routes to `shikiToHtmlDual`
 - `src/server/adapters/mermaid.ts` - Lazy mermaid loader; in dual mode it uses `matchMedia("(prefers-color-scheme: dark)")` and re-renders SVGs on system flips

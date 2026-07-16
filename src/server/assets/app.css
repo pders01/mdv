@@ -9,6 +9,7 @@
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mdv-font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --mdv-font-serif: Georgia, "Times New Roman", Times, serif;
   --mdv-sidebar-width: 280px;
   --mdv-statusbar-height: 28px;
   --mdv-content-max: 880px;
@@ -476,4 +477,213 @@ body.mdv--sidebar .mdv-sidebar__node[data-match][data-cursor] > .mdv-sidebar__en
 }
 .mdv-statusbar__notify {
   color: var(--mdv-orange);
+}
+
+/* ============================== print view ============================== */
+
+/* --print is primarily a distraction-free reading mode. The article uses
+ * A4 proportions as a familiar visual cue, but remains one continuous page
+ * on screen so long documents do not gain artificial gaps between sheets. */
+body.mdv.mdv--print {
+  --mdv-paper-width: 210mm;
+  --mdv-paper-height: 297mm;
+  display: block;
+  background: #ededed;
+  color: #171717;
+  font-family: var(--mdv-font-serif);
+}
+
+body.mdv.mdv--print.mdv--directory {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  grid-template-areas: "sidebar content";
+}
+
+body.mdv.mdv--print.mdv--directory.no-sidebar {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+body.mdv.mdv--print .mdv-statusbar,
+body.mdv.mdv--print:not(.mdv--directory) .mdv-sidebar {
+  display: none;
+}
+
+body.mdv.mdv--print.mdv--directory .mdv-sidebar {
+  display: block;
+  border-right: 1px solid #d6d6d6;
+  background: #f7f7f7;
+  color: #222;
+  font-family: var(--mdv-font-serif);
+}
+
+body.mdv.mdv--print.mdv--directory .mdv-sidebar__header {
+  background: #f7f7f7;
+  color: #666;
+}
+
+body.mdv.mdv--print.mdv--directory .mdv-sidebar__header::after {
+  background: linear-gradient(to bottom, #f7f7f7, transparent);
+}
+
+body.mdv.mdv--print.mdv--directory .mdv-sidebar__entry,
+body.mdv.mdv--print.mdv--directory .mdv-sidebar__dir-label {
+  color: #333;
+}
+
+body.mdv.mdv--print .mdv-content {
+  height: 100vh;
+  overflow-y: auto;
+  padding: 48px 24px 80px;
+}
+
+body.mdv.mdv--print .mdv-prose {
+  width: min(var(--mdv-paper-width), calc(100vw - 48px));
+  min-height: var(--mdv-paper-height);
+  max-width: none;
+  margin: 0 auto;
+  padding: 18mm 20mm 24mm;
+  background: #fff;
+  color: #171717;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+body.mdv.mdv--print.mdv--directory .mdv-prose {
+  width: min(var(--mdv-paper-width), calc(100vw - 288px));
+}
+
+body.mdv.mdv--print .mdv-prose h1,
+body.mdv.mdv--print .mdv-prose h2,
+body.mdv.mdv--print .mdv-prose h3,
+body.mdv.mdv--print .mdv-prose h4,
+body.mdv.mdv--print .mdv-prose h5,
+body.mdv.mdv--print .mdv-prose h6,
+body.mdv.mdv--print .mdv-prose strong,
+body.mdv.mdv--print .mdv-prose em {
+  color: #111;
+}
+
+body.mdv.mdv--print .mdv-prose h1,
+body.mdv.mdv--print .mdv-prose h2 {
+  border-bottom-color: #d4d4d4;
+}
+
+body.mdv.mdv--print .mdv-prose a {
+  color: #174ea6;
+  border-bottom-color: rgb(23 78 166 / 35%);
+}
+
+body.mdv.mdv--print .mdv-prose code,
+body.mdv.mdv--print .mdv-prose pre {
+  background: #f4f4f4;
+}
+
+/* Paper has a fixed width, so horizontal code scrollers would be clipped in
+ * print/PDF output. Wrap long source lines while preserving indentation and
+ * explicit newlines instead. This applies to the on-screen preview too, so
+ * it accurately represents the eventual printed layout. */
+body.mdv.mdv--print .mdv-prose pre {
+  overflow-x: visible;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body.mdv.mdv--print .mdv-prose pre code,
+body.mdv.mdv--print .mdv-prose pre code span {
+  white-space: inherit;
+}
+
+body.mdv.mdv--print .mdv-prose blockquote,
+body.mdv.mdv--print .mdv-prose .markdown-alert {
+  color: #333;
+  background: #f7f7f7;
+}
+
+body.mdv.mdv--print .mdv-prose ul > li::marker,
+body.mdv.mdv--print .mdv-prose ol > li::marker {
+  color: #333;
+}
+
+body.mdv.mdv--print .mdv-search {
+  bottom: 0;
+}
+
+@media (max-width: 700px) {
+  body.mdv.mdv--print.mdv--directory {
+    display: block;
+  }
+
+  body.mdv.mdv--print.mdv--directory .mdv-sidebar {
+    display: none;
+  }
+
+  body.mdv.mdv--print .mdv-content {
+    padding: 0;
+  }
+
+  body.mdv.mdv--print .mdv-prose,
+  body.mdv.mdv--print.mdv--directory .mdv-prose {
+    width: 100%;
+    min-height: 100vh;
+    padding: 32px 24px 64px;
+    box-shadow: none;
+  }
+}
+
+@media print {
+  body.mdv.mdv--print {
+    height: auto;
+    background: #fff;
+  }
+
+  /* Match the directory-preview selector's specificity so its screen-only
+   * `display: block` cannot keep the sidebar in print/PDF output. */
+  body.mdv.mdv--print.mdv--directory .mdv-sidebar,
+  body.mdv.mdv--print .mdv-statusbar,
+  body.mdv.mdv--print .mdv-search {
+    display: none;
+  }
+
+  body.mdv.mdv--print.mdv--directory {
+    display: block;
+  }
+
+  body.mdv.mdv--print .mdv-content {
+    height: auto;
+    overflow: visible;
+    padding: 0;
+  }
+
+  body.mdv.mdv--print .mdv-prose {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    font-size: 11pt;
+  }
+
+  body.mdv.mdv--print .mdv-prose h1,
+  body.mdv.mdv--print .mdv-prose h2,
+  body.mdv.mdv--print .mdv-prose h3,
+  body.mdv.mdv--print .mdv-prose h4,
+  body.mdv.mdv--print .mdv-prose h5,
+  body.mdv.mdv--print .mdv-prose h6 {
+    break-after: avoid-page;
+  }
+
+  body.mdv.mdv--print .mdv-prose blockquote,
+  body.mdv.mdv--print .mdv-prose table,
+  body.mdv.mdv--print .mdv-prose img {
+    break-inside: avoid-page;
+  }
+
+  /* Long code blocks may span pages. Preventing page breaks here causes
+   * browsers to clip blocks taller than one sheet. */
+  body.mdv.mdv--print .mdv-prose pre {
+    break-inside: auto;
+  }
 }

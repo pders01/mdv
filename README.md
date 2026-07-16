@@ -73,6 +73,9 @@ mdv serve ./docs
 # Serve with live reload — page refreshes on every save
 mdv serve ./docs --watch
 
+# Open a distraction-free, paper-like reading and print view
+mdv --print README.md
+
 # With a specific theme
 mdv -t dracula README.md
 
@@ -107,6 +110,25 @@ Default URL is `http://localhost:4280`. The same Shiki theme drives both modes �
 
 When `--theme=auto` (the default), the web UI ships **both** `github-light` and `github-dark` and the browser picks per `prefers-color-scheme`. This is independent of the host OS — a server reached over `--host 0.0.0.0` matches each viewer's appearance, not the machine running `mdv serve`. Pass `--theme <name>` to lock a single theme for everyone.
 
+### Print view
+
+Use `--print` for a distraction-free, paper-like reading view:
+
+```bash
+mdv --print README.md
+```
+
+It implies `--serve --open` and uses a clean light serif document layout. Directory mode retains a compact matching sidebar for navigation; the sidebar is omitted from printed output. The on-screen article defaults to A4 proportions without artificial page breaks, and browser printing removes the canvas, subtle shadow, and reading padding so “Save as PDF” produces a clean document.
+
+Choose another common paper format with `--paper`:
+
+```bash
+mdv --print --paper letter README.md
+mdv --print --paper a5 README.md
+```
+
+Supported sizes are `a3`, `a4`, `a5`, `letter`, `legal`, and `tabloid`.
+
 ### Live reload
 
 Pass `--watch` and the page refreshes whenever a markdown file in the served tree changes (creates and renames included):
@@ -128,6 +150,8 @@ Fenced ` ```mermaid ` blocks render client-side from a locally-vendored mermaid 
 -p, --port <port>     Port to bind (default: 4280)
     --host <host>     Host to bind (default: localhost)
 -o, --open            Open the URL in the default browser
+    --print           Open a paper-like web reading and print view
+    --paper <size>    Paper size: a3, a4, a5, letter, legal, tabloid (default: a4)
 -q, --quiet           Suppress startup banner and access log
 -w, --watch           Live reload on file changes
     --no-mermaid      Skip the mermaid adapter
@@ -258,6 +282,8 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 -p, --port <port>     Port for serve mode (default: 4280)
     --host <host>     Host for serve mode (default: localhost)
 -o, --open            Open the served URL in the default browser
+    --print           Open a paper-like web reading and print view
+    --paper <size>    Paper size: a3, a4, a5, letter, legal, tabloid (default: a4)
 -q, --quiet           Suppress startup banner and access log (serve mode)
     --debug           Enable debug logging
 -v, --version         Show version

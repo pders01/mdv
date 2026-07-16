@@ -12,6 +12,9 @@
   "use strict";
 
   const body = document.body;
+  const printMode = body.classList.contains("mdv--print");
+  const printDirectoryMode = printMode && body.classList.contains("mdv--directory");
+  const paneNavigationEnabled = !printMode || printDirectoryMode;
   const content = document.getElementById("content");
   const sidebar = document.getElementById("sidebar");
   const prose = document.getElementById("prose");
@@ -78,6 +81,9 @@
   }
 
   function setFocus(next) {
+    // Single-file print view has no visible sidebar; directory print view
+    // retains its compact navigator.
+    if (printMode && !printDirectoryMode) next = "content";
     focus = next;
     body.classList.remove("mdv--sidebar", "mdv--content");
     body.classList.add(`mdv--${next}`);
@@ -415,21 +421,22 @@
     }
     if (yPending && k !== "y") yPending = false;
 
-    // Pane switching
-    if (k === "Tab") {
+    // Pane switching remains available in directory print view. Single-file
+    // print view leaves these browser shortcuts untouched.
+    if (paneNavigationEnabled && k === "Tab") {
       setFocus(focus === "content" ? "sidebar" : "content");
       return true;
     }
-    if (ctrl && k === "h") {
+    if (paneNavigationEnabled && ctrl && k === "h") {
       setFocus("sidebar");
       return true;
     }
-    if (ctrl && k === "l") {
+    if (paneNavigationEnabled && ctrl && k === "l") {
       setFocus("content");
       return true;
     }
 
-    if (k === "\\") {
+    if (paneNavigationEnabled && k === "\\") {
       toggleSidebar();
       return true;
     }
