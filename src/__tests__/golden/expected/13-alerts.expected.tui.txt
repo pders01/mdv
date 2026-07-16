@@ -16,7 +16,7 @@
    │ Key information users need to know to achieve their goal.                  
                                                                                 
                                                                                 
-   │ ⚠ Warning                                                                 
+   │ ⚠ Warning                                                                  
    │ Urgent info that needs immediate user attention to avoid problems.         
                                                                                 
                                                                                 
