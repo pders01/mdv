@@ -132,6 +132,12 @@ export function createMainContainer(renderer: CliRenderer, contentLines: string[
     scrollX: false,
   });
 
+  // ScrollBox is focusable by default and its built-in key handler maps j/k
+  // to one-fifth-viewport scrolls. Clicking the document focuses it, so each
+  // subsequent j/k is otherwise handled twice: once by OpenTUI and once by
+  // our cursor manager. Mouse-wheel scrolling does not require focus.
+  scrollBox.focusable = false;
+
   container.add(scrollBox);
 
   // Mutable state for reload support

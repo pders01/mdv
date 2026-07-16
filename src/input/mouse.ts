@@ -3,9 +3,9 @@
  *
  * Character-level selection is handled natively by OpenTUI's renderer.
  * This module only handles clicks on gaps/margins (non-selectable areas)
- * to position the cursor. Native selection is cleared via keyboard handlers
- * (Esc, V-mode entry) — not here, to avoid interfering with the renderer's
- * selection anchor on mouseDown.
+ * to position the cursor. A completed zero-distance selection is treated as
+ * a click and cleared by the selection listener; real drag selections remain
+ * available for yanking.
  */
 
 import type { ScrollBoxRenderable, MouseEvent } from "@opentui/core";
@@ -19,6 +19,14 @@ export interface MouseHandlerOptions {
   contentLines: string[];
   showNotification: (message: string, durationMs?: number) => void;
   getLinePosition: GetLinePosition;
+}
+
+/** True when a native selection represents a click rather than a drag. */
+export function isCollapsedMouseSelection(selection: {
+  anchor: { x: number; y: number };
+  focus: { x: number; y: number };
+}): boolean {
+  return selection.anchor.x === selection.focus.x && selection.anchor.y === selection.focus.y;
 }
 
 /**

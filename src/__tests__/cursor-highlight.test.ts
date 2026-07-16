@@ -90,7 +90,7 @@ async function setup(content: string) {
 
   await r.renderOnce();
   await r.renderOnce();
-  return { ...r, cursor, fire, themeColors };
+  return { ...r, cursor, fire, themeColors, scrollBox };
 }
 
 function rowBg(
@@ -129,6 +129,10 @@ Some paragraph.
 Another paragraph here.
 `;
     const ctx = await setup(md);
+
+    // Clicking must not activate OpenTUI's built-in j/k viewport scrolling;
+    // mdv owns keyboard movement through CursorManager.
+    expect(ctx.scrollBox.focusable).toBe(false);
 
     // Move cursor to "Another paragraph here." (cursorLine 4 in source).
     while (ctx.cursor.cursorLine < 4) ctx.fire("j");

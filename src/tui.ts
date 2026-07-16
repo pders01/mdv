@@ -27,7 +27,7 @@ import { createStatusBar } from "./ui/statusbar.js";
 import { createCursorManager, scrollToCursor } from "./input/cursor.js";
 import { setupKeyboardHandler } from "./input/keyboard.js";
 import { SearchManager } from "./input/search.js";
-import { setupMouseHandler, mouseYToLine } from "./input/mouse.js";
+import { setupMouseHandler, mouseYToLine, isCollapsedMouseSelection } from "./input/mouse.js";
 import { scanDirectory } from "./fs/tree.js";
 import { createSidebar } from "./ui/sidebar.js";
 import { createFocusManager } from "./input/focus.js";
@@ -609,6 +609,16 @@ export async function startTui(args: CliArgs): Promise<void> {
         cursor.exitVisual();
       }
       cursor.setCursor(line);
+
+      // OpenTUI keeps even a zero-distance click as a live native selection.
+      // Its anchor follows the clicked renderable as the scroll box moves;
+      // subsequent j/k renders then repaint selection bounds in stale screen
+      // regions, which looks like the viewport is jumping several rows at a
+      // time. Keep genuine drag selections, but discard the click-only one.
+      if (isCollapsedMouseSelection(selection)) {
+        renderer.clearSelection();
+      }
+
       statusBarUpdate();
     });
   }

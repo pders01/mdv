@@ -9,9 +9,35 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { uniformMouseYToLine, mouseYToLine } from "../input/mouse.js";
+import { uniformMouseYToLine, mouseYToLine, isCollapsedMouseSelection } from "../input/mouse.js";
 import { createCursorManager, type CursorManager } from "../input/cursor.js";
 import type { LinePosition, GetLinePosition } from "../ui/container.js";
+
+describe("isCollapsedMouseSelection", () => {
+  test("identifies a click with no pointer movement", () => {
+    expect(
+      isCollapsedMouseSelection({
+        anchor: { x: 12, y: 8 },
+        focus: { x: 12, y: 8 },
+      }),
+    ).toBe(true);
+  });
+
+  test("preserves horizontal and vertical drag selections", () => {
+    expect(
+      isCollapsedMouseSelection({
+        anchor: { x: 12, y: 8 },
+        focus: { x: 13, y: 8 },
+      }),
+    ).toBe(false);
+    expect(
+      isCollapsedMouseSelection({
+        anchor: { x: 12, y: 8 },
+        focus: { x: 12, y: 9 },
+      }),
+    ).toBe(false);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Helper: build a mock getLinePosition from a layout description
