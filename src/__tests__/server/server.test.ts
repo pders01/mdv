@@ -101,6 +101,8 @@ describe("server routes", () => {
     expect(css).toContain("body.mdv.mdv--print.mdv--directory .mdv-sidebar");
     expect(css).toContain("white-space: pre-wrap");
     expect(css).toContain("break-inside: auto");
+    expect(css).toContain("font-size: 10pt");
+    expect(css).toContain("line-height: 1.32");
   });
 
   test("static client.js served", async () => {

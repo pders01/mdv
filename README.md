@@ -118,7 +118,7 @@ Use `--print` for a distraction-free, paper-like reading view:
 mdv --print README.md
 ```
 
-It implies `--serve --open` and uses a clean light serif document layout. Directory mode retains a compact matching sidebar for navigation; the sidebar is omitted from printed output. The on-screen article defaults to A4 proportions without artificial page breaks, and browser printing removes the canvas, subtle shadow, and reading padding so “Save as PDF” produces a clean document.
+It implies `--serve --open` and uses a clean light serif document layout. Directory mode retains a compact matching sidebar for navigation; the sidebar is omitted from printed output. The on-screen article defaults to dense 10pt A4 typesetting without artificial page breaks, and browser printing removes the canvas and reading padding so “Save as PDF” produces a clean document.
 
 Choose another common paper format with `--paper`:
 

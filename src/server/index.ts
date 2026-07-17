@@ -450,7 +450,7 @@ function renderTemplate(
     focus: "content",
     viewClass: `${ctx.print ? " mdv--print" : ""}${ctx.rootIsDirectory ? " mdv--directory" : ""}`,
     viewStyles: ctx.print
-      ? `<style id="mdv-print-page">body.mdv--print { --mdv-paper-width: ${ctx.paper.width}; --mdv-paper-height: ${ctx.paper.height}; } @page { size: ${ctx.paper.cssName}; margin: 18mm 20mm; }</style>`
+      ? `<style id="mdv-print-page">body.mdv--print { --mdv-paper-width: ${ctx.paper.width}; --mdv-paper-height: ${ctx.paper.height}; } @page { size: ${ctx.paper.cssName}; margin: 15mm 16mm; }</style>`
       : "",
     rootName: escapeHtml(basename(ctx.rootDir)),
     activePath: escapeAttr(vars.activePath),
