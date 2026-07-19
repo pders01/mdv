@@ -173,7 +173,7 @@ export class MdvMarkdownRenderable extends BoxRenderable {
    */
   private rebuild(): void {
     for (const block of this._blockStates) {
-      this.remove(block.renderable.id);
+      this.remove(block.renderable);
       block.renderable.destroy();
     }
     this._blockStates = [];

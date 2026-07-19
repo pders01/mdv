@@ -111,7 +111,7 @@ async function main(): Promise<void> {
     constructSamples.push(performance.now() - t0);
     scrollBox.add(md);
     await renderOnce();
-    scrollBox.remove(md.id);
+    scrollBox.remove(md);
   }
 
   // Path 2: keep one MarkdownRenderable, mutate .content (the new path).
