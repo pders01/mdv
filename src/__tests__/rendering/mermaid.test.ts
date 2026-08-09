@@ -148,6 +148,21 @@ describe("prerenderMermaid — no mermaid blocks", () => {
     const result = await prerenderMermaid("");
     expect(result.hadBlocks).toBe(false);
   });
+
+  test("candidate check preserves nested blockquote fences", async () => {
+    const result = await prerenderMermaid(
+      `> \`\`\`mermaid\n> flowchart TD\n>   A --> B\n> \`\`\`\n`,
+      { disabled: true },
+    );
+    expect(result.hadBlocks).toBe(true);
+  });
+
+  test("candidate false positives still go through the exact parser", async () => {
+    const result = await prerenderMermaid(
+      `\`\`\`\`markdown\n\`\`\`mermaid\nflowchart TD\n  A --> B\n\`\`\`\n\`\`\`\`\n`,
+    );
+    expect(result.hadBlocks).toBe(false);
+  });
 });
 
 describe("prerenderMermaid — tool missing", () => {

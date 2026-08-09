@@ -23,6 +23,14 @@ import { walkCodeFences } from "../util/markdown.js";
 const CONCURRENCY = 4;
 const TIMEOUT_MS = 5000;
 
+// Most documents do not contain Mermaid. Avoid running a full unified parse
+// just to prove that absence: the exact mdast walk below is only needed after
+// this cheap opening-fence check finds a plausible candidate. False positives
+// are harmless (they fall through to the parser); false negatives would skip a
+// diagram, so keep this deliberately permissive about container prefixes.
+const MERMAID_FENCE_CANDIDATE_RE =
+  /^[ \t]*(?:(?:>[ \t]?|(?:[-+*]|\d{1,9}[.)])[ \t]+)[ \t]*)*(?:`{3,}|~{3,})[ \t]*mermaid(?:[ \t]|\r?$)/m;
+
 // Module-level state. Intentionally persistent across renders so that
 // directory-mode file switches and watch-mode reloads hit the cache.
 let binResolved = false;
@@ -245,6 +253,10 @@ export async function prerenderMermaid(
   content: string,
   options: { disabled?: boolean; availableWidth?: number } = {},
 ): Promise<PrerenderResult> {
+  if (!MERMAID_FENCE_CANDIDATE_RE.test(content)) {
+    return { renders: new Map(), hadBlocks: false, toolMissing: false, overflowed: 0 };
+  }
+
   const sources = collectMermaidSources(content);
   const hadBlocks = sources.length > 0;
   const availableWidth = options.availableWidth ?? Infinity;

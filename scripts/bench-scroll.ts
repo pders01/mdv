@@ -22,6 +22,7 @@ import { createTestRenderer } from "@opentui/core/testing";
 import { extractThemeColors, createSyntaxStyle, resolveTheme } from "../src/theme/index.js";
 import { createHighlighterInstance, loadLangsForContent } from "../src/highlighting/shiki.js";
 import { createRenderNode } from "../src/rendering/index.js";
+import { prerenderMermaid } from "../src/rendering/mermaid.js";
 import { createMainContainer } from "../src/ui/container.js";
 import { MdvMarkdownRenderable } from "../src/ui/markdown.js";
 import { createCursorManager } from "../src/input/cursor.js";
@@ -100,8 +101,11 @@ async function main(): Promise<void> {
   const { container, scrollBox, setupHighlighting } = phaseSync("container:create", () =>
     createMainContainer(renderer, contentLines),
   );
+  const mermaid = await phase("mermaid:prerender", () =>
+    prerenderMermaid(content, { availableWidth: Math.max(20, flags.width - 4) }),
+  );
   const renderNode = phaseSync("render-node:create", () =>
-    createRenderNode(renderer, themeColors, highlighter, flags.width - 2, new Map()),
+    createRenderNode(renderer, themeColors, highlighter, flags.width - 2, mermaid.renders),
   );
   const markdown = phaseSync(
     "markdown:construct",
@@ -132,6 +136,7 @@ async function main(): Promise<void> {
     ),
   );
   renderer.root.add(container);
+  await phase("render:first-paint", () => renderOnce());
   dumpPhases("[perf:startup]");
   setPhaseEnabled(false);
 
@@ -164,8 +169,9 @@ async function main(): Promise<void> {
     );
   };
 
-  // Warm-up: first few frames pay one-time costs (Shiki cache fill, layout).
-  for (let i = 0; i < 5; i++) await renderOnce();
+  // Four more warm-up frames after the measured first paint keep the previous
+  // five-frame warm-up total before the scrolling sample window.
+  for (let i = 0; i < 4; i++) await renderOnce();
 
   renderer.setGatherStats(true);
   renderer.resetStats();
