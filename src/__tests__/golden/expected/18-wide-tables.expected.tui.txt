@@ -1,0 +1,40 @@
+                                                                               ▀
+                                                                                
+                                                                                
+ Wide-table stress fixtures                                                     
+                                                                                
+ These tables intentionally exceed common desktop widths. Use them to check     
+ natural column sizing, horizontal overflow, and readability at viewport        
+ widths around 1280, 1920, and 3840 CSS pixels. The TUI fixture should also be  
+ tested at 120, 160, and 240 columns.                                           
+                                                                                
+                                                                                
+                                                                                
+ Many moderately wide columns (roughly 220+ terminal cells)                     
+                                                                                
+                                                                                
+ 12 fields                                                                      
+ ────────────────                                                               
+ Service name: customer-profile-api                                             
+ Deployment region: us-west-2 production                                        
+ Runtime version: Node.js 22.14 LTS                                             
+ Database engine: PostgreSQL 16.8                                               
+ Availability zone: us-west-2b / us-west-2c                                     
+ Release channel: stable production                                             
+ Primary owner: Customer Platform Team                                          
+ Incident contact: customer-platform-oncall                                     
+ Last deployment: 2026-05-14 09 UTC                                             
+ Current status: healthy and serving                                            
+ Replication mode: synchronous multi-zone                                       
+ Data residency: United States                                                  
+                                                                                
+ Service name: billing-event-processor                                          
+ Deployment region: eu-central-1 production                                     
+ Runtime version: Java 21.0.6 LTS                                               
+ Database engine: MariaDB 11.4 LTS                                              
+ Availability zone: eu-central-1a / eu-central-1b                               
+ Release channel: gradual rollout                                               
+ Primary owner: Revenue Infrastructure                                          
+ Incident contact: revenue-infra-oncall                                         
+ Last deployment: 2026-05-13 18 UTC                                             
+ Current status: degraded, investigating                                        

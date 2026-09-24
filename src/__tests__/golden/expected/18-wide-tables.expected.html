@@ -1,0 +1,133 @@
+<h1>Wide-table stress fixtures</h1>
+<p>These tables intentionally exceed common desktop widths. Use them to check natural column sizing, horizontal overflow, and readability at viewport widths around 1280, 1920, and 3840 CSS pixels. The TUI fixture should also be tested at 120, 160, and 240 columns.</p>
+<h2>Many moderately wide columns (roughly 220+ terminal cells)</h2>
+<div class="mdv-table-wrap"><table>
+<thead>
+<tr>
+<th>Service name</th>
+<th>Deployment region</th>
+<th>Runtime version</th>
+<th>Database engine</th>
+<th>Availability zone</th>
+<th>Release channel</th>
+<th>Primary owner</th>
+<th>Incident contact</th>
+<th>Last deployment</th>
+<th>Current status</th>
+<th>Replication mode</th>
+<th>Data residency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="Service name">customer-profile-api</td>
+<td data-label="Deployment region">us-west-2 production</td>
+<td data-label="Runtime version">Node.js 22.14 LTS</td>
+<td data-label="Database engine">PostgreSQL 16.8</td>
+<td data-label="Availability zone">us-west-2b / us-west-2c</td>
+<td data-label="Release channel">stable production</td>
+<td data-label="Primary owner">Customer Platform Team</td>
+<td data-label="Incident contact">customer-platform-oncall</td>
+<td data-label="Last deployment">2026-05-14 09<div></div> UTC</td>
+<td data-label="Current status">healthy and serving</td>
+<td data-label="Replication mode">synchronous multi-zone</td>
+<td data-label="Data residency">United States</td>
+</tr>
+<tr>
+<td data-label="Service name">billing-event-processor</td>
+<td data-label="Deployment region">eu-central-1 production</td>
+<td data-label="Runtime version">Java 21.0.6 LTS</td>
+<td data-label="Database engine">MariaDB 11.4 LTS</td>
+<td data-label="Availability zone">eu-central-1a / eu-central-1b</td>
+<td data-label="Release channel">gradual rollout</td>
+<td data-label="Primary owner">Revenue Infrastructure</td>
+<td data-label="Incident contact">revenue-infra-oncall</td>
+<td data-label="Last deployment">2026-05-13 18<div></div> UTC</td>
+<td data-label="Current status">degraded, investigating</td>
+<td data-label="Replication mode">asynchronous cross-region</td>
+<td data-label="Data residency">European Union</td>
+</tr>
+<tr>
+<td data-label="Service name">search-index-maintainer</td>
+<td data-label="Deployment region">ap-southeast-2 staging</td>
+<td data-label="Runtime version">Python 3.13.2</td>
+<td data-label="Database engine">OpenSearch 2.19</td>
+<td data-label="Availability zone">ap-southeast-2a</td>
+<td data-label="Release channel">candidate build 2026.05</td>
+<td data-label="Primary owner">Discovery Engineering</td>
+<td data-label="Incident contact">discovery-primary-oncall</td>
+<td data-label="Last deployment">2026-05-12 03<div></div> UTC</td>
+<td data-label="Current status">scheduled maintenance</td>
+<td data-label="Replication mode">snapshot-based recovery</td>
+<td data-label="Data residency">Australia</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Long unbreakable values (should force actual horizontal overflow on web)</h2>
+<div class="mdv-table-wrap"><table>
+<thead>
+<tr>
+<th>Artifact</th>
+<th>Registry path</th>
+<th>Commit identifier</th>
+<th>Build provenance</th>
+<th>Verification result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="Artifact">web-client</td>
+<td data-label="Registry path">registry.example.internal/platform/customer-experience/web-client/releases/2026/05/14/web-client-production-image</td>
+<td data-label="Commit identifier">sha256<div></div></td>
+<td data-label="Build provenance"><a href="https://provenance.example.internal/attestations/platform/customer-experience/web-client/2026/05/14/build-18427/production/release-candidate">https://provenance.example.internal/attestations/platform/customer-experience/web-client/2026/05/14/build-18427/production/release-candidate</a></td>
+<td data-label="Verification result">signature-valid; policy-approved; vulnerability-scan-clean</td>
+</tr>
+<tr>
+<td data-label="Artifact">search-worker</td>
+<td data-label="Registry path">registry.example.internal/platform/discovery/search-index-maintainer/releases/2026/05/12/search-worker-staging-image</td>
+<td data-label="Commit identifier">sha256<div></div></td>
+<td data-label="Build provenance"><a href="https://provenance.example.internal/attestations/platform/discovery/search-index-maintainer/2026/05/12/build-9231/staging/verified">https://provenance.example.internal/attestations/platform/discovery/search-index-maintainer/2026/05/12/build-9231/staging/verified</a></td>
+<td data-label="Verification result">signature-valid; policy-approved; vulnerability-scan-clean</td>
+</tr>
+</tbody>
+</table></div>
+<h2>Mixed short and verbose cells (record layout stress)</h2>
+<p>The Description field is deliberately much longer than the other cells, while IDs, status values, and optional values stay short or empty. Check that record-style layouts keep all of each value readable without wasting the entire row on the longest cell.</p>
+<div class="mdv-table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Component</th>
+<th>Description</th>
+<th>Owner</th>
+<th>Status</th>
+<th>Optional note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="ID">17</td>
+<td data-label="Component">auth</td>
+<td data-label="Description">Handles browser sign-in using OAuth 2.1, rotating refresh tokens, device-bound sessions, and a staged migration path that keeps existing customer sessions valid while old credentials are retired.</td>
+<td data-label="Owner">Identity Platform</td>
+<td data-label="Status">active</td>
+<td data-label="Optional note"></td>
+</tr>
+<tr>
+<td data-label="ID">23</td>
+<td data-label="Component">billing</td>
+<td data-label="Description">Reconciles delayed payment events against the immutable ledger, retries transient provider failures with bounded exponential backoff, and emits an audit trail that support engineers can inspect without replaying the original transaction.</td>
+<td data-label="Owner">Revenue Systems</td>
+<td data-label="Status">degraded</td>
+<td data-label="Optional note">follow-up at 14<div></div> UTC</td>
+</tr>
+<tr>
+<td data-label="ID">31</td>
+<td data-label="Component">search</td>
+<td data-label="Description">Rebuilds stale indexes from the event log while preserving query availability; the worker limits concurrent shard moves and reports progress with enough detail to diagnose slow partitions.</td>
+<td data-label="Owner">Discovery</td>
+<td data-label="Status">planned</td>
+<td data-label="Optional note"></td>
+</tr>
+</tbody>
+</table></div>
