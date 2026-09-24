@@ -71,6 +71,7 @@ export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor
         },
       })
       .use(rehypeKatex)
+      .use(rehypeResponsiveTables)
       .use(rehypeStringify, {
         allowDangerousHtml: true,
         // Conventional HTML output uses named refs (`&lt;`, `&gt;`, `&amp;`).
@@ -79,6 +80,65 @@ export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor
         characterReferences: { useNamedReferences: true },
       }) as MarkdownProcessor
   );
+}
+
+type HastNode = {
+  type: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+  value?: string;
+};
+
+/** Add semantic labels and a scroll boundary so tables adapt without clipping prose. */
+function rehypeResponsiveTables() {
+  return (tree: HastNode) => {
+    const visit = (parent: HastNode) => {
+      if (!parent.children) return;
+      const next: HastNode[] = [];
+      for (const child of parent.children) {
+        if (child.type === "element" && child.tagName === "table") {
+          const headers: string[] = [];
+          const findHeaders = (node: HastNode) => {
+            if (node.type === "element" && node.tagName === "th") {
+              headers.push(textContent(node).trim());
+            }
+            node.children?.forEach(findHeaders);
+          };
+          findHeaders(child);
+          const labelCells = (node: HastNode) => {
+            if (node.type === "element" && node.tagName === "tr") {
+              let cellIndex = 0;
+              for (const cell of node.children ?? []) {
+                if (cell.type === "element" && cell.tagName === "td") {
+                  cell.properties = { ...cell.properties, dataLabel: headers[cellIndex] ?? "" };
+                  cellIndex++;
+                }
+              }
+            }
+            node.children?.forEach(labelCells);
+          };
+          labelCells(child);
+          next.push({
+            type: "element",
+            tagName: "div",
+            properties: { className: ["mdv-table-wrap"] },
+            children: [child],
+          });
+        } else {
+          visit(child);
+          next.push(child);
+        }
+      }
+      parent.children = next;
+    };
+    visit(tree);
+  };
+}
+
+function textContent(node: HastNode): string {
+  if (node.type === "text") return node.value ?? "";
+  return (node.children ?? []).map(textContent).join("");
 }
 
 export function renderMarkdown(registry: CodeAdapterRegistry, source: string): string {

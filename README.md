@@ -106,6 +106,12 @@ Use `mdv serve` to serve a directory of markdown files over HTTP. The web UI mir
 mdv serve ./docs
 ```
 
+Wide tables expand to the available content-pane width while regular prose stays centered. To keep tables within the centered text column instead, use `--contained-tables`:
+
+```bash
+mdv serve ./docs --contained-tables
+```
+
 Default URL is `http://localhost:4280`. The same Shiki theme drives both modes — `mdv serve --theme dracula` recolors the entire web UI from a single CSS-variable block.
 
 When `--theme=auto` (the default), the web UI ships **both** `github-light` and `github-dark` and the browser picks per `prefers-color-scheme`. This is independent of the host OS — a server reached over `--host 0.0.0.0` matches each viewer's appearance, not the machine running `mdv serve`. Pass `--theme <name>` to lock a single theme for everyone.
@@ -152,6 +158,7 @@ Fenced ` ```mermaid ` blocks render client-side from a locally-vendored mermaid 
 -o, --open            Open the URL in the default browser
     --print           Open a paper-like web reading and print view
     --paper <size>    Paper size: a3, a4, a5, letter, legal, tabloid (default: a4)
+    --contained-tables Keep web tables within the centered text column
 -q, --quiet           Suppress startup banner and access log
 -w, --watch           Live reload on file changes
     --no-mermaid      Skip the mermaid adapter
@@ -284,6 +291,7 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 -o, --open            Open the served URL in the default browser
     --print           Open a paper-like web reading and print view
     --paper <size>    Paper size: a3, a4, a5, letter, legal, tabloid (default: a4)
+    --contained-tables Keep web tables within the centered text column
 -q, --quiet           Suppress startup banner and access log (serve mode)
     --debug           Enable debug logging
 -v, --version         Show version

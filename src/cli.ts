@@ -136,6 +136,12 @@ const OPTIONS: readonly OptionDef[] = [
     group: "serve",
   },
   {
+    name: "contained-tables",
+    type: "boolean",
+    description: "Keep web tables within the centered text column",
+    group: "serve",
+  },
+  {
     name: "quiet",
     short: "q",
     type: "boolean",
@@ -170,6 +176,7 @@ export interface CliArgs {
   open: boolean;
   print: boolean;
   paper: string;
+  containedTables: boolean;
   quiet: boolean;
 }
 
@@ -230,6 +237,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     open: ((values.open as boolean | undefined) ?? false) || print,
     print,
     paper: values.paper as string,
+    containedTables: (values["contained-tables"] as boolean | undefined) ?? false,
     quiet: (values.quiet as boolean | undefined) ?? false,
   };
 }

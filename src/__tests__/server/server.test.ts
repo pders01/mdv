@@ -33,6 +33,7 @@ const BASE_ARGS: CliArgs = {
   open: false,
   print: false,
   paper: "a4",
+  containedTables: false,
   quiet: true,
 };
 
@@ -103,6 +104,7 @@ describe("server routes", () => {
     expect(css).toContain("break-inside: auto");
     expect(css).toContain("font-size: 10pt");
     expect(css).toContain("line-height: 1.32");
+    expect(css).toContain("body.mdv.mdv--print .mdv-prose td::before");
   });
 
   test("static client.js served", async () => {
@@ -126,6 +128,22 @@ describe("server routes", () => {
     const html = await res.text();
     expect(html).toContain("--mdv-fg:");
     expect(html).toContain("--mdv-code-bg:");
+  });
+
+  test("contained-tables option adds the corresponding body class", async () => {
+    const containedPort = port + 200;
+    const handle = await startServer({
+      ...BASE_ARGS,
+      filePath: tempDir,
+      port: containedPort,
+      containedTables: true,
+    });
+    try {
+      const html = await (await fetch(`http://localhost:${containedPort}/`)).text();
+      expect(html).toContain("mdv--contained-tables");
+    } finally {
+      handle.stop();
+    }
   });
 
   test("print view emits its page class and light theme", async () => {

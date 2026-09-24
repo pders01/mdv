@@ -354,10 +354,35 @@ body.mdv--sidebar .mdv-sidebar__node[data-match][data-cursor] > .mdv-sidebar__en
   margin: 2em 0;
 }
 
+.mdv-table-wrap {
+  position: relative;
+  left: 50%;
+  width: calc(100vw - var(--mdv-sidebar-width) - 80px);
+  max-width: none;
+  overflow-x: auto;
+  margin: 1em 0;
+  transform: translateX(-50%);
+  overscroll-behavior-x: contain;
+}
+body.mdv.no-sidebar .mdv-table-wrap {
+  width: calc(100vw - 80px);
+}
+body.mdv--print .mdv-table-wrap {
+  width: calc(100vw - 290px);
+}
+body.mdv--print.no-sidebar .mdv-table-wrap {
+  width: calc(100vw - 80px);
+}
+body.mdv--contained-tables .mdv-table-wrap {
+  left: auto;
+  width: 100%;
+  transform: none;
+}
 .mdv-prose table {
   border-collapse: collapse;
-  margin: 1em 0;
-  width: 100%;
+  margin: 0;
+  width: max-content;
+  min-width: 100%;
 }
 .mdv-prose th,
 .mdv-prose td {
@@ -369,6 +394,43 @@ body.mdv--sidebar .mdv-sidebar__node[data-match][data-cursor] > .mdv-sidebar__en
   background: color-mix(in srgb, var(--mdv-gray) 15%, transparent);
   color: var(--mdv-fg);
   font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .mdv-prose .mdv-table-wrap {
+    left: auto;
+    width: 100%;
+    overflow: visible;
+    transform: none;
+  }
+  .mdv-prose table,
+  .mdv-prose thead,
+  .mdv-prose tbody,
+  .mdv-prose tr,
+  .mdv-prose td { display: block; }
+  .mdv-prose thead { display: none; }
+  .mdv-prose table { width: 100%; min-width: 0; }
+  .mdv-prose tbody { display: grid; gap: 0.75em; }
+  .mdv-prose tr {
+    border: 1px solid color-mix(in srgb, var(--mdv-gray) 40%, transparent);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .mdv-prose td {
+    display: grid;
+    grid-template-columns: minmax(6em, 35%) minmax(0, 1fr);
+    gap: 0.75em;
+    overflow-wrap: anywhere;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--mdv-gray) 25%, transparent);
+    padding: 0.55em 0.75em;
+  }
+  .mdv-prose td:last-child { border-bottom: 0; }
+  .mdv-prose td::before {
+    content: attr(data-label);
+    color: var(--mdv-fg);
+    font-weight: 600;
+  }
 }
 
 .mdv-prose img {
@@ -691,6 +753,42 @@ body.mdv.mdv--print .mdv-prose .markdown-alert-title {
   margin-bottom: 0.2em;
   color: #111;
 }
+
+/* Paper-width pages cannot rely on horizontal scrolling. Present each table
+ * record as labeled fields in print mode (preview and actual print alike) so
+ * wide tables retain every value within the paper column. */
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap {
+  left: auto;
+  width: 100%;
+  overflow: visible;
+  transform: none;
+}
+body.mdv.mdv--print .mdv-prose table,
+body.mdv.mdv--print .mdv-prose thead,
+body.mdv.mdv--print .mdv-prose tbody,
+body.mdv.mdv--print .mdv-prose tr,
+body.mdv.mdv--print .mdv-prose td { display: block; }
+body.mdv.mdv--print .mdv-prose thead { display: none; }
+body.mdv.mdv--print .mdv-prose table { width: 100%; min-width: 0; }
+body.mdv.mdv--print .mdv-prose tbody { display: grid; gap: 0.6em; }
+body.mdv.mdv--print .mdv-prose tr {
+  border: 1px solid #aaa;
+  break-inside: avoid;
+}
+body.mdv.mdv--print .mdv-prose td {
+  display: grid;
+  grid-template-columns: minmax(6em, 32%) minmax(0, 1fr);
+  gap: 0.5em;
+  overflow-wrap: anywhere;
+  border: 0;
+  border-bottom: 1px solid #ddd;
+}
+body.mdv.mdv--print .mdv-prose td::before {
+  content: attr(data-label);
+  color: #111;
+  font-weight: 600;
+}
+body.mdv.mdv--print .mdv-prose td:last-child { border-bottom: 0; }
 
 body.mdv.mdv--print .mdv-prose table {
   margin: 0.6em 0;

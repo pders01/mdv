@@ -69,8 +69,9 @@ describe("renderMarkdown", () => {
   test("renders tables", () => {
     const md = "| A | B |\n|---|---|\n| 1 | 2 |\n";
     const html = renderMarkdown(registry, md);
-    expect(html).toContain("<table>");
+    expect(html).toContain('<div class="mdv-table-wrap"><table>');
     expect(html).toContain("<th>A</th>");
+    expect(html).toContain('data-label="A"');
   });
 });
 

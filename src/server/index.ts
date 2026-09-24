@@ -98,6 +98,7 @@ interface ServerContext {
   debug: boolean;
   watch: boolean;
   print: boolean;
+  containedTables: boolean;
   paper: PaperSize;
   /** Connected WebSocket clients for live reload broadcasts. */
   clients: Set<ServerWebSocket<unknown>>;
@@ -195,6 +196,7 @@ export async function startServer(args: CliArgs): Promise<ServerHandle> {
     debug: args.debug,
     watch: args.watch,
     print: args.print,
+    containedTables: args.containedTables,
     paper: resolvePaperSize(args.paper),
     clients: new Set(),
   };
@@ -448,7 +450,7 @@ function renderTemplate(
     themeVars: ctx.themeCss,
     headAssets: ctx.headAssets,
     focus: "content",
-    viewClass: `${ctx.print ? " mdv--print" : ""}${ctx.rootIsDirectory ? " mdv--directory" : ""}`,
+    viewClass: `${ctx.print ? " mdv--print" : ""}${ctx.rootIsDirectory ? " mdv--directory" : ""}${ctx.containedTables ? " mdv--contained-tables" : ""}`,
     viewStyles: ctx.print
       ? `<style id="mdv-print-page">body.mdv--print { --mdv-paper-width: ${ctx.paper.width}; --mdv-paper-height: ${ctx.paper.height}; } @page { size: ${ctx.paper.cssName}; margin: 15mm 16mm; }</style>`
       : "",

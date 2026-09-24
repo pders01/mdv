@@ -114,10 +114,16 @@ describe("parseCliArgs", () => {
     expect(args.paper).toBe("letter");
   });
 
-  test("defaults print view to false", () => {
+  test("defaults print view and contained tables to false", () => {
     const args = parseCliArgs(["node", "mdv", "file.md"]);
     expect(args.print).toBe(false);
     expect(args.paper).toBe("a4");
+    expect(args.containedTables).toBe(false);
+  });
+
+  test("parses contained-tables option", () => {
+    const args = parseCliArgs(["node", "mdv", "serve", "docs", "--contained-tables"]);
+    expect(args.containedTables).toBe(true);
   });
 
   test("parses version flag short form", () => {
