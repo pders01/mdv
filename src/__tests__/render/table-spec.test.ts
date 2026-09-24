@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { tableToSpec } from "../../rendering/table.js";
+import type { Spec } from "../../render/spec.js";
 import { calculateColumnWidths, padCell, truncateCell } from "../../rendering/table-utils.js";
 import type { ThemeColors, TableToken } from "../../types.js";
 
@@ -64,6 +65,27 @@ describe("tableToSpec", () => {
 
     for (const child of spec.children) {
       expect(child.kind).toBe("text");
+    }
+  });
+
+  it("uses labeled record rows at narrow widths", () => {
+    const table = makeTable();
+    table.rows = [[{ text: "short" }, { text: "a detailed description that makes this table wider than sixty terminal columns" }]];
+    const spec = tableToSpec(colors, table, 60);
+    const collectText = (node: Spec): string =>
+      node.kind === "text"
+        ? node.chunks.map((chunk) => chunk.text).join("")
+        : node.children.map(collectText).join(" ");
+    const rendered = collectText(spec);
+    expect(rendered).toContain("Name: short");
+    expect(rendered).toContain("描述: a detailed description");
+    expect(rendered).not.toContain("| ");
+    const record = spec.children[2]!;
+    expect(record.kind).toBe("box");
+    if (record.kind === "box") {
+      expect(record.marginTop).toBe(0);
+      expect(record.children).toHaveLength(2);
+      expect(record.children.some((child) => child.kind === "text" && child.chunks[0]?.text.includes("────"))).toBe(false);
     }
   });
 

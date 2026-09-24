@@ -10,6 +10,8 @@ import {
   buildSeparatorLine,
   truncateCell,
   chooseLayout,
+  shouldUseKeyValueLayout,
+  tableKeyValueEntries,
 } from "./table-utils.js";
 import type { BoxSpec, Spec } from "../render/spec.js";
 
@@ -25,6 +27,20 @@ export function tableToBlock(
   const dataCells = token.rows.map((row) => row.map((cell) => cell.text));
   const allRows = [headerCells, ...dataCells];
   const colCount = token.header.length;
+
+  if (availableWidth !== undefined && shouldUseKeyValueLayout(allRows, availableWidth)) {
+    const lines: StyledSegment[][] = [];
+    for (const [rowIndex, entry] of tableKeyValueEntries(headerCells, dataCells).entries()) {
+      if (rowIndex > 0) lines.push([{ text: "────────────────", fg: colors.gray, bold: false, italic: false }]);
+      for (const [label, value] of entry) {
+        lines.push([
+          { text: `${label}: `, fg: colors.cyan, bold: true, italic: false },
+          { text: value, fg: colors.fg, bold: false, italic: false },
+        ]);
+      }
+    }
+    return { type: "table", lines, indent: 0, marginTop: 1, marginBottom: 1 };
+  }
 
   const layout = chooseLayout(allRows, availableWidth);
   const colWidths = calculateColumnWidths(allRows, availableWidth, layout);
@@ -115,6 +131,44 @@ export function tableToSpec(colors: ThemeColors, token: TableToken, contentWidth
   const colCount = token.header.length;
 
   const availableWidth = Math.max(20, contentWidth);
+  if (shouldUseKeyValueLayout(allRows, availableWidth)) {
+    const textSpec = (text: string, label?: string): Spec => ({
+      kind: "text",
+      wrapMode: "char",
+      chunks: label
+        ? [
+            { __isChunk: true, text: `${label}: `, fg: RGBA.fromHex(colors.cyan), bold: true },
+            { __isChunk: true, text, fg: RGBA.fromHex(colors.fg) },
+          ]
+        : [{ __isChunk: true, text, fg: RGBA.fromHex(colors.gray) }],
+      source: null,
+    });
+    const entries = tableKeyValueEntries(headerCells, dataCells);
+    // Keep the top-level child count aligned with the Markdown table's
+    // source lines (header, delimiter, and one child per data record). This
+    // lets cursor mapping highlight the correct record instead of estimating
+    // its position by dividing the entire table height uniformly.
+    const children: Spec[] = [
+      textSpec(`${headerCells.length} fields`),
+      textSpec("────────────────"),
+      ...entries.map((entry, rowIndex) => ({
+        kind: "box" as const,
+        flexDirection: "column" as const,
+        marginTop: rowIndex > 0 ? 1 : 0,
+        source: null,
+        children: entry.map(([label, value]) => textSpec(value, label)),
+      })),
+    ];
+    return {
+      kind: "box",
+      block: "table",
+      flexDirection: "column",
+      marginTop: 1,
+      marginBottom: 1,
+      source: null,
+      children,
+    };
+  }
   const layout = chooseLayout(allRows, availableWidth);
   const colWidths = calculateColumnWidths(allRows, availableWidth, layout);
   const paddedWidths = colWidths.map((w) => w + layout.cellPadding);

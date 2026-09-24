@@ -22,6 +22,28 @@ const SMALL_COL_THRESHOLD = 10;
  * algorithm that protects small columns from unnecessary truncation.
  * Uses the provided layout's padding for overhead calculations.
  */
+/** Return true whenever a constrained terminal would require table-cell truncation. */
+export function shouldUseKeyValueLayout(rows: string[][], availableWidth: number): boolean {
+  if (rows.length === 0) return false;
+  const colCount = Math.max(...rows.map((row) => row.length));
+  if (colCount < 2) return false;
+  const naturalWidth = rows.reduce(
+    (widths, row) => {
+      row.forEach((cell, i) => {
+        widths[i] = Math.max(widths[i] ?? 0, cellWidth(cell));
+      });
+      return widths;
+    },
+    [] as number[],
+  );
+  return naturalWidth.reduce((sum, width) => sum + width, 0) + layoutOverhead(colCount, NORMAL_LAYOUT) > availableWidth;
+}
+
+/** Format table data as records for narrow terminal layouts. */
+export function tableKeyValueEntries(headers: string[], rows: string[][]): Array<Array<[string, string]>> {
+  return rows.map((row) => headers.map((header, i) => [header, row[i] ?? ""]));
+}
+
 export function calculateColumnWidths(
   rows: string[][],
   availableWidth?: number,

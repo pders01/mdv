@@ -37,23 +37,28 @@ describe("table responsiveness — many columns", () => {
     expect(block.lines.length).toBe(5); // header + separator + 3 rows
   });
 
-  test("fits within 80-column viewport", () => {
+  test("preserves all cell contents when the table exceeds an 80-column viewport", () => {
     const block = tableToBlock(TEST_COLORS, token, 80);
-    const width = tableLineWidth(block);
-    expect(width).toBeLessThanOrEqual(80);
+    const text = block.lines.flatMap((line) => line.map((segment) => segment.text)).join(" ");
+    expect(text).toContain("Name:");
+    expect(text).toContain("Alice");
+    expect(text).not.toContain("\u2026");
   });
 
-  test("fits within 120-column viewport", () => {
+  test("uses key-value records when the table exceeds a 120-column viewport", () => {
     const block = tableToBlock(TEST_COLORS, token, 120);
-    const width = tableLineWidth(block);
-    expect(width).toBeLessThanOrEqual(120);
+    const text = block.lines.flatMap((line) => line.map((segment) => segment.text)).join(" ");
+    expect(text).toContain("Email:");
+    expect(text).toContain("Address:");
+    expect(text).not.toContain("\u2026");
   });
 
-  test("truncates cells when squeezed to 60 columns", () => {
+  test("uses readable key-value records when squeezed to 60 columns", () => {
     const block = tableToBlock(TEST_COLORS, token, 60);
-    const text = block.lines.flatMap((l) => l.map((s) => s.text)).join("");
-    // With 10 columns in 60 chars, truncation with ellipsis is expected
-    expect(text).toContain("\u2026");
+    const text = block.lines.flatMap((l) => l.map((s) => s.text)).join(" ");
+    expect(text).toMatch(/ID:\s+1/);
+    expect(text).toMatch(/Name:\s+Alice/);
+    expect(text).not.toContain("\u2026");
   });
 });
 
@@ -61,10 +66,12 @@ describe("table responsiveness — long content", () => {
   const markdown = loadFixture("long-content.md");
   const token = getTableToken(markdown);
 
-  test("fits within 80-column viewport", () => {
+  test("preserves long cell contents rather than truncating at 80 columns", () => {
     const block = tableToBlock(TEST_COLORS, token, 80);
-    const width = tableLineWidth(block);
-    expect(width).toBeLessThanOrEqual(80);
+    const text = block.lines.flatMap((line) => line.map((segment) => segment.text)).join(" ");
+    expect(text).toContain("without exposing client secrets");
+    expect(text).toContain("Description:");
+    expect(text).not.toContain("\u2026");
   });
 
   test("preserves short column content when possible at 120 cols", () => {
@@ -81,10 +88,12 @@ describe("table responsiveness — long content", () => {
     expect(text).toContain("Status");
   });
 
-  test("truncates the long Description column at narrow widths", () => {
+  test("shows labeled values rather than truncating at narrow widths", () => {
     const block = tableToBlock(TEST_COLORS, token, 60);
-    const text = block.lines.flatMap((l) => l.map((s) => s.text)).join("");
-    expect(text).toContain("\u2026");
+    const text = block.lines.flatMap((l) => l.map((s) => s.text)).join(" ");
+    expect(text).toMatch(/Feature:\s+Authentication/);
+    expect(text).toMatch(/Status:\s+Complete/);
+    expect(text).not.toContain("\u2026");
   });
 });
 
@@ -97,7 +106,7 @@ describe("table responsiveness — extreme column count (20)", () => {
 
   test("renders without error", () => {
     const block = tableToBlock(TEST_COLORS, token, 80);
-    expect(block.lines.length).toBe(3); // header + separator + 1 row
+    expect(block.lines.length).toBe(20); // 20 labeled cells in one record
   });
 
   test("preserves natural column widths at wide viewports", () => {
