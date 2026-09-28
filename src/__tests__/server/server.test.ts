@@ -104,7 +104,10 @@ describe("server routes", () => {
     expect(css).toContain("break-inside: auto");
     expect(css).toContain("font-size: 10pt");
     expect(css).toContain("line-height: 1.32");
-    expect(css).toContain("body.mdv.mdv--print .mdv-prose td::before");
+    expect(css).toContain("body.mdv.mdv--print .mdv-prose .mdv-table-wrap td::before");
+    expect(css).toContain(".mdv-table-wrap thead:only-child { display: block; }");
+    expect(css).toContain(".mdv-prose .mdv-table-wrap thead { display: none; }");
+    expect(css).not.toContain(".mdv-prose thead { display: none; }");
   });
 
   test("static client.js served", async () => {

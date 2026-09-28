@@ -380,6 +380,10 @@ body.mdv--contained-tables .mdv-table-wrap {
 }
 .mdv-prose table {
   border-collapse: collapse;
+  margin: 1em 0;
+  width: 100%;
+}
+.mdv-prose .mdv-table-wrap table {
   margin: 0;
   width: max-content;
   min-width: 100%;
@@ -403,20 +407,20 @@ body.mdv--contained-tables .mdv-table-wrap {
     overflow: visible;
     transform: none;
   }
-  .mdv-prose table,
-  .mdv-prose thead,
-  .mdv-prose tbody,
-  .mdv-prose tr,
-  .mdv-prose td { display: block; }
-  .mdv-prose thead { display: none; }
-  .mdv-prose table { width: 100%; min-width: 0; }
-  .mdv-prose tbody { display: grid; gap: 0.75em; }
-  .mdv-prose tr {
+  /* Only generated Markdown tables have data-labels; raw HTML tables keep
+   * their own thead and native table layout. */
+  .mdv-prose .mdv-table-wrap :is(table, thead, tbody, tr, td) { display: block; }
+  .mdv-prose .mdv-table-wrap thead { display: none; }
+  .mdv-prose .mdv-table-wrap thead:only-child { display: block; }
+  .mdv-prose .mdv-table-wrap thead:only-child th { display: block; overflow-wrap: anywhere; }
+  .mdv-prose .mdv-table-wrap table { width: 100%; min-width: 0; }
+  .mdv-prose .mdv-table-wrap tbody { display: grid; gap: 0.75em; }
+  .mdv-prose .mdv-table-wrap tr {
     border: 1px solid color-mix(in srgb, var(--mdv-gray) 40%, transparent);
     border-radius: 6px;
     overflow: hidden;
   }
-  .mdv-prose td {
+  .mdv-prose .mdv-table-wrap td {
     display: grid;
     grid-template-columns: minmax(6em, 35%) minmax(0, 1fr);
     gap: 0.75em;
@@ -425,8 +429,8 @@ body.mdv--contained-tables .mdv-table-wrap {
     border-bottom: 1px solid color-mix(in srgb, var(--mdv-gray) 25%, transparent);
     padding: 0.55em 0.75em;
   }
-  .mdv-prose td:last-child { border-bottom: 0; }
-  .mdv-prose td::before {
+  .mdv-prose .mdv-table-wrap td:last-child { border-bottom: 0; }
+  .mdv-prose .mdv-table-wrap td::before {
     content: attr(data-label);
     color: var(--mdv-fg);
     font-weight: 600;
@@ -763,19 +767,17 @@ body.mdv.mdv--print .mdv-prose .mdv-table-wrap {
   overflow: visible;
   transform: none;
 }
-body.mdv.mdv--print .mdv-prose table,
-body.mdv.mdv--print .mdv-prose thead,
-body.mdv.mdv--print .mdv-prose tbody,
-body.mdv.mdv--print .mdv-prose tr,
-body.mdv.mdv--print .mdv-prose td { display: block; }
-body.mdv.mdv--print .mdv-prose thead { display: none; }
-body.mdv.mdv--print .mdv-prose table { width: 100%; min-width: 0; }
-body.mdv.mdv--print .mdv-prose tbody { display: grid; gap: 0.6em; }
-body.mdv.mdv--print .mdv-prose tr {
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap :is(table, thead, tbody, tr, td) { display: block; }
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap thead { display: none; }
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap thead:only-child { display: block; }
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap thead:only-child th { display: block; overflow-wrap: anywhere; }
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap table { width: 100%; min-width: 0; }
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap tbody { display: grid; gap: 0.6em; }
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap tr {
   border: 1px solid #aaa;
   break-inside: avoid;
 }
-body.mdv.mdv--print .mdv-prose td {
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap td {
   display: grid;
   grid-template-columns: minmax(6em, 32%) minmax(0, 1fr);
   gap: 0.5em;
@@ -783,12 +785,12 @@ body.mdv.mdv--print .mdv-prose td {
   border: 0;
   border-bottom: 1px solid #ddd;
 }
-body.mdv.mdv--print .mdv-prose td::before {
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap td::before {
   content: attr(data-label);
   color: #111;
   font-weight: 600;
 }
-body.mdv.mdv--print .mdv-prose td:last-child { border-bottom: 0; }
+body.mdv.mdv--print .mdv-prose .mdv-table-wrap td:last-child { border-bottom: 0; }
 
 body.mdv.mdv--print .mdv-prose table {
   margin: 0.6em 0;

@@ -74,6 +74,22 @@ describe("renderMarkdown", () => {
     expect(html).toContain('data-label="A"');
   });
 
+  test("keeps header-only tables visible for mobile and print layouts", () => {
+    const html = renderMarkdown(registry, "| Very long heading | Another heading |\n|---|---|\n");
+    expect(html).toContain('<div class="mdv-table-wrap"><table>');
+    expect(html).toContain("<th>Very long heading</th>");
+    expect(html).not.toContain("<tbody>");
+  });
+
+  test("leaves raw HTML tables unwrapped (without generated data-labels)", () => {
+    const source =
+      "<table><thead><tr><th>Field</th></tr></thead><tbody><tr><td>Value</td></tr></tbody></table>";
+    const html = renderMarkdown(registry, source);
+    expect(html).toContain(source);
+    expect(html).not.toContain("mdv-table-wrap");
+    expect(html).not.toContain("data-label");
+  });
+
   test("preserves bare colon suffixes in prose and tables", () => {
     const md = "| Time | Hash |\n|---|---|\n| 09:42 UTC | sha256:8c20e9f1 |\n";
     const html = renderMarkdown(registry, md);

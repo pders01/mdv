@@ -70,7 +70,12 @@ describe("tableToSpec", () => {
 
   it("uses labeled record rows at narrow widths", () => {
     const table = makeTable();
-    table.rows = [[{ text: "short" }, { text: "a detailed description that makes this table wider than sixty terminal columns" }]];
+    table.rows = [
+      [
+        { text: "short" },
+        { text: "a detailed description that makes this table wider than sixty terminal columns" },
+      ],
+    ];
     const spec = tableToSpec(colors, table, 60);
     const collectText = (node: Spec): string =>
       node.kind === "text"
@@ -85,7 +90,44 @@ describe("tableToSpec", () => {
     if (record.kind === "box") {
       expect(record.marginTop).toBe(0);
       expect(record.children).toHaveLength(2);
-      expect(record.children.some((child) => child.kind === "text" && child.chunks[0]?.text.includes("────"))).toBe(false);
+      expect(
+        record.children.some(
+          (child) => child.kind === "text" && child.chunks[0]?.text.includes("────"),
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("keeps long headings in a header-only table", () => {
+    const first = "Long first heading ".repeat(5).trim();
+    const second = "Long second heading ".repeat(5).trim();
+    const spec = tableToSpec(colors, { header: [{ text: first }, { text: second }], rows: [] }, 60);
+    expect(spec.children).toHaveLength(2); // source header and delimiter
+    const heading = spec.children[0]!;
+    expect(heading.kind).toBe("box");
+    if (heading.kind === "box") {
+      expect(
+        heading.children.map((node) => (node.kind === "text" ? node.chunks[0]?.text : "")),
+      ).toEqual([first, second]);
+    }
+  });
+
+  it("wraps a long single-column value without an ellipsis", () => {
+    const value = "x".repeat(90);
+    const spec = tableToSpec(
+      colors,
+      { header: [{ text: "Header" }], rows: [[{ text: value }]] },
+      80,
+    );
+    const record = spec.children[2]!;
+    expect(record.kind).toBe("box");
+    if (record.kind === "box") {
+      const cell = record.children[0]!;
+      expect(cell.kind).toBe("text");
+      if (cell.kind === "text") {
+        expect(cell.wrapMode).toBe("char");
+        expect(cell.chunks.map((chunk) => chunk.text).join("")).toBe(`Header: ${value}`);
+      }
     }
   });
 

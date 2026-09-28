@@ -159,6 +159,28 @@ describe("table responsiveness — mixed column widths", () => {
   });
 });
 
+describe("table responsiveness — header-only and single-column tables", () => {
+  test("preserves every heading in a wide table without data rows", () => {
+    const token = getTableToken(
+      `| ${"A long heading ".repeat(5)} | ${"Another long heading ".repeat(5)} |\n|---|---|\n`,
+    );
+    const block = tableToBlock(TEST_COLORS, token, 80);
+    const text = block.lines.flatMap((line) => line.map((segment) => segment.text)).join(" ");
+    expect(text).toContain("A long heading ".repeat(5).trim());
+    expect(text).toContain("Another long heading ".repeat(5).trim());
+    expect(text).not.toContain("\u2026");
+  });
+
+  test("wraps rather than truncates an overflowing single-column value", () => {
+    const value = "x".repeat(90);
+    const token = getTableToken(`| Header |\n|---|\n| ${value} |\n`);
+    const block = tableToBlock(TEST_COLORS, token, 80);
+    const text = block.lines.flatMap((line) => line.map((segment) => segment.text)).join(" ");
+    expect(text).toContain(`Header:  ${value}`);
+    expect(text).not.toContain("\u2026");
+  });
+});
+
 describe("calculateColumnWidths edge cases", () => {
   test("returns natural widths when no constraint is given", () => {
     const rows = [["short", "a very long column value"]];

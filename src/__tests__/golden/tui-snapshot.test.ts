@@ -31,6 +31,18 @@ describe("golden TUI snapshots", () => {
     });
   }
 
+  test("shows wide header-only tables and wraps single-column values", async () => {
+    const heading = "FirstHeading".repeat(8);
+    const value = "x".repeat(90);
+    const frame = await renderTuiSnapshot(
+      `| ${heading} | Second heading |\n|---|---|\n\n| Header |\n|---|\n| ${value} |\n`,
+    );
+    const compact = frame.replace(/\s/g, "");
+    expect(compact).toContain(heading);
+    expect(compact).toContain(`Header:${value}`);
+    expect(frame).not.toContain("…");
+  });
+
   test("keeps times and both kinds of digest suffixes in prose and tables", async () => {
     const frame = await renderTuiSnapshot(
       "09:42 UTC sha256:deadbeef release:stable\n\n| When | Hash |\n|---|---|\n| 09:42 | sha256:8c20 |\n",

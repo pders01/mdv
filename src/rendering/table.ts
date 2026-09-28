@@ -29,9 +29,23 @@ export function tableToBlock(
   const colCount = token.header.length;
 
   if (availableWidth !== undefined && shouldUseKeyValueLayout(allRows, availableWidth)) {
+    if (dataCells.length === 0) {
+      // A header-only table has no records to label; keep its headings visible.
+      return {
+        type: "table",
+        lines: [
+          ...headerCells.map((text) => [{ text, fg: colors.cyan, bold: true, italic: false }]),
+          [{ text: "────────────────", fg: colors.gray, bold: false, italic: false }],
+        ],
+        indent: 0,
+        marginTop: 1,
+        marginBottom: 1,
+      };
+    }
     const lines: StyledSegment[][] = [];
     for (const [rowIndex, entry] of tableKeyValueEntries(headerCells, dataCells).entries()) {
-      if (rowIndex > 0) lines.push([{ text: "────────────────", fg: colors.gray, bold: false, italic: false }]);
+      if (rowIndex > 0)
+        lines.push([{ text: "────────────────", fg: colors.gray, bold: false, italic: false }]);
       for (const [label, value] of entry) {
         lines.push([
           { text: `${label}: `, fg: colors.cyan, bold: true, italic: false },
@@ -132,7 +146,7 @@ export function tableToSpec(colors: ThemeColors, token: TableToken, contentWidth
 
   const availableWidth = Math.max(20, contentWidth);
   if (shouldUseKeyValueLayout(allRows, availableWidth)) {
-    const textSpec = (text: string, label?: string): Spec => ({
+    const textSpec = (text: string, label?: string, header = false): Spec => ({
       kind: "text",
       wrapMode: "char",
       chunks: label
@@ -140,16 +154,44 @@ export function tableToSpec(colors: ThemeColors, token: TableToken, contentWidth
             { __isChunk: true, text: `${label}: `, fg: RGBA.fromHex(colors.cyan), bold: true },
             { __isChunk: true, text, fg: RGBA.fromHex(colors.fg) },
           ]
-        : [{ __isChunk: true, text, fg: RGBA.fromHex(colors.gray) }],
+        : [
+            {
+              __isChunk: true,
+              text,
+              fg: RGBA.fromHex(header ? colors.cyan : colors.gray),
+              bold: header,
+            },
+          ],
       source: null,
     });
+    // Keep the header and delimiter as the first two top-level children for
+    // source-line cursor mapping, even when the table has no data records.
+    if (dataCells.length === 0) {
+      return {
+        kind: "box",
+        block: "table",
+        flexDirection: "column",
+        marginTop: 1,
+        marginBottom: 1,
+        source: null,
+        children: [
+          {
+            kind: "box",
+            flexDirection: "column",
+            source: null,
+            children: headerCells.map((header) => textSpec(header, undefined, true)),
+          },
+          textSpec("────────────────"),
+        ],
+      };
+    }
     const entries = tableKeyValueEntries(headerCells, dataCells);
     // Keep the top-level child count aligned with the Markdown table's
     // source lines (header, delimiter, and one child per data record). This
     // lets cursor mapping highlight the correct record instead of estimating
     // its position by dividing the entire table height uniformly.
     const children: Spec[] = [
-      textSpec(`${headerCells.length} fields`),
+      textSpec(`${headerCells.length} ${headerCells.length === 1 ? "field" : "fields"}`),
       textSpec("────────────────"),
       ...entries.map((entry, rowIndex) => ({
         kind: "box" as const,
