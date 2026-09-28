@@ -73,6 +73,24 @@ describe("renderMarkdown", () => {
     expect(html).toContain("<th>A</th>");
     expect(html).toContain('data-label="A"');
   });
+
+  test("preserves bare colon suffixes in prose and tables", () => {
+    const md = "| Time | Hash |\n|---|---|\n| 09:42 UTC | sha256:8c20e9f1 |\n";
+    const html = renderMarkdown(registry, md);
+    expect(html).toContain('data-label="Time">09:42 UTC</td>');
+    expect(html).toContain('data-label="Hash">sha256:8c20e9f1</td>');
+    expect(renderMarkdown(registry, "sha256:deadbeef release:stable")).toContain(
+      "<p>sha256:deadbeef release:stable</p>",
+    );
+    expect(html).not.toContain("<div></div>");
+  });
+
+  test("leaves explicit inline and container directives intact", () => {
+    expect(renderMarkdown(registry, ":note[hello *there* at 09:42]")).toContain(
+      "<div>hello <em>there</em> at 09:42</div>",
+    );
+    expect(renderMarkdown(registry, ":::tip\nHello.\n:::\n")).toContain("<div><p>Hello.</p></div>");
+  });
 });
 
 describe("renderSidebar", () => {

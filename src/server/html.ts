@@ -39,6 +39,7 @@ import rehypeStringify from "rehype-stringify";
 import type { Code } from "mdast";
 import type { CodeAdapterRegistry } from "./adapters/index.js";
 import { escapeHtml } from "../util/escape.js";
+import { restoreBareDirectives } from "../util/restore-bare-directives.js";
 
 type MarkdownProcessor = Processor<undefined, undefined, undefined, undefined, string>;
 
@@ -54,6 +55,7 @@ export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor
       .use(wikiLink, { aliasDivider: "|" })
       .use(remarkDeflist)
       .use(remarkDirective)
+      .use(restoreBareDirectives)
       .use(remarkMarkers)
       .use(remarkSupersub)
       .use(remarkAlert)
@@ -78,7 +80,7 @@ export function createMarkdown(registry: CodeAdapterRegistry): MarkdownProcessor
         // Default hex refs (`&#x3C;`) are equivalent to browsers but break
         // toContain-style assertions that expect the readable form.
         characterReferences: { useNamedReferences: true },
-      }) as MarkdownProcessor
+      }) as unknown as MarkdownProcessor
   );
 }
 

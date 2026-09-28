@@ -23,7 +23,7 @@
  Release channel: stable production                                             
  Primary owner: Customer Platform Team                                          
  Incident contact: customer-platform-oncall                                     
- Last deployment: 2026-05-14 09 UTC                                             
+ Last deployment: 2026-05-14 09:42 UTC                                          
  Current status: healthy and serving                                            
  Replication mode: synchronous multi-zone                                       
  Data residency: United States                                                  
@@ -36,5 +36,5 @@
  Release channel: gradual rollout                                               
  Primary owner: Revenue Infrastructure                                          
  Incident contact: revenue-infra-oncall                                         
- Last deployment: 2026-05-13 18 UTC                                             
+ Last deployment: 2026-05-13 18:07 UTC                                          
  Current status: degraded, investigating                                        

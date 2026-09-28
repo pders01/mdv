@@ -30,4 +30,12 @@ describe("golden TUI snapshots", () => {
       expect(actual).toBe(expected);
     });
   }
+
+  test("keeps times and both kinds of digest suffixes in prose and tables", async () => {
+    const frame = await renderTuiSnapshot(
+      "09:42 UTC sha256:deadbeef release:stable\n\n| When | Hash |\n|---|---|\n| 09:42 | sha256:8c20 |\n",
+    );
+    expect(frame).toContain("09:42 UTC sha256:deadbeef release:stable");
+    expect(frame).toContain("09:42  | sha256:8c20");
+  });
 });
