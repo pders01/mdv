@@ -33,7 +33,7 @@ interface OptionDef {
   group: HelpGroup;
 }
 
-type HelpGroup = "general" | "serve";
+type HelpGroup = "general" | "stdout" | "serve";
 
 /** Defaults referenced from both the OPTIONS table and the parseCliArgs fallback. */
 const DEFAULT_THEME = "auto";
@@ -89,6 +89,28 @@ const OPTIONS: readonly OptionDef[] = [
   { name: "debug", type: "boolean", description: "Enable debug logging", group: "general" },
   { name: "version", short: "v", type: "boolean", description: "Show version", group: "general" },
   { name: "help", short: "h", type: "boolean", description: "Show this help", group: "general" },
+
+  // stdout
+  {
+    name: "stdout",
+    type: "boolean",
+    description: "Render once to stdout instead of opening the TUI",
+    group: "stdout",
+  },
+  {
+    name: "width",
+    type: "string",
+    valueDesc: "<columns>",
+    description: "Output width (default: terminal columns, or 80 when redirected)",
+    group: "stdout",
+  },
+  {
+    name: "color",
+    type: "string",
+    valueDesc: "<mode>",
+    description: "Colors: auto, always, never (default: auto)",
+    group: "stdout",
+  },
 
   // serve
   {
@@ -152,6 +174,7 @@ const OPTIONS: readonly OptionDef[] = [
 
 const GROUP_TITLES: Record<HelpGroup, string> = {
   general: "Options",
+  stdout: "Stdout options",
   serve: "Serve options",
 };
 
@@ -170,6 +193,9 @@ export interface CliArgs {
   watch: boolean;
   exclude: string[];
   noMermaid: boolean;
+  stdout: boolean;
+  width: number | null;
+  color: "auto" | "always" | "never";
   serve: boolean;
   port: number;
   host: string;
@@ -184,15 +210,15 @@ export interface CliArgs {
 // Parsing
 // =============================================================================
 
-function buildParseArgsOptions(): ParseArgsConfig["options"] {
-  const out: ParseArgsConfig["options"] = {};
+function buildParseArgsOptions(): NonNullable<ParseArgsConfig["options"]> {
+  const out: NonNullable<ParseArgsConfig["options"]> = {};
   for (const o of OPTIONS) {
     out[o.name] = {
       type: o.type,
       ...(o.short ? { short: o.short } : {}),
       ...(o.multiple ? { multiple: o.multiple } : {}),
       ...(o.default !== undefined ? { default: o.default } : {}),
-    } as ParseArgsConfig["options"][string];
+    };
   }
   return out;
 }
@@ -206,10 +232,11 @@ const PARSE_OPTIONS = buildParseArgsOptions();
  * The subcommand form is preferred in user-facing docs.
  */
 export function parseCliArgs(argv: string[]): CliArgs {
-  const { values, positionals } = parseArgs({
+  const { values, positionals, tokens } = parseArgs({
     args: argv.slice(2),
     options: PARSE_OPTIONS,
     allowPositionals: true,
+    tokens: true,
   });
 
   const isServeSubcommand = positionals[0] === "serve";
@@ -218,6 +245,31 @@ export function parseCliArgs(argv: string[]): CliArgs {
   const filePath = (isServeSubcommand ? positionals[1] : positionals[0]) ?? null;
 
   const portNum = Number.parseInt(values.port as string, 10);
+  const stdout = values.stdout === true;
+  const widthArg = values.width as string | undefined;
+  const width = widthArg === undefined ? null : Number(widthArg);
+  const color = (values.color ?? "auto") as CliArgs["color"];
+  if (
+    widthArg !== undefined &&
+    (!/^\d+$/.test(widthArg) || !Number.isSafeInteger(width) || width! < 1)
+  ) {
+    throw new Error("--width must be a positive integer");
+  }
+  if (!["auto", "always", "never"].includes(color)) {
+    throw new Error("--color must be auto, always, or never");
+  }
+  if (!stdout && (widthArg !== undefined || values.color !== undefined)) {
+    throw new Error("--width and --color require --stdout");
+  }
+  if (stdout) {
+    if (serve) throw new Error("--stdout cannot be combined with serve, --serve, or --print");
+    if (values.watch) throw new Error("--stdout cannot be combined with --watch");
+    if (positionals.length > 1) throw new Error("--stdout accepts one file or '-' for stdin");
+    const serverOnly = new Set(["open", "quiet", "contained-tables", "port", "host", "paper"]);
+    if (tokens.some((token) => token.kind === "option" && serverOnly.has(token.name))) {
+      throw new Error("--stdout cannot be combined with browser/server options");
+    }
+  }
 
   return {
     theme: values.theme as string,
@@ -230,6 +282,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
     watch: (values.watch as boolean | undefined) ?? false,
     exclude: (values.exclude as string[] | undefined) ?? [],
     noMermaid: (values["no-mermaid"] as boolean | undefined) ?? false,
+    stdout,
+    width,
+    color,
     serve,
     port: Number.isFinite(portNum) ? portNum : DEFAULT_PORT,
     host: values.host as string,
@@ -250,6 +305,7 @@ const USAGE = [
   "Usage: mdv [options] <markdown-file|directory>",
   "       mdv serve [options] <directory>",
   "       cat file.md | mdv [options]",
+  "       mdv --stdout [--width <columns>] [--color <mode>] <file|->",
 ];
 
 /**
@@ -284,7 +340,7 @@ function formatFlag(opt: OptionDef): string {
 
 /** Build the full help text. Public for testing. */
 export function buildHelp(): string {
-  const groups: HelpGroup[] = ["general", "serve"];
+  const groups: HelpGroup[] = ["general", "stdout", "serve"];
   const sections: string[][] = [];
 
   // One column width across all option groups AND the keybind table so every
