@@ -58,6 +58,30 @@ describe("ANSI backend", () => {
     expect(plain([text("中", "char")], 1)).toBe("�\n");
   });
 
+  it("keeps graphemes atomic across styled chunk boundaries", () => {
+    for (const [parts, expected] of [
+      [["❤", "️", "x"], "❤️\nx\n"],
+      [["👩‍", "💻", "x"], "👩‍💻\nx\n"],
+      [["e", "\u0301", "xx"], "éx\nx\n"],
+    ] as const) {
+      const spec = text("");
+      spec.chunks = parts.map((part, i) => ({ __isChunk: true, text: part, bold: i === 1 }));
+      for (const color of [false, true]) {
+        const output = specsToAnsi([spec], { width: 2, color });
+        expect(terminalText(output)).toBe(expected);
+        for (const line of terminalText(output).split("\n"))
+          expect(cellWidth(line)).toBeLessThanOrEqual(2);
+        expect(output).toContain(expected.split("\n")[0]!);
+      }
+    }
+  });
+
+  it("preserves leading indentation when wrapping a long code line", () => {
+    const source = "```text\n     abcdefghijklmnop\n```";
+    expect(plain(markdown(source, 10), 10)).toBe("      abc\n defghijk\n lmnop\n");
+    expect(plain([text("     abcdefghijklmnop")], 8)).toBe("     abc\ndefghijk\nlmnop\n");
+  });
+
   it("honors char, no-wrap, tabs, and explicit newlines", () => {
     expect(plain([text("ab cd", "char")], 3)).toBe("ab\ncd\n");
     expect(plain([text("abcdef\nxyz", "none")], 3)).toBe("abc\nxyz\n");

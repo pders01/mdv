@@ -132,6 +132,24 @@ describe("stdout CLI", () => {
     expect(disabled.stdout).not.toContain("\x1b");
   });
 
+  it("preserves styled graphemes and long code indentation through the CLI", async () => {
+    for (const color of ["never", "always"]) {
+      const emoji = await cli(
+        ["--stdout", "--width", "2", "--color", color, "-"],
+        "❤**️**x\n\n👩‍**💻**",
+      );
+      expect(emoji.code).toBe(0);
+      expect(emoji.stderr).toBe("");
+      expect(terminalText(emoji.stdout)).toBe("❤️\nx\n\n👩‍💻\n");
+      const code = await cli(
+        ["--stdout", "--width", "10", "--color", color, "-"],
+        "```text\n     abcdefghijklmnop\n```",
+      );
+      expect(code.code).toBe(0);
+      expect(terminalText(code.stdout).split("\n")[0]!.trimEnd()).toBe("      abc");
+    }
+  });
+
   it("handles empty input without emitting anything", async () => {
     for (const content of ["", " \n\n"])
       expect(await cli(["--stdout", "-"], content)).toEqual({ code: 0, stdout: "", stderr: "" });

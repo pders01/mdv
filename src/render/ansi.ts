@@ -56,7 +56,9 @@ function colorHex(color: TextChunk["fg"]): string | undefined {
 function chunkLines(chunks: TextChunk[], inherited: Style): Row[] {
   const rows: Row[] = [[]];
   let column = 0;
-  // Sanitize each chunk before applying styles so escape sequences cannot become output styling.
+  const spans: Array<{ end: number; style: Style }> = [];
+  const parts: string[] = [];
+  let length = 0;
   for (const chunk of chunks) {
     const style: Style = {
       ...inherited,
@@ -64,21 +66,29 @@ function chunkLines(chunks: TextChunk[], inherited: Style): Row[] {
       bold: chunk.bold,
       italic: chunk.italic,
     };
-    for (const { segment } of graphemes.segment(terminalText(chunk.text))) {
-      if (segment === "\n") {
-        rows.push([]);
-        column = 0;
-      } else if (segment === "\t") {
-        const width = 4 - (column % 4);
-        rows[rows.length - 1]!.push(
-          ...Array.from({ length: width }, () => ({ ...style, text: " ", width: 1 })),
-        );
-        column += width;
-      } else {
-        const width = cellWidth(segment);
-        rows[rows.length - 1]!.push({ ...style, text: segment, width });
-        column += width;
-      }
+    const part = terminalText(chunk.text);
+    if (!part) continue;
+    parts.push(part);
+    length += part.length;
+    spans.push({ end: length, style });
+  }
+  let span = 0;
+  for (const { segment, index } of graphemes.segment(parts.join(""))) {
+    while (index >= spans[span]!.end) span++;
+    const style = spans[span]!.style;
+    if (segment === "\n") {
+      rows.push([]);
+      column = 0;
+    } else if (segment === "\t") {
+      const width = 4 - (column % 4);
+      rows[rows.length - 1]!.push(
+        ...Array.from({ length: width }, () => ({ ...style, text: " ", width: 1 })),
+      );
+      column += width;
+    } else {
+      const width = cellWidth(segment);
+      rows[rows.length - 1]!.push({ ...style, text: segment, width });
+      column += width;
     }
   }
   return rows;
@@ -100,17 +110,22 @@ function wrapLine(input: Row, width: number, mode: "word" | "char" | "none"): Ro
     let used = 0;
     let end = start;
     let breakAt = -1;
+    let hasContent = false;
     for (; end < input.length; end++) {
       const cell = input[end]!;
       if (used + cell.width > width) break;
       used += cell.width;
-      if (/^ +$/.test(cell.text)) breakAt = end;
+      if (/^ +$/.test(cell.text)) {
+        if (hasContent) breakAt = end;
+      } else {
+        hasContent = true;
+      }
     }
     if (end === input.length || mode === "none") {
       rows.push(input.slice(start, end));
       break;
     }
-    if (mode === "word" && end > start && /^ +$/.test(input[end]!.text)) {
+    if (mode === "word" && hasContent && end > start && /^ +$/.test(input[end]!.text)) {
       rows.push(input.slice(start, end));
       start = end;
       while (input[start]?.text === " ") start++;
