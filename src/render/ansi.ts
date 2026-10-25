@@ -19,6 +19,8 @@ export interface AnsiOptions {
   width: number;
   color: boolean;
   foreground?: string;
+  /** Compositing base only; never painted as a page-wide background. */
+  background?: string;
   codeBackground?: string;
 }
 
@@ -42,7 +44,7 @@ export function terminalText(text: string): string {
 
 function colorHex(color: TextChunk["fg"]): string | undefined {
   if (!color) return undefined;
-  return `#${[color.r, color.g, color.b]
+  return `#${[color.r, color.g, color.b, ...(color.a < 1 ? [color.a] : [])]
     .map((c) =>
       Math.round(c * 255)
         .toString(16)
@@ -93,47 +95,36 @@ function spaces(width: number, style: Style): Row {
 function wrapLine(input: Row, width: number, mode: "word" | "char" | "none"): Row[] {
   if (input.length === 0) return [[]];
   const rows: Row[] = [];
-  let remaining = input;
-  while (remaining.length) {
+  let start = 0;
+  while (start < input.length) {
     let used = 0;
-    let end = 0;
+    let end = start;
     let breakAt = -1;
-    for (; end < remaining.length; end++) {
-      const cell = remaining[end]!;
+    for (; end < input.length; end++) {
+      const cell = input[end]!;
       if (used + cell.width > width) break;
       used += cell.width;
       if (/^ +$/.test(cell.text)) breakAt = end;
     }
-    if (end === remaining.length) {
-      rows.push(remaining);
+    if (end === input.length || mode === "none") {
+      rows.push(input.slice(start, end));
       break;
     }
-    if (mode === "none") {
-      rows.push(remaining.slice(0, end));
-      break;
-    }
-    if (mode === "word" && end > 0 && /^ +$/.test(remaining[end]!.text)) {
-      rows.push(remaining.slice(0, end));
-      remaining = remaining.slice(end);
-      while (remaining[0] && /^ +$/.test(remaining[0].text)) remaining = remaining.slice(1);
-    } else if (mode === "word" && breakAt > 0) {
-      rows.push(remaining.slice(0, breakAt));
-      remaining = remaining.slice(breakAt + 1);
-      while (remaining[0] && /^ +$/.test(remaining[0].text)) remaining = remaining.slice(1);
-    } else if (end > 0) {
-      rows.push(remaining.slice(0, end));
-      remaining = remaining.slice(end);
+    if (mode === "word" && end > start && /^ +$/.test(input[end]!.text)) {
+      rows.push(input.slice(start, end));
+      start = end;
+      while (input[start]?.text === " ") start++;
+    } else if (mode === "word" && breakAt > start) {
+      rows.push(input.slice(start, breakAt));
+      start = breakAt + 1;
+      while (input[start]?.text === " ") start++;
+    } else if (end > start) {
+      rows.push(input.slice(start, end));
+      start = end;
     } else {
-      // A wide grapheme (or expanded tab) cannot fit even on an empty row.
-      const cell = remaining[0]!;
-      rows.push([
-        {
-          ...cell,
-          text: /^ +$/.test(cell.text) ? " ".repeat(width) : "�",
-          width: /^ +$/.test(cell.text) ? width : 1,
-        },
-      ]);
-      remaining = remaining.slice(1);
+      const cell = input[start]!;
+      rows.push([{ ...cell, text: "�", width: 1 }]);
+      start++;
     }
   }
   return rows;
@@ -173,12 +164,19 @@ function layout(spec: Spec, width: number, inherited: Style, options: AnsiOption
       // No horizontal allocation can fit: stack rather than lose content.
       body = spec.children.flatMap((child) => layout(child, innerWidth, style, options));
     } else {
-      // Keep short prefixes (quote bars / list markers) intact, shrink the widest columns first.
-      let total = widths.reduce((a, b) => a + b, 0);
-      while (total > innerWidth) {
-        const widest = widths.indexOf(Math.max(...widths));
-        widths[widest] = widths[widest]! - 1;
-        total--;
+      let low = 1;
+      let high = Math.max(...widths);
+      while (low < high) {
+        const cap = Math.ceil((low + high) / 2);
+        const total = widths.reduce((sum, value) => sum + Math.min(value, cap), 0);
+        if (total > innerWidth) high = cap - 1;
+        else low = cap;
+      }
+      let spare = innerWidth - widths.reduce((sum, value) => sum + Math.min(value, low), 0);
+      for (let i = 0; i < widths.length; i++) {
+        const extra = widths[i]! > low && spare > 0 ? 1 : 0;
+        widths[i] = Math.min(widths[i]!, low) + extra;
+        spare -= extra;
       }
       const columns = spec.children.map((child, i) => layout(child, widths[i]!, style, options));
       const height = Math.max(0, ...columns.map((column) => column.length));
@@ -207,20 +205,26 @@ function layout(spec: Spec, width: number, inherited: Style, options: AnsiOption
   ];
 }
 
-function sgr(style: Style): string {
+type Rgb = [number, number, number];
+function opaqueRgb(hex: string | undefined, base: Rgb): Rgb | undefined {
+  if (!hex || !/^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i.test(hex)) return undefined;
+  let value = hex.slice(1);
+  if (value.length <= 4) value = Array.from(value, (char) => char + char).join("");
+  const alpha = value.length === 8 ? parseInt(value.slice(6, 8), 16) / 255 : 1;
+  return base.map((channel, i) =>
+    Math.round(parseInt(value.slice(i * 2, i * 2 + 2), 16) * alpha + channel * (1 - alpha)),
+  ) as Rgb;
+}
+
+function sgr(style: Style, pageBackground?: string): string {
   const codes = ["0"];
   if (style.bold) codes.push("1");
   if (style.italic) codes.push("3");
-  for (const [key, prefix] of [
-    ["fg", "38"],
-    ["bg", "48"],
-  ] as const) {
-    const hex = style[key];
-    if (!hex || !/^#[\da-f]{6}$/i.test(hex)) continue;
-    codes.push(
-      `${prefix};2;${parseInt(hex.slice(1, 3), 16)};${parseInt(hex.slice(3, 5), 16)};${parseInt(hex.slice(5, 7), 16)}`,
-    );
-  }
+  const base = opaqueRgb(pageBackground, [0, 0, 0]) ?? [0, 0, 0];
+  const background = opaqueRgb(style.bg, base);
+  const foreground = opaqueRgb(style.fg, background ?? base);
+  if (foreground) codes.push(`38;2;${foreground.join(";")}`);
+  if (background) codes.push(`48;2;${background.join(";")}`);
   return `\x1b[${codes.join(";")}m`;
 }
 
@@ -246,7 +250,7 @@ export function specsToAnsi(specs: Spec[], options: AnsiOptions): string {
         let output = "";
         for (const cell of row) {
           if (!cell.text) continue;
-          const code = sgr(cell);
+          const code = sgr(cell, options.background);
           if (code !== last) output += code;
           output += cell.text;
           last = code;

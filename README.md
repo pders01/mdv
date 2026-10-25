@@ -61,6 +61,10 @@ mdv .
 cat README.md | mdv
 curl -s https://example.com/doc.md | mdv
 
+# Render once to stdout (no TUI)
+mdv --stdout README.md
+cat README.md | mdv --stdout -
+
 # Watch a file for live reload
 mdv -w README.md
 
@@ -85,6 +89,23 @@ mdv -e drafts -e tmp ./docs
 # List available themes
 mdv --list-themes
 ```
+
+## Stdout Mode
+
+Use `--stdout` for one-shot terminal output, shell pipelines, or a pager:
+
+```bash
+mdv --stdout --theme dracula README.md
+cat README.md | mdv --stdout --width 100 -
+mdv --stdout --color always README.md | less -R
+mdv --stdout --color never README.md > rendered.txt
+```
+
+This mode shares the TUI's Markdown rendering rules, theme palette, Shiki syntax highlighting, adaptive tables, and Mermaid ASCII rendering. `--no-mermaid` keeps diagrams as source code; the optional `mermaid-ascii` binary is used otherwise, with source fallback when unavailable or too wide.
+
+Width defaults to the terminal's columns, or **80** when redirected. Override it with `--width <positive integer>`. `--color auto` (the default) enables truecolor ANSI only on a terminal, honors `NO_COLOR` and `FORCE_COLOR` (`0` disables), and emits plain text when redirected. Explicit `always` or `never` overrides those environment variables. `--theme auto` uses the same system-appearance detection as the TUI.
+
+Pass one regular file or `-` for stdin. Empty input produces no output. Directories, `--watch`, and browser/server options are rejected; errors go to stderr. Stdout mode is never selected automatically, does not enter the alternate screen, and does not capture keyboard or mouse input. `--print` remains the browser print view.
 
 ## Directory Browsing
 
@@ -285,6 +306,9 @@ Search works in both the reader pane and the sidebar file list. Matches are high
 -e, --exclude <dir>   Exclude directory from scan (repeatable)
     --no-mouse        Disable mouse input (TUI only)
     --no-mermaid      Disable mermaid diagram rendering
+    --stdout          Render once to stdout instead of opening the TUI
+    --width <columns> Output width (stdout only; default: terminal columns or 80)
+    --color <mode>    auto, always, never (stdout only; default: auto)
     --serve           Serve over HTTP instead of TUI
 -p, --port <port>     Port for serve mode (default: 4280)
     --host <host>     Host for serve mode (default: localhost)

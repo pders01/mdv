@@ -102,6 +102,22 @@ describe("ANSI backend", () => {
     expect(output).toEndWith("\x1b[0m\n");
   });
 
+  it("supports shorthand and translucent theme backgrounds", () => {
+    const spec: Spec = { kind: "box", block: "code", source: null, children: [text("code")] };
+    expect(specsToAnsi([spec], { width: 10, color: true, codeBackground: "#FFF" })).toContain(
+      "48;2;255;255;255",
+    );
+    const output = specsToAnsi([spec], {
+      width: 10,
+      color: true,
+      background: "#ffffff",
+      codeBackground: "#00000080",
+    });
+    expect(output).toContain("48;2;127;127;127");
+    const outside = specsToAnsi([text("plain")], { width: 10, color: true, background: "#ffffff" });
+    expect(outside).not.toContain("48;2;");
+  });
+
   it("emits truecolor and attributes only when enabled", () => {
     const spec = text("styled");
     spec.chunks[0] = {
@@ -142,6 +158,13 @@ describe("ANSI backend", () => {
     const input = "safe\x1b[2J\x1b]52;c;payload\x07\x1bPcontrol\x1b\\\x00\x9b end";
     expect(plain([text(input)])).toBe("safe end\n");
     expect(terminalText("\x1b]unterminated")).toBe("");
+  });
+
+  it("wraps long unbroken input without losing text", () => {
+    const source = "x".repeat(100_000);
+    const output = plain([text(source)], 40);
+    expect(output.replace(/\n/g, "")).toBe(source);
+    expect(output.split("\n")).toHaveLength(2501);
   });
 
   it("rejects invalid widths", () => {

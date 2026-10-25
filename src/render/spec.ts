@@ -1,22 +1,13 @@
 /**
  * Renderable Spec — IR for mdv's render pipeline.
  *
- * Stage 4 of the pipeline emits a tree of `Spec` values. Stage 5 (the
- * mounter in ./mount.ts) walks the tree and constructs the OpenTUI
- * Renderable graph. Splitting the IR from Renderable construction means:
+ * `documentToSpecs` emits these trees through the shared token factories.
+ * `mount.ts` constructs the TUI renderable graph; `ansi.ts` lays out rows
+ * for one-shot terminal output. Chunks retain OpenTUI RGBA color values,
+ * but building a Spec never requires a renderer instance.
  *
- *  - block renderers (`src/rendering/*`) become pure functions returning
- *    plain data — snapshot-testable without a TestRenderer.
- *  - stage 4 receives Spec, computes Y/height via an injected `Measure`
- *    dep, and emits a positioned line map that downstream overlays
- *    (cursor, selection, search) read directly. No more reverse-engineering
- *    `_blockStates` and dividing `r.height / linesInBlock`.
- *  - the pipeline runs without OpenTUI imports until mount time. mdv serve
- *    can share stages 1-4 with the TUI and only diverge at stage 5.
- *
- * The spec stays narrow: only the BoxRenderable / TextRenderable props
- * mdv's block renderers actually set. Extend as renderers port over —
- * adding a new prop here is the signal that we're starting to need it.
+ * Source spans and TextLine metadata also support TUI line measurement.
+ * See SPEC.md for the backend boundary and stdout layout contract.
  */
 
 import type { TextChunk } from "../types.js";

@@ -46,6 +46,7 @@ export async function renderStdout(
       width,
       color,
       foreground: colors.fg,
+      background: colors.bg,
       codeBackground: colors.codeBg,
     });
   } finally {
