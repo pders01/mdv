@@ -27,22 +27,9 @@
 
 import { BoxRenderable, type Renderable, type RenderContext } from "@opentui/core";
 import type { BoxOptions } from "@opentui/core";
-import type { Token } from "marked";
+import { documentToSpecs, type RenderNode, type RenderNodeContext } from "../render/document.js";
 import type { Spec } from "../render/spec.js";
 import { mountSpec } from "../render/mount.js";
-import { unified, type Processor } from "unified";
-import remarkParse from "remark-parse";
-import remarkGfm from "remark-gfm";
-import remarkFrontmatter from "remark-frontmatter";
-import remarkMath from "remark-math";
-import wikiLink from "remark-wiki-link";
-import remarkDeflist from "remark-deflist";
-import remarkDirective from "remark-directive";
-import remarkMarkers from "remark-flexible-markers";
-import remarkSupersub from "remark-supersub";
-import type { Root } from "mdast";
-import { mdastRootToTokens } from "../util/mdast-to-marked.js";
-import { restoreBareDirectives } from "../util/restore-bare-directives.js";
 
 /**
  * Subset of OpenTUI's `RenderNodeContext` that our renderers actually use.
@@ -55,16 +42,8 @@ import { restoreBareDirectives } from "../util/restore-bare-directives.js";
  * block emission uses it to set absolute `TextLine.sourceLine` values
  * so per-line measurement maps directly without post-hoc shifts.
  */
-export interface MdvRenderNodeContext {
-  conceal: boolean;
-  defaultRender: () => Renderable | null;
-  sourceLineStart: number;
-}
-
-export type MdvRenderNode = (
-  token: Token,
-  context: MdvRenderNodeContext,
-) => Spec | null | undefined;
+export type MdvRenderNodeContext = RenderNodeContext;
+export type MdvRenderNode = RenderNode;
 
 /**
  * Per-block state exposed via `MdvMarkdownRenderable.blockStates`.
@@ -86,27 +65,6 @@ export interface MdvMarkdownOptions extends BoxOptions {
   content?: string;
   conceal?: boolean;
   renderNode?: MdvRenderNode;
-}
-
-/** Shared processor — remark-parse + remark-gfm is stateless across calls. */
-let sharedProcessor: Processor<Root, Root, Root, Root, string> | null = null;
-function getProcessor(): Processor<Root, Root, Root, Root, string> {
-  if (!sharedProcessor) {
-    sharedProcessor = unified()
-      .use(remarkParse)
-      .use(remarkFrontmatter, ["yaml", "toml"])
-      // singleTilde:false reserves `~text~` for remark-supersub (subscript)
-      // — GFM strikethrough still works as `~~text~~`.
-      .use(remarkGfm, { singleTilde: false })
-      .use(remarkMath)
-      .use(wikiLink, { aliasDivider: "|" })
-      .use(remarkDeflist)
-      .use(remarkDirective)
-      .use(restoreBareDirectives)
-      .use(remarkMarkers)
-      .use(remarkSupersub) as unknown as Processor<Root, Root, Root, Root, string>;
-  }
-  return sharedProcessor;
 }
 
 export class MdvMarkdownRenderable extends BoxRenderable {
@@ -182,31 +140,7 @@ export class MdvMarkdownRenderable extends BoxRenderable {
 
     if (!this._content || !this._renderNode) return;
 
-    const proc = getProcessor();
-    // `runSync` applies transformer plugins (markers, supersub, alert,
-    // wiki-link, etc.) on top of the raw `parse` tree. Skipping it leaves
-    // ==highlight==, ~sub~, ^sup^, and similar syntaxes as literal text.
-    // Pass the source again: runSync(tree) otherwise constructs an empty VFile,
-    // so source-offset-based transforms cannot recover bare colon suffixes.
-    const tree = proc.runSync(proc.parse(this._content), this._content) as Root;
-    const tokens = mdastRootToTokens(tree, this._content);
-    const lineRanges = computeBlockLineRanges(this._content, tree);
-
-    const ctx: MdvRenderNodeContext = {
-      conceal: this._conceal,
-      defaultRender: () => null,
-      sourceLineStart: 0,
-    };
-
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i]!;
-      const range = lineRanges[i] ?? { start: 0, end: 0 };
-      ctx.sourceLineStart = range.start;
-      const spec = this._renderNode(token, ctx);
-      if (!spec) continue;
-      // Persist the block's source span on the spec; container.ts and
-      // measureBlockLine read it from here, no duplicate fields needed.
-      spec.source = { start: range.start, end: range.end };
+    for (const spec of documentToSpecs(this._content, this._renderNode, this._conceal)) {
       const renderable = mountSpec(this.ctx, spec);
       this.add(renderable);
       this._blockStates.push({ renderable, spec });
@@ -214,21 +148,3 @@ export class MdvMarkdownRenderable extends BoxRenderable {
   }
 }
 
-/**
- * Source-line range (0-indexed, inclusive) for each top-level mdast block.
- * `start` is the line the block begins on, `end` is the line of its last
- * meaningful character. Lines BETWEEN consecutive blocks (separator
- * blanks) belong to no block; container.ts treats them as gap lines.
- */
-function computeBlockLineRanges(
-  _content: string,
-  tree: Root,
-): Array<{ start: number; end: number }> {
-  const ranges: Array<{ start: number; end: number }> = [];
-  for (const node of tree.children) {
-    const startLine = (node.position?.start.line ?? 1) - 1; // mdast is 1-based
-    const endLine = (node.position?.end.line ?? node.position?.start.line ?? 1) - 1;
-    ranges.push({ start: startLine, end: endLine });
-  }
-  return ranges;
-}

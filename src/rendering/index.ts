@@ -8,7 +8,7 @@
  */
 
 import { type CliRenderer } from "@opentui/core";
-import type { MdvRenderNodeContext } from "../ui/markdown.js";
+import type { RenderNodeContext } from "../render/document.js";
 import type { Token } from "marked";
 import type { ThemeColors, ListToken, TableToken, ParagraphToken } from "../types.js";
 
@@ -33,7 +33,7 @@ import type { Spec } from "../render/spec.js";
  */
 export type RenderNodeCallback = (
   token: Token,
-  context: MdvRenderNodeContext,
+  context: RenderNodeContext,
 ) => Spec | null | undefined;
 
 /**
@@ -46,7 +46,17 @@ export type RenderNodeCallback = (
  * path (rendered unhighlighted since "mermaid" isn't a known Shiki language).
  */
 export function createRenderNode(
-  renderer: CliRenderer,
+  _renderer: CliRenderer,
+  colors: ThemeColors,
+  highlighterInstance: HighlighterInstance,
+  contentWidth: number,
+  mermaidRenders?: Map<string, string>,
+): RenderNodeCallback {
+  return createSpecRenderer(colors, highlighterInstance, contentWidth, mermaidRenders);
+}
+
+/** Shared token renderer for both interactive and stdout backends. */
+export function createSpecRenderer(
   colors: ThemeColors,
   highlighterInstance: HighlighterInstance,
   contentWidth: number,
@@ -58,7 +68,7 @@ export function createRenderNode(
   // sync with the source token stream.
   const emptySpec = (): Spec => ({ kind: "box", source: null, children: [] });
 
-  const toSpec = (token: Token, context: MdvRenderNodeContext): Spec | null => {
+  const toSpec = (token: Token, context: RenderNodeContext): Spec | null => {
     // Handle headings (OpenTUI 0.1.86+ no longer renders these by default
     // when a renderNode callback is provided)
     if (token.type === "heading") {
@@ -126,7 +136,7 @@ export function createRenderNode(
     return null;
   };
 
-  return (token: Token, context: MdvRenderNodeContext): Spec | null => {
+  return (token: Token, context: RenderNodeContext): Spec | null => {
     if ((token as Token & { type: string }).type === "deflist") {
       return defListToSpec(colors, token);
     }
